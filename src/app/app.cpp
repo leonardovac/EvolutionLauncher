@@ -97,7 +97,6 @@ int run(const Options& options)
         ui::endFrame();
         window.clearMouseEdge();
         renderer.render(device.ctx(), ui::dl(), device.width(), device.height());
-        device.present(true);
 
         if (options.wantShot && elapsed >= options.shotTime)
         {
@@ -105,6 +104,8 @@ int run(const Options& options)
                 result = 1;
             break;
         }
+
+        device.present(true);
     }
 
     renderer.destroy();
