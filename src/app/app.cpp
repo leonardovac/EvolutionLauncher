@@ -108,10 +108,11 @@ int run(const Options& options)
         device.present(true);
     }
 
+    hero = gfx::Image{};
+    ui::shutdown();
     renderer.destroy();
     device.destroy();
     window.destroy();
-    ui::shutdown();
     gfx::shutdownImaging();
     ::CoUninitialize();
     return result;
