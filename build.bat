@@ -20,7 +20,7 @@ if not exist bin\obj mkdir bin\obj
 
 set "CXXFLAGS=/nologo /std:c++latest /EHsc /W4 /sdl /permissive- /Zc:preprocessor /utf-8 /DNOMINMAX /DWIN32_LEAN_AND_MEAN /D_UNICODE /DUNICODE /Isrc /Ithird_party"
 set "CFLAGS=/nologo /W3 /sdl /utf-8 /D_7ZIP_ST"
-set "LDFLAGS=winhttp.lib shlwapi.lib shell32.lib advapi32.lib"
+set "LDFLAGS=winhttp.lib shlwapi.lib shell32.lib advapi32.lib user32.lib /SUBSYSTEM:WINDOWS"
 
 if /i "%~1"=="debug" (
   set "CXXFLAGS=!CXXFLAGS! /Od /Zi /MDd /RTC1 /D_DEBUG"
