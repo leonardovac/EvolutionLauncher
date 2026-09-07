@@ -52,11 +52,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 
 	app::Options options;
 	std::wstring value;
-	for (int i = 1; i < argc; ++i)
-	{
-		if (std::wstring_view(argv[i]) == L"-shot")
-			options.wantShot = true;
-	}
+	options.wantShot = argc > 1 && std::wstring_view(argv[1]) == L"-shot";
 	if (options.wantShot)
 	{
 		options.shotPath = L"shot.bmp";
