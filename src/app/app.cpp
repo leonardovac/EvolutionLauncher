@@ -40,6 +40,7 @@ int run(const Options& options)
     gfx::DrawList draw;
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
+    int result = 0;
 
     while (window.pump())
     {
@@ -64,7 +65,8 @@ int run(const Options& options)
 
         if (options.wantShot && elapsed >= options.shotTime)
         {
-            device.captureBackbuffer(options.shotPath);
+            if (!device.captureBackbuffer(options.shotPath))
+                result = 1;
             break;
         }
     }
@@ -74,7 +76,7 @@ int run(const Options& options)
     window.destroy();
     gfx::shutdownImaging();
     ::CoUninitialize();
-    return 0;
+    return result;
 }
 
 }
