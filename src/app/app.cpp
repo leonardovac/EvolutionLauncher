@@ -6,7 +6,6 @@
 #include "app/window.h"
 #include "core/types.h"
 #include "gfx/device.h"
-#include "gfx/drawlist.h"
 #include "gfx/image.h"
 #include "gfx/renderer.h"
 #include "ui/ui.h"
@@ -79,6 +78,10 @@ int run(const Options& options)
                                   static_cast<float>(device.height()));
 
         ui::Input input;
+        input.mouse = window.mousePos();
+        input.down = window.mouseDown();
+        input.pressed = window.mousePressed();
+        input.released = window.mouseReleased();
         ui::newFrame(input, dt, static_cast<float>(device.width()),
                      static_cast<float>(device.height()));
         ShellState shell;
@@ -90,6 +93,7 @@ int run(const Options& options)
         if (shellCloseClicked())
             break;
         ui::endFrame();
+        window.clearMouseEdge();
         renderer.render(device.ctx(), ui::dl(), device.width(), device.height());
         device.present(true);
 
