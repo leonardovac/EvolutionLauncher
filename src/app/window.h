@@ -2,8 +2,6 @@
 
 #include <windows.h>
 
-#include <string>
-
 #include "core/types.h"
 
 namespace app

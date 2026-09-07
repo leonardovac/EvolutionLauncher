@@ -16,7 +16,6 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
 {
     using core::Col;
     using core::Rect;
-    using core::Vec2;
 
     const Col gold = Col::hex(0xD9C07A, 1.f);
     const float inset = ui::px(28.f);
