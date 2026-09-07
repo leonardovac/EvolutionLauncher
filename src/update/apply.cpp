@@ -22,7 +22,7 @@ constexpr int attempts = 3;
 }
 
 std::expected<ApplyResult, ApplyError> applyEntry(const Connection& content, const Entry& entry,
-                                                  const Config& config)
+                                                  const Config& config, Progress* progress)
 {
 	const std::filesystem::path destination = config.root / entry.installPath;
 	std::error_code ec;
@@ -62,6 +62,8 @@ std::expected<ApplyResult, ApplyError> applyEntry(const Connection& content, con
 		if (core::cancelled())
 			return false;
 		received += bytes.size();
+		if (progress != nullptr)
+			progress->onBytes(bytes.size());
 		if (entry.compression == Compression::Bulk)
 			return emit(bytes);
 		const auto pushed = lzma.push(bytes, emit);

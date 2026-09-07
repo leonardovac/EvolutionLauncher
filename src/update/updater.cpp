@@ -89,6 +89,8 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	if (options.config.root.empty())
 		return std::unexpected(UpdateError::NoRoot);
 
+	Progress* progress = options.progress;
+
 	const auto session = Session::open();
 	if (!session)
 		return std::unexpected(UpdateError::Session);
@@ -107,6 +109,8 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	for (const std::wstring& line : index->rejected)
 		core::debug("rejected line: {}", core::narrow(line));
 	core::info("index: {} entries, {} rejected", summary.entries, summary.rejected);
+	if (progress != nullptr)
+		progress->onIndex(summary.entries, summary.rejected);
 
 	std::vector<Entry> entries = index->entries;
 	if (!options.only.empty())
@@ -119,13 +123,15 @@ std::expected<Summary, UpdateError> run(const Options& options)
 
 	core::info("checking {} against {}", core::narrow(branchName(options.config.branch)),
 	           options.config.root.string());
-	const Plan plan = buildPlan(entries, options.config);
+	const Plan plan = buildPlan(entries, options.config, progress);
 	summary.filtered = plan.filtered;
 	summary.upToDate = plan.upToDate;
 	summary.queued = plan.jobs.size();
 
 	core::info("{} filtered, {} up to date, {} queued ({} to download)", plan.filtered,
 	           plan.upToDate, plan.jobs.size(), core::formatBytes(plan.downloadBytes));
+	if (progress != nullptr)
+		progress->onPlan(plan.jobs.size(), plan.downloadBytes);
 
 	if (options.dryRun)
 	{
@@ -152,7 +158,10 @@ std::expected<Summary, UpdateError> run(const Options& options)
 		++position;
 		core::info("[{}/{}] {} ({})", position, plan.jobs.size(),
 		           core::narrow(job.entry->installPath), core::formatBytes(job.entry->wireSize));
-		const auto applied = applyEntry(*content, *job.entry, options.config);
+		if (progress != nullptr)
+			progress->onEntryStart(position, plan.jobs.size(), job.entry->installPath,
+			                       job.entry->wireSize);
+		const auto applied = applyEntry(*content, *job.entry, options.config, progress);
 		if (!applied)
 		{
 			if (applied.error() == ApplyError::Cancelled)
@@ -163,6 +172,8 @@ std::expected<Summary, UpdateError> run(const Options& options)
 			++summary.failed;
 			core::error("{}: {}", core::narrow(job.entry->installPath),
 			            core::narrow(describe(applied.error())));
+			if (progress != nullptr)
+				progress->onEntryFailed(job.entry->installPath, describe(applied.error()));
 			continue;
 		}
 		++summary.updated;

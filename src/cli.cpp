@@ -2,6 +2,7 @@
 #include "core/log.h"
 #include "core/str.h"
 #include "update/plan.h"
+#include "update/progress.h"
 #include "update/updater.h"
 
 #include <array>
@@ -55,6 +56,10 @@ std::optional<wf::Branch> parseBranch(std::wstring_view text)
 		return wf::Branch::Dev;
 	return std::nullopt;
 }
+
+class ConsoleProgress final : public wf::Progress
+{
+};
 
 }
 
@@ -183,6 +188,9 @@ int run(int argc, wchar_t** argv)
 	}
 
 	core::installCancelHandler();
+
+	ConsoleProgress progress;
+	options.progress = &progress;
 
 	const auto summary = wf::run(options);
 	if (!summary)

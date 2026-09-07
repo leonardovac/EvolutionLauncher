@@ -2,6 +2,7 @@
 
 #include "update/manifest.h"
 #include "update/plan.h"
+#include "update/progress.h"
 
 #include <cstdint>
 #include <expected>
@@ -26,6 +27,7 @@ struct Options
 	Config config;
 	bool dryRun = false;
 	std::wstring only;
+	Progress* progress = nullptr;
 };
 
 struct Summary

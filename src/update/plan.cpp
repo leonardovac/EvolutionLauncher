@@ -177,7 +177,7 @@ bool appliesToClient(const Entry& entry, const Config& config)
 	return languageAllows(entry.installPath, config.language);
 }
 
-Plan buildPlan(std::span<const Entry> entries, const Config& config)
+Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* progress)
 {
 	Plan plan;
 	std::unordered_map<std::wstring, const Entry*> byPath;
@@ -229,6 +229,8 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config)
 			reported = hashedBytes;
 			core::info("checked {}/{}, hashed {}", checked, applicable.size(),
 			           core::formatBytes(hashedBytes));
+			if (progress != nullptr)
+				progress->onChecking(checked, applicable.size());
 		}
 
 		if (digest && *digest == entry->hash)

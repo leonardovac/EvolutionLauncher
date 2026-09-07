@@ -1,6 +1,7 @@
 #pragma once
 
 #include "update/manifest.h"
+#include "update/progress.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -63,7 +64,7 @@ struct Plan
 	std::size_t hashed = 0;
 };
 
-Plan buildPlan(std::span<const Entry> entries, const Config& config);
+Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* progress = nullptr);
 
 std::wstring_view describe(Reason reason);
 

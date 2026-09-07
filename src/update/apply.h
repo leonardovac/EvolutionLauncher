@@ -3,6 +3,7 @@
 #include "update/http.h"
 #include "update/manifest.h"
 #include "update/plan.h"
+#include "update/progress.h"
 
 #include <cstdint>
 #include <expected>
@@ -30,7 +31,7 @@ struct ApplyResult
 };
 
 std::expected<ApplyResult, ApplyError> applyEntry(const Connection& content, const Entry& entry,
-                                                  const Config& config);
+                                                  const Config& config, Progress* progress = nullptr);
 
 std::wstring_view describe(ApplyError error);
 
