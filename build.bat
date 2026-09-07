@@ -39,7 +39,7 @@ if /i "%~1"=="debug" (
 )
 
 set SRC=
-for %%f in (src\*.cpp src\core\*.cpp src\gfx\*.cpp src\update\*.cpp) do set "SRC=!SRC! %%f"
+for %%f in (src\*.cpp src\core\*.cpp src\gfx\*.cpp src\ui\*.cpp src\app\*.cpp src\update\*.cpp) do set "SRC=!SRC! %%f"
 
 cl !CFLAGS! /c /Fobin\obj\ third_party\lzma\LzmaDec.c || exit /b 1
 cl !CXXFLAGS! /Fobin\obj\ /Fdbin\obj\ !SRC! bin\obj\LzmaDec.obj /Febin\WFUpdate.exe /link !LDFLAGS! || exit /b 1

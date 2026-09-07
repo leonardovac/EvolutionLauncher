@@ -1,9 +1,13 @@
+#include "app/app.h"
 #include "cli.h"
 
 #include <windows.h>
 #include <shellapi.h>
 
 #include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <string_view>
 
 namespace
 {
@@ -24,6 +28,19 @@ void attachConsole()
 		::freopen_s(&stream, "CONOUT$", "w", stderr);
 }
 
+bool argAfter(int argc, wchar_t** argv, std::wstring_view flag, std::wstring& value)
+{
+	for (int i = 1; i + 1 < argc; ++i)
+	{
+		if (flag == argv[i])
+		{
+			value = argv[i + 1];
+			return true;
+		}
+	}
+	return false;
+}
+
 }
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
@@ -33,16 +50,31 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 	if (argv == nullptr)
 		return 1;
 
+	app::Options options;
+	std::wstring value;
+	for (int i = 1; i < argc; ++i)
+	{
+		if (std::wstring_view(argv[i]) == L"-shot")
+			options.wantShot = true;
+	}
+	if (options.wantShot)
+	{
+		options.shotPath = L"shot.bmp";
+		if (argAfter(argc, argv, L"-shot", value))
+			options.shotPath = value;
+		if (argAfter(argc, argv, L"-t", value))
+			options.shotTime = static_cast<float>(::_wtof(value.c_str()));
+	}
+
 	int result = 0;
-	if (argc > 1)
+	if (argc > 1 && !options.wantShot)
 	{
 		attachConsole();
 		result = wf::cli::run(argc, argv);
 	}
 	else
 	{
-		std::fputs("GUI not implemented yet\n", stderr);
-		result = 1;
+		result = app::run(options);
 	}
 
 	::LocalFree(argv);
