@@ -39,6 +39,9 @@ void usage()
 	          "  --verbose         per-file detail\n"
 	          "  --help\n"
 	          "\n"
+	          "  -shot <path>      (as argv[1]) launch the GUI and save a screenshot to <path>\n"
+	          "  -t <seconds>      delay before the -shot capture           (default 0.6)\n"
+	          "\n"
 	          "exit: 0 ok, 1 failed, 2 cancelled, 3 --check found work to do");
 }
 
