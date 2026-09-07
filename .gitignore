@@ -1,0 +1,25 @@
+bin/
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.i64
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+
+# vendored LZMA SDK sources, fetched per third_party/lzma/VENDOR.md
+third_party/lzma/*.c
+third_party/lzma/*.h
+
+# local working notes, never committed
+PLAN.md
+NOTES.md
+scratch/
+index.txt
+
+# local scratch
+.notes/

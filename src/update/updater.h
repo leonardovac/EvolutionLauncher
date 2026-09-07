@@ -1,0 +1,48 @@
+#pragma once
+
+#include "update/manifest.h"
+#include "update/plan.h"
+
+#include <cstdint>
+#include <expected>
+#include <string>
+#include <string_view>
+
+namespace wf
+{
+
+enum class UpdateError
+{
+	Session,
+	Connect,
+	IndexFetch,
+	IndexDecode,
+	IndexEmpty,
+	NoRoot
+};
+
+struct Options
+{
+	Config config;
+	bool dryRun = false;
+	std::wstring only;
+};
+
+struct Summary
+{
+	std::size_t entries = 0;
+	std::size_t rejected = 0;
+	std::size_t filtered = 0;
+	std::size_t upToDate = 0;
+	std::size_t queued = 0;
+	std::size_t updated = 0;
+	std::size_t failed = 0;
+	std::uint64_t downloaded = 0;
+	bool cancelled = false;
+};
+
+std::expected<Summary, UpdateError> run(const Options& options);
+
+std::wstring_view describe(UpdateError error);
+
+}
