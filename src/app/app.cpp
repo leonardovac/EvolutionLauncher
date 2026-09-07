@@ -70,6 +70,8 @@ int run(const Options& options)
 
         if (window.takeResized())
             device.resize(window.width(), window.height());
+        if (window.takeScaleChanged())
+            ui::rebuildFonts(device.dev(), window.scale());
 
         device.waitForFrame();
         device.beginFrame();

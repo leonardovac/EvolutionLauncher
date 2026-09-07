@@ -26,6 +26,7 @@ public:
 
     bool pump();
     bool takeResized() noexcept;
+    bool takeScaleChanged() noexcept;
     void clearMouseEdge() noexcept;
 
 private:
@@ -37,6 +38,7 @@ private:
     int height_ = 0;
     float scale_ = 1.f;
     bool resized_ = false;
+    bool scaleChanged_ = false;
     bool running_ = true;
     core::Vec2 mousePos_;
     bool mouseDown_ = false;

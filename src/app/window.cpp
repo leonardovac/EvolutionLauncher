@@ -57,6 +57,7 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     case WM_DPICHANGED:
     {
         scale_ = static_cast<float>(HIWORD(wp)) / 96.f;
+        scaleChanged_ = true;
         const RECT* target = reinterpret_cast<const RECT*>(lp);
         ::SetWindowPos(hwnd, nullptr, target->left, target->top, target->right - target->left,
                        target->bottom - target->top, SWP_NOZORDER | SWP_NOACTIVATE);
@@ -139,6 +140,13 @@ bool Window::takeResized() noexcept
 {
     const bool was = resized_;
     resized_ = false;
+    return was;
+}
+
+bool Window::takeScaleChanged() noexcept
+{
+    const bool was = scaleChanged_;
+    scaleChanged_ = false;
     return was;
 }
 
