@@ -205,6 +205,8 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 		if (core::cancelled())
 			break;
 		++checked;
+		if (progress != nullptr)
+			progress->onChecking(checked, applicable.size());
 
 		const std::filesystem::path destination = config.root / entry->installPath;
 		std::error_code ec;
@@ -229,8 +231,6 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			reported = hashedBytes;
 			core::info("checked {}/{}, hashed {}", checked, applicable.size(),
 			           core::formatBytes(hashedBytes));
-			if (progress != nullptr)
-				progress->onChecking(checked, applicable.size());
 		}
 
 		if (digest && *digest == entry->hash)
