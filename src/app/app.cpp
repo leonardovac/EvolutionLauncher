@@ -9,6 +9,7 @@
 #include "gfx/image.h"
 #include "gfx/renderer.h"
 #include "ui/ui.h"
+#include "ui/widgets.h"
 
 #include <objbase.h>
 
@@ -50,6 +51,13 @@ int run(const Options& options)
         return 1;
     ui::rebuildFonts(device.dev(), window.scale());
 
+    gfx::Image hero;
+    if (const auto bytes = resource(WF_RES_HERO); !bytes.empty())
+    {
+        if (auto loaded = gfx::loadImageMemory(device.dev(), bytes))
+            hero = std::move(*loaded);
+    }
+
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
     int result = 0;
@@ -74,6 +82,8 @@ int run(const Options& options)
         ui::newFrame(input, dt, static_cast<float>(device.width()),
                      static_cast<float>(device.height()));
         ui::dl().rect(viewport, ui::theme().body);
+        ui::heroCard(viewport, hero.valid() ? &hero : nullptr, ui::theme().focus, 0.f, 1.f);
+        ui::heroOverlay(viewport, 0.f, 0.35f);
         ui::text(ui::fonts().title, core::Rect(40.f, 40.f, 600.f, 80.f), "WARFRAME",
                  ui::theme().text, ui::AlignH::Left, ui::AlignV::Middle, 4.f);
         ui::endFrame();

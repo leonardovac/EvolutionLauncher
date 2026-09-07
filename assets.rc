@@ -1,3 +1,4 @@
 #include "src/app/resource.h"
 
 WF_RES_FONT RCDATA "assets\\RobotoCondensed.ttf"
+WF_RES_HERO RCDATA "assets\\hero.jpg"
