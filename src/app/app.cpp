@@ -2,6 +2,7 @@
 
 #include "app/assets.h"
 #include "app/resource.h"
+#include "app/shell.h"
 #include "app/window.h"
 #include "core/types.h"
 #include "gfx/device.h"
@@ -9,7 +10,6 @@
 #include "gfx/image.h"
 #include "gfx/renderer.h"
 #include "ui/ui.h"
-#include "ui/widgets.h"
 
 #include <objbase.h>
 
@@ -81,11 +81,14 @@ int run(const Options& options)
         ui::Input input;
         ui::newFrame(input, dt, static_cast<float>(device.width()),
                      static_cast<float>(device.height()));
-        ui::dl().rect(viewport, ui::theme().body);
-        ui::heroCard(viewport, hero.valid() ? &hero : nullptr, ui::theme().focus, 0.f, 1.f);
-        ui::heroOverlay(viewport, 0.f, 0.35f);
-        ui::text(ui::fonts().title, core::Rect(40.f, 40.f, 600.f, 80.f), "WARFRAME",
-                 ui::theme().text, ui::AlignH::Left, ui::AlignV::Middle, 4.f);
+        ShellState shell;
+        shell.statusLine = "UPDATING GAME  51%   250 / 1150 MB";
+        shell.progress = 0.51f;
+        shell.showProgress = true;
+        shell.startEnabled = false;
+        drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
+        if (shellCloseClicked())
+            break;
         ui::endFrame();
         renderer.render(device.ctx(), ui::dl(), device.width(), device.height());
         device.present(true);

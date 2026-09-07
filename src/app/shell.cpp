@@ -1,0 +1,77 @@
+#include "app/shell.h"
+
+#include "ui/ui.h"
+#include "ui/widgets.h"
+
+namespace app
+{
+namespace
+{
+
+bool closeClicked = false;
+
+}
+
+void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& state)
+{
+    using core::Col;
+    using core::Rect;
+    using core::Vec2;
+
+    const Col gold = Col::hex(0xD9C07A, 1.f);
+    const float inset = ui::px(28.f);
+
+    ui::dl().rect(viewport, ui::theme().body);
+    ui::heroCard(viewport, hero, ui::theme().focus, 0.f, 1.f);
+    ui::heroOverlay(viewport, 0.f, 0.35f);
+
+    const Rect frame(viewport.x + inset, viewport.y + inset, viewport.w - inset * 2.f,
+                     viewport.h - inset * 2.f);
+    ui::dl().border(frame, gold.alpha(0.45f), ui::px(1.f), 0.f);
+
+    const Rect title(frame.x + ui::px(24.f), frame.y + ui::px(18.f), ui::px(260.f), ui::px(28.f));
+    ui::text(ui::fonts().title, title, "WARFRAME", gold, ui::AlignH::Left, ui::AlignV::Middle,
+             ui::px(4.f));
+
+    const float chipW = ui::px(96.f);
+    const float chipH = ui::px(26.f);
+    const Rect chip(frame.x + frame.w - ui::px(150.f), frame.y + ui::px(18.f), chipW, chipH);
+    ui::dl().border(chip, gold.alpha(0.5f), ui::px(1.f), 0.f);
+    ui::text(ui::fonts().caption, chip, "LANGUAGE  EN", gold, ui::AlignH::Center,
+             ui::AlignV::Middle, ui::px(1.f));
+
+    const Rect closeBox(frame.x + frame.w - ui::px(34.f), frame.y + ui::px(16.f), ui::px(22.f),
+                        ui::px(22.f));
+    closeClicked = ui::closeButton("shell.close", closeBox);
+
+    const Rect bottom(frame.x + ui::px(24.f), frame.y + frame.h - ui::px(78.f),
+                      frame.w - ui::px(48.f), ui::px(54.f));
+
+    if (state.showProgress)
+    {
+        const Rect label(bottom.x, bottom.y, bottom.w * 0.5f, ui::px(16.f));
+        ui::text(ui::fonts().caption, label, state.statusLine, ui::theme().text, ui::AlignH::Left,
+                 ui::AlignV::Middle, ui::px(1.f));
+        const Rect track(bottom.x, bottom.y + ui::px(22.f), bottom.w * 0.62f, ui::px(3.f));
+        ui::loadingLine(track, state.progress, ui::g().time, gold, 1.f);
+    }
+    else
+    {
+        const Rect label(bottom.x, bottom.y + ui::px(14.f), bottom.w * 0.5f, ui::px(16.f));
+        ui::text(ui::fonts().caption, label, state.buildLabel, ui::theme().subtext,
+                 ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
+    }
+
+    const Rect start(bottom.x + bottom.w - ui::px(240.f), bottom.y, ui::px(240.f), ui::px(44.f));
+    const Col startCol = state.startEnabled ? gold : gold.alpha(0.35f);
+    ui::dl().border(start, startCol, ui::px(1.f), 0.f);
+    ui::text(ui::fonts().title, start, "GAME START", startCol, ui::AlignH::Center,
+             ui::AlignV::Middle, ui::px(5.f));
+}
+
+bool shellCloseClicked()
+{
+    return closeClicked;
+}
+
+}
