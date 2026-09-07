@@ -3,7 +3,9 @@
 #include "app/assets.h"
 #include "app/resource.h"
 #include "app/shell.h"
+#include "app/updatejob.h"
 #include "app/window.h"
+#include "core/log.h"
 #include "core/types.h"
 #include "gfx/device.h"
 #include "gfx/image.h"
@@ -57,6 +59,10 @@ int run(const Options& options)
             hero = std::move(*loaded);
     }
 
+    UpdateJob job;
+    if (!options.wantShot)
+        job.start();
+
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
     int result = 0;
@@ -67,6 +73,16 @@ int run(const Options& options)
         const float dt = std::chrono::duration<float>(now - previous).count();
         previous = now;
         elapsed += dt;
+
+        const JobSnapshot snap = job.snapshot();
+        static float logTimer = 0.f;
+        logTimer += dt;
+        if (logTimer >= 1.f)
+        {
+            logTimer = 0.f;
+            core::info("job phase {} entry {}/{} bytes {}/{}", static_cast<int>(snap.phase),
+                       snap.entryIndex, snap.entryCount, snap.downloaded, snap.downloadTotal);
+        }
 
         if (window.takeResized())
             device.resize(window.width(), window.height());

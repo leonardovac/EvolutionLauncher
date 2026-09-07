@@ -40,4 +40,9 @@ bool cancelled() noexcept
 	return stopping.load(std::memory_order_relaxed);
 }
 
+void requestCancel() noexcept
+{
+	stopping.store(true, std::memory_order_relaxed);
+}
+
 }

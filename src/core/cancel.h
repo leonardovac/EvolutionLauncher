@@ -5,5 +5,6 @@ namespace core
 
 void installCancelHandler();
 bool cancelled() noexcept;
+void requestCancel() noexcept;
 
 }
