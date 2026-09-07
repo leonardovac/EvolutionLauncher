@@ -8,13 +8,20 @@
 namespace
 {
 
+// GUI builds have no console; borrow the caller's without clobbering a redirect.
 void attachConsole()
 {
+	const bool outRedirected = ::GetFileType(::GetStdHandle(STD_OUTPUT_HANDLE)) != FILE_TYPE_UNKNOWN;
+	const bool errRedirected = ::GetFileType(::GetStdHandle(STD_ERROR_HANDLE)) != FILE_TYPE_UNKNOWN;
+	if (outRedirected && errRedirected)
+		return;
 	if (!::AttachConsole(ATTACH_PARENT_PROCESS) && !::AllocConsole())
 		return;
 	FILE* stream = nullptr;
-	::freopen_s(&stream, "CONOUT$", "w", stdout);
-	::freopen_s(&stream, "CONOUT$", "w", stderr);
+	if (!outRedirected)
+		::freopen_s(&stream, "CONOUT$", "w", stdout);
+	if (!errRedirected)
+		::freopen_s(&stream, "CONOUT$", "w", stderr);
 }
 
 }
