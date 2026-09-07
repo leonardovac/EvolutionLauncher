@@ -78,7 +78,8 @@ bool Font::create(ID3D11Device* dev, std::wstring_view family, float size, int w
     return finishSetup();
 }
 
-bool Font::createFromMemory(ID3D11Device* dev, const void* data, size_t size, float pixelSize) {
+bool Font::createFromMemory(ID3D11Device* dev, const void* data, size_t size, float pixelSize,
+                            float weight) {
     dev_ = dev;
     size_ = pixelSize;
 
@@ -98,8 +99,24 @@ bool Font::createFromMemory(ID3D11Device* dev, const void* data, size_t size, fl
     if (!supported || faceCount == 0) return false;
 
     IDWriteFontFile* files[] = { file.get() };
-    if (FAILED(g_dwrite5->CreateFontFace(faceType, 1, files, 0, DWRITE_FONT_SIMULATIONS_NONE, face_.put())))
+
+    ComPtr<IDWriteFactory6> factory6;
+    ComPtr<IDWriteFontResource> fontResource;
+    if (SUCCEEDED(g_dwrite5->QueryInterface(__uuidof(IDWriteFactory6), factory6.putVoid()))
+        && SUCCEEDED(factory6->CreateFontResource(files[0], 0, fontResource.put())))
+    {
+        const DWRITE_FONT_AXIS_VALUE axis{ DWRITE_FONT_AXIS_TAG_WEIGHT, weight };
+        ComPtr<IDWriteFontFace5> face5;
+        if (FAILED(fontResource->CreateFontFace(DWRITE_FONT_SIMULATIONS_NONE, &axis, 1, face5.put())))
+            return false;
+        if (FAILED(face5->QueryInterface(__uuidof(IDWriteFontFace), face_.putVoid())))
+            return false;
+    }
+    else if (FAILED(g_dwrite5->CreateFontFace(faceType, 1, files, 0, DWRITE_FONT_SIMULATIONS_NONE,
+                                              face_.put())))
+    {
         return false;
+    }
 
     return finishSetup();
 }

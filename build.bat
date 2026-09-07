@@ -23,6 +23,9 @@ if errorlevel 1 (echo [!] fxc ps_main failed & exit /b 1)
 if not exist bin mkdir bin
 if not exist bin\obj mkdir bin\obj
 
+rc /nologo /fo bin\obj\assets.res assets.rc
+if errorlevel 1 (echo [!] asset resource build failed & exit /b 1)
+
 set "CXXFLAGS=/nologo /std:c++latest /EHsc /W4 /sdl /permissive- /Zc:preprocessor /utf-8 /DNOMINMAX /DWIN32_LEAN_AND_MEAN /D_UNICODE /DUNICODE /Isrc /Ithird_party"
 set "CFLAGS=/nologo /W3 /sdl /utf-8 /D_7ZIP_ST"
 set "LDFLAGS=winhttp.lib shlwapi.lib shell32.lib advapi32.lib user32.lib gdi32.lib ole32.lib d3d11.lib dxgi.lib dcomp.lib dxguid.lib windowscodecs.lib /SUBSYSTEM:WINDOWS"
@@ -42,6 +45,6 @@ set SRC=
 for %%f in (src\*.cpp src\core\*.cpp src\gfx\*.cpp src\ui\*.cpp src\app\*.cpp src\update\*.cpp) do set "SRC=!SRC! %%f"
 
 cl !CFLAGS! /c /Fobin\obj\ third_party\lzma\LzmaDec.c || exit /b 1
-cl !CXXFLAGS! /Fobin\obj\ /Fdbin\obj\ !SRC! bin\obj\LzmaDec.obj /Febin\WFUpdate.exe /link !LDFLAGS! || exit /b 1
+cl !CXXFLAGS! /Fobin\obj\ /Fdbin\obj\ !SRC! bin\obj\LzmaDec.obj bin\obj\assets.res /Febin\WFUpdate.exe /link !LDFLAGS! || exit /b 1
 
 echo [+] bin\WFUpdate.exe

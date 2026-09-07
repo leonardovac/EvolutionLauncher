@@ -21,7 +21,8 @@ struct Glyph {
 class Font {
 public:
     bool create(ID3D11Device* dev, std::wstring_view family, float size, int weight);
-    bool createFromMemory(ID3D11Device* dev, const void* data, size_t size, float pixelSize);
+    bool createFromMemory(ID3D11Device* dev, const void* data, size_t size, float pixelSize,
+                          float weight = 400.f);
     void destroy();
 
     const Glyph* glyph(uint32_t codepoint);

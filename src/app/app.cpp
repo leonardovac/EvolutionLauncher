@@ -1,11 +1,14 @@
 #include "app/app.h"
 
+#include "app/assets.h"
+#include "app/resource.h"
 #include "app/window.h"
 #include "core/types.h"
 #include "gfx/device.h"
 #include "gfx/drawlist.h"
 #include "gfx/image.h"
 #include "gfx/renderer.h"
+#include "ui/ui.h"
 
 #include <objbase.h>
 
@@ -37,7 +40,16 @@ int run(const Options& options)
     if (!renderer.create(device.dev()))
         return 1;
 
-    gfx::DrawList draw;
+    const auto fontBytes = resource(WF_RES_FONT);
+    ui::FontData fontData;
+    fontData.semiBold = fontBytes.data();
+    fontData.semiBoldSize = fontBytes.size();
+    fontData.bold = fontBytes.data();
+    fontData.boldSize = fontBytes.size();
+    if (!ui::init(device.dev(), fontData))
+        return 1;
+    ui::rebuildFonts(device.dev(), window.scale());
+
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
     int result = 0;
@@ -57,10 +69,15 @@ int run(const Options& options)
 
         const core::Rect viewport(0.f, 0.f, static_cast<float>(device.width()),
                                   static_cast<float>(device.height()));
-        draw.reset(viewport);
-        draw.rect(viewport, core::Col::hex(0x0B0A0A, 1.f));
 
-        renderer.render(device.ctx(), draw, device.width(), device.height());
+        ui::Input input;
+        ui::newFrame(input, dt, static_cast<float>(device.width()),
+                     static_cast<float>(device.height()));
+        ui::dl().rect(viewport, ui::theme().body);
+        ui::text(ui::fonts().title, core::Rect(40.f, 40.f, 600.f, 80.f), "WARFRAME",
+                 ui::theme().text, ui::AlignH::Left, ui::AlignV::Middle, 4.f);
+        ui::endFrame();
+        renderer.render(device.ctx(), ui::dl(), device.width(), device.height());
         device.present(true);
 
         if (options.wantShot && elapsed >= options.shotTime)
@@ -74,6 +91,7 @@ int run(const Options& options)
     renderer.destroy();
     device.destroy();
     window.destroy();
+    ui::shutdown();
     gfx::shutdownImaging();
     ::CoUninitialize();
     return result;
