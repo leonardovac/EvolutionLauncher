@@ -12,6 +12,8 @@
 #include "gfx/renderer.h"
 #include "ui/ui.h"
 
+#include <windows.h>
+
 #include <objbase.h>
 
 #include <algorithm>
@@ -79,6 +81,9 @@ int run(const Options& options)
         elapsed += dt;
 
         const JobSnapshot snap = job.snapshot();
+        constexpr std::array liveJobPhases{JobPhase::Checking, JobPhase::Updating};
+        if (std::ranges::contains(liveJobPhases, snap.phase))
+            ui::requestFrame();
 
         if (window.takeResized())
             device.resize(window.width(), window.height());
@@ -135,7 +140,10 @@ int run(const Options& options)
         }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
         if (shellCloseClicked())
+        {
+            job.cancel();
             break;
+        }
         ui::endFrame();
         window.clearMouseEdge();
         renderer.render(device.ctx(), ui::dl(), device.width(), device.height());
@@ -148,7 +156,11 @@ int run(const Options& options)
         }
 
         device.present(true);
+        if (!ui::g().animated && !window.mouseDown())
+            ::Sleep(16);
     }
+
+    job.cancel();
 
     hero = gfx::Image{};
     ui::shutdown();
