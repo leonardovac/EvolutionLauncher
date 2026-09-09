@@ -37,6 +37,7 @@ public:
 
     void start();
     void cancel();
+    void join();
     [[nodiscard]] bool running() const noexcept;
     [[nodiscard]] JobSnapshot snapshot() const;
 

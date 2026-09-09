@@ -58,8 +58,7 @@ private:
 UpdateJob::~UpdateJob()
 {
     cancel();
-    if (thread_.joinable())
-        thread_.join();
+    join();
 }
 
 void UpdateJob::start()
@@ -75,6 +74,12 @@ void UpdateJob::cancel()
 {
     if (running_.load(std::memory_order_acquire))
         core::requestCancel();
+}
+
+void UpdateJob::join()
+{
+    if (thread_.joinable())
+        thread_.join();
 }
 
 bool UpdateJob::running() const noexcept

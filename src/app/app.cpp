@@ -161,6 +161,7 @@ int run(const Options& options)
     }
 
     job.cancel();
+    job.join();
 
     hero = gfx::Image{};
     ui::shutdown();
