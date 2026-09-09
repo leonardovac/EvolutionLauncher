@@ -5,7 +5,7 @@
 #include "app/shell.h"
 #include "app/updatejob.h"
 #include "app/window.h"
-#include "core/log.h"
+#include "core/str.h"
 #include "core/types.h"
 #include "gfx/device.h"
 #include "gfx/image.h"
@@ -14,7 +14,11 @@
 
 #include <objbase.h>
 
+#include <algorithm>
+#include <array>
 #include <chrono>
+#include <format>
+#include <ranges>
 
 namespace app
 {
@@ -75,14 +79,6 @@ int run(const Options& options)
         elapsed += dt;
 
         const JobSnapshot snap = job.snapshot();
-        static float logTimer = 0.f;
-        logTimer += dt;
-        if (logTimer >= 1.f)
-        {
-            logTimer = 0.f;
-            core::info("job phase {} entry {}/{} bytes {}/{}", static_cast<int>(snap.phase),
-                       snap.entryIndex, snap.entryCount, snap.downloaded, snap.downloadTotal);
-        }
 
         if (window.takeResized())
             device.resize(window.width(), window.height());
@@ -102,11 +98,41 @@ int run(const Options& options)
         input.released = window.mouseReleased();
         ui::newFrame(input, dt, static_cast<float>(device.width()),
                      static_cast<float>(device.height()));
+        constexpr std::array terminalPhases{JobPhase::Ready, JobPhase::Failed,
+                                            JobPhase::Cancelled};
         ShellState shell;
-        shell.statusLine = "UPDATING GAME  51%   250 / 1150 MB";
-        shell.progress = 0.51f;
-        shell.showProgress = true;
-        shell.startEnabled = false;
+        shell.phase = snap.phase;
+        shell.startEnabled = std::ranges::contains(terminalPhases, snap.phase);
+        switch (snap.phase)
+        {
+        case JobPhase::Idle:
+        case JobPhase::Checking:
+            shell.statusLine = "CHECKING FOR UPDATES";
+            break;
+        case JobPhase::Updating:
+        {
+            const float fraction =
+                snap.downloadTotal != 0
+                    ? core::clamp01(static_cast<float>(static_cast<double>(snap.downloaded)
+                                                        / static_cast<double>(snap.downloadTotal)))
+                    : 0.f;
+            shell.progress = fraction;
+            shell.statusLine = std::format("UPDATING GAME  {}%   {} / {}",
+                                           static_cast<int>(fraction * 100.f),
+                                           core::formatBytes(snap.downloaded),
+                                           core::formatBytes(snap.downloadTotal));
+            break;
+        }
+        case JobPhase::Ready:
+            shell.buildLabel = "READY";
+            break;
+        case JobPhase::Failed:
+            shell.statusLine = snap.message.empty() ? "UPDATE FAILED" : snap.message;
+            break;
+        case JobPhase::Cancelled:
+            shell.statusLine = "CANCELLED";
+            break;
+        }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
         if (shellCloseClicked())
             break;
