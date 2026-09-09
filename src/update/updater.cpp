@@ -133,6 +133,12 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	if (progress != nullptr)
 		progress->onPlan(plan.jobs.size(), plan.downloadBytes);
 
+	if (core::cancelled())
+	{
+		summary.cancelled = true;
+		return summary;
+	}
+
 	if (options.dryRun)
 	{
 		for (const Job& job : plan.jobs)
