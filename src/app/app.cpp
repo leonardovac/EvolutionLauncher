@@ -81,9 +81,6 @@ int run(const Options& options)
         elapsed += dt;
 
         const JobSnapshot snap = job.snapshot();
-        constexpr std::array liveJobPhases{JobPhase::Checking, JobPhase::Updating};
-        if (std::ranges::contains(liveJobPhases, snap.phase))
-            ui::requestFrame();
 
         if (window.takeResized())
             device.resize(window.width(), window.height());
@@ -103,6 +100,9 @@ int run(const Options& options)
         input.released = window.mouseReleased();
         ui::newFrame(input, dt, static_cast<float>(device.width()),
                      static_cast<float>(device.height()));
+        constexpr std::array liveJobPhases{JobPhase::Checking, JobPhase::Updating};
+        if (std::ranges::contains(liveJobPhases, snap.phase))
+            ui::requestFrame();
         constexpr std::array terminalPhases{JobPhase::Ready, JobPhase::Failed,
                                             JobPhase::Cancelled};
         ShellState shell;
