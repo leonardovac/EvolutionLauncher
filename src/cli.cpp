@@ -203,6 +203,11 @@ int run(int argc, wchar_t** argv)
 	{
 		core::info("{} queued, {} up to date, {} filtered", summary->queued, summary->upToDate,
 		           summary->filtered);
+		if (summary->cancelled)
+		{
+			core::warn("cancelled while checking");
+			return 2;
+		}
 		return summary->queued == 0 ? 0 : 3;
 	}
 
