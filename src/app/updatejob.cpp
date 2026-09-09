@@ -13,10 +13,10 @@ namespace
 class Bridge final : public wf::Progress
 {
 public:
-    Bridge(std::atomic<std::size_t>& index, std::atomic<std::size_t>& count,
+    Bridge(std::atomic<JobPhase>& phase, std::atomic<std::size_t>& index, std::atomic<std::size_t>& count,
            std::atomic<std::uint64_t>& downloaded, std::atomic<std::uint64_t>& total,
            std::mutex& textMutex, std::string& currentFile)
-        : index_(index), count_(count), downloaded_(downloaded), total_(total),
+        : phase_(phase), index_(index), count_(count), downloaded_(downloaded), total_(total),
           textMutex_(textMutex), currentFile_(currentFile)
     {
     }
@@ -25,6 +25,8 @@ public:
     {
         count_.store(queued, std::memory_order_relaxed);
         total_.store(downloadBytes, std::memory_order_relaxed);
+        if (queued != 0)
+            phase_.store(JobPhase::Updating, std::memory_order_relaxed);
     }
 
     void onEntryStart(std::size_t index, std::size_t count, std::wstring_view installPath,
@@ -42,6 +44,7 @@ public:
     }
 
 private:
+    std::atomic<JobPhase>& phase_;
     std::atomic<std::size_t>& index_;
     std::atomic<std::size_t>& count_;
     std::atomic<std::uint64_t>& downloaded_;
@@ -61,7 +64,7 @@ UpdateJob::~UpdateJob()
 
 void UpdateJob::start()
 {
-    if (running_.load(std::memory_order_acquire))
+    if (thread_.joinable() || running_.load(std::memory_order_acquire))
         return;
     running_.store(true, std::memory_order_release);
     phase_.store(JobPhase::Checking, std::memory_order_relaxed);
@@ -95,7 +98,7 @@ JobSnapshot UpdateJob::snapshot() const
 
 void UpdateJob::work()
 {
-    Bridge bridge(entryIndex_, entryCount_, downloaded_, downloadTotal_, textMutex_, currentFile_);
+    Bridge bridge(phase_, entryIndex_, entryCount_, downloaded_, downloadTotal_, textMutex_, currentFile_);
 
     wf::Options options;
     options.config.root = wf::defaultRoot(options.config.branch);
