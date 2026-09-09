@@ -6,7 +6,6 @@
 namespace wf
 {
 
-// Observer for a run's user-visible events; the CLI logs them, the GUI draws them.
 class Progress
 {
 public:
