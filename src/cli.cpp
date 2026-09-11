@@ -131,9 +131,13 @@ int run(int argc, wchar_t** argv)
 			core::setVerbose(true);
 		}
 		else if (flag == L"--settings")
+		{
 			wantSettings = true;
+		}
 		else if (flag == L"--settings-write")
+		{
 			wantSettingsWrite = true;
+		}
 		else if (flag == L"--root")
 		{
 			const auto given = value(i);
@@ -184,12 +188,26 @@ int run(int argc, wchar_t** argv)
 		}
 	}
 
+	const app::Settings settings = app::Settings::load();
+
+	if (wantSettingsWrite)
+	{
+		if (!settings.save())
+		{
+			core::error("settings save failed");
+			return 1;
+		}
+		core::info("settings written");
+		return 0;
+	}
+
 	if (!languageGiven)
-		options.config.language = wf::defaultLanguage();
-	options.config.steam = steam.value_or(wf::defaultSteam());
-	options.config.eosSdk = eos.value_or(wf::defaultEos());
-	options.config.dx12 = dx12.value_or(wf::defaultDx12());
-	options.config.root = root.empty() ? wf::defaultRoot(options.config.branch) : root;
+		options.config.language = settings.language;
+	options.config.steam = steam.value_or(settings.steam());
+	options.config.eosSdk = eos.value_or(settings.eos());
+	options.config.dx12 = dx12.value_or(settings.dx12());
+	options.config.forceHttps = !settings.allowNetworkCaches;
+	options.config.root = root.empty() ? settings.installRoot(options.config.branch) : root;
 	if (options.config.root.empty())
 	{
 		core::error("could not resolve an install root, pass --root");
@@ -198,7 +216,6 @@ int run(int argc, wchar_t** argv)
 
 	if (wantSettings)
 	{
-		const app::Settings settings = app::Settings::load();
 		core::info("graphicsApi {}", static_cast<std::uint32_t>(settings.graphicsApi));
 		core::info("gpuPreference {}", static_cast<std::uint32_t>(settings.gpuPreference));
 		core::info("windowMode {}", static_cast<std::uint32_t>(settings.windowMode));
@@ -211,18 +228,6 @@ int run(int argc, wchar_t** argv)
 		core::info("allowNetworkCaches {}", settings.allowNetworkCaches);
 		core::info("root {}", settings.installRoot(options.config.branch).string());
 		core::info("steam {} eos {} dx12 {}", settings.steam(), settings.eos(), settings.dx12());
-		return 0;
-	}
-
-	if (wantSettingsWrite)
-	{
-		app::Settings settings = app::Settings::load();
-		if (!settings.save())
-		{
-			core::error("settings save failed");
-			return 1;
-		}
-		core::info("settings written");
 		return 0;
 	}
 

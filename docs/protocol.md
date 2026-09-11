@@ -85,6 +85,18 @@ The body handler is chosen by whether the request path contains `.lzma`: LZMA-al
 decode (`WF_ReadBodyLzma`, 0x29C54, 16 KiB in / 32 KiB out) or a straight copy
 (`WF_ReadBodyRaw`, 0x29958, 32 KiB). Both run MD5 over the bytes that reach disk.
 
+## Content scheme
+
+`ForceHTTPS` in the launcher's registry key selects the scheme used for the content host.
+The stock settings dialog's **Allow Network Caches** checkbox stores its negation —
+checking it writes `ForceHTTPS = 0`. We honour the setting for `content.warframe.com` and
+its `-test`/`-dev` siblings, so a checked box lets a transparent proxy or CDN cache serve
+those objects over `http://`. The origin index fetch stays on `https://` unconditionally
+regardless of the setting: it is one small compressed request where caching buys nothing,
+and downgrading it would trade away transport security for no benefit. `flipScheme` in
+`updater.cpp` still retries the opposite scheme on a connect failure either way, so a wrong
+guess degrades to one retry rather than a hard failure.
+
 ## Install paths
 
 The root is **not** always under `%LOCALAPPDATA%`. A Steam install keeps content in the

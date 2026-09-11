@@ -5,11 +5,8 @@
 #include "core/str.h"
 #include "update/md5.h"
 
-#include <windows.h>
-
 #include <algorithm>
 #include <array>
-#include <optional>
 #include <ranges>
 #include <unordered_map>
 #include <unordered_set>
@@ -20,18 +17,7 @@ namespace wf
 namespace
 {
 
-constexpr std::wstring_view launcherKey = L"Software\\Digital Extremes\\Warframe\\Launcher";
 constexpr std::uint64_t progressStride = 4ull << 30;
-
-std::optional<std::wstring> launcherSetting(const wchar_t* name)
-{
-	std::array<wchar_t, 1024> buffer{};
-	DWORD size = static_cast<DWORD>(buffer.size() * sizeof(wchar_t));
-	if (::RegGetValueW(HKEY_CURRENT_USER, launcherKey.data(), name, RRF_RT_REG_SZ, nullptr,
-	                   buffer.data(), &size) != ERROR_SUCCESS)
-		return std::nullopt;
-	return std::wstring(buffer.data());
-}
 
 // only these three extensions carry a _<lang> suffix in the index
 constexpr std::array<std::wstring_view, 3> localizedExtensions{L".cache", L".toc", L".rtf"};
@@ -83,15 +69,17 @@ std::wstring_view originHost(Branch branch)
 	return L"https://origin.warframe.com";
 }
 
-std::wstring_view contentHost(Branch branch)
+std::wstring_view contentHost(Branch branch, bool forceHttps)
 {
 	switch (branch)
 	{
-	case Branch::Test: return L"http://content-test.warframe.com";
-	case Branch::Dev: return L"http://content-dev.warframe.com";
+	case Branch::Test:
+		return forceHttps ? L"https://content-test.warframe.com" : L"http://content-test.warframe.com";
+	case Branch::Dev:
+		return forceHttps ? L"https://content-dev.warframe.com" : L"http://content-dev.warframe.com";
 	case Branch::Public: break;
 	}
-	return L"http://content.warframe.com";
+	return forceHttps ? L"https://content.warframe.com" : L"http://content.warframe.com";
 }
 
 std::wstring_view branchName(Branch branch)
@@ -103,59 +91,6 @@ std::wstring_view branchName(Branch branch)
 	case Branch::Public: break;
 	}
 	return L"Public";
-}
-
-std::filesystem::path defaultRoot(Branch branch)
-{
-	// a Steam install keeps content beside Tools\Launcher.exe, not under LOCALAPPDATA
-	if (branch == Branch::Public)
-	{
-		if (const auto launcher = launcherSetting(L"LauncherExe"))
-		{
-			const std::filesystem::path root =
-				std::filesystem::path(*launcher).parent_path().parent_path();
-			std::error_code ec;
-			if (!root.empty() && std::filesystem::exists(root, ec))
-				return root;
-		}
-	}
-
-	std::array<wchar_t, MAX_PATH> local{};
-	const DWORD written =
-		::GetEnvironmentVariableW(L"LOCALAPPDATA", local.data(), static_cast<DWORD>(local.size()));
-	if (written == 0 || written >= local.size())
-		return {};
-	return std::filesystem::path(local.data()) / L"Warframe" / L"Downloaded" / branchName(branch);
-}
-
-std::wstring defaultLanguage()
-{
-	const auto language = launcherSetting(L"Language");
-	return language && language->size() == 2 ? *language : std::wstring(L"en");
-}
-
-// the launcher reads its platform from -registry:<tag>; the install path is our only equivalent
-bool defaultSteam()
-{
-	const auto launcher = launcherSetting(L"LauncherExe");
-	return launcher && core::containsNoCase(*launcher, L"steamapps");
-}
-
-bool defaultEos()
-{
-	const auto launcher = launcherSetting(L"LauncherExe");
-	return launcher && core::containsNoCase(*launcher, L"Epic");
-}
-
-// GraphicsAPI 1 is DX12, and only then does the launcher keep the dx12 caches
-bool defaultDx12()
-{
-	DWORD value = 0;
-	DWORD size = sizeof(value);
-	if (::RegGetValueW(HKEY_CURRENT_USER, launcherKey.data(), L"GraphicsAPI", RRF_RT_REG_DWORD,
-	                   nullptr, &value, &size) != ERROR_SUCCESS)
-		return false;
-	return value == 1;
 }
 
 bool appliesToClient(const Entry& entry, const Config& config)

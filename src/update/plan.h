@@ -29,16 +29,12 @@ struct Config
 	bool eosSdk = false;
 	bool dx12 = false;
 	bool hashCaches = false;
+	bool forceHttps = false;
 };
 
 std::wstring_view originHost(Branch branch);
-std::wstring_view contentHost(Branch branch);
+std::wstring_view contentHost(Branch branch, bool forceHttps);
 std::wstring_view branchName(Branch branch);
-std::filesystem::path defaultRoot(Branch branch);
-std::wstring defaultLanguage();
-bool defaultSteam();
-bool defaultEos();
-bool defaultDx12();
 
 bool appliesToClient(const Entry& entry, const Config& config);
 

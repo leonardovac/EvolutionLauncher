@@ -67,8 +67,8 @@ Settings Settings::load()
         out.windowMode = clampEnum(*value, WindowMode::Windowed, 2u);
     if (const auto value = readString(L"Language"); value && value->size() == 2)
         out.language = *value;
-    if (const auto value = readString(L"LanguageVO"))
-        out.audioLanguage = value->size() == 2 ? *value : std::wstring();
+    if (const auto value = readString(L"LanguageVO"); value && value->size() == 2)
+        out.audioLanguage = *value;
     if (const auto value = readDword(L"EnableShaderCache"))
         out.shaderCache = *value != 0;
     if (const auto value = readDword(L"EnableBulkDownload"))
@@ -77,6 +77,7 @@ Settings Settings::load()
         out.aggressiveDownload = *value != 0;
     if (const auto value = readDword(L"LauncherGPU"))
         out.launcherGpu = *value != 0;
+    // allowNetworkCaches is the registry's ForceHTTPS, inverted
     if (const auto value = readDword(L"ForceHTTPS"))
         out.allowNetworkCaches = *value == 0;
     if (const auto value = readString(L"LauncherExe"))

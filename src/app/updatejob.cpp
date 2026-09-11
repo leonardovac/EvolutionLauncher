@@ -1,5 +1,6 @@
 #include "app/updatejob.h"
 
+#include "app/settings.h"
 #include "core/cancel.h"
 #include "core/str.h"
 #include "update/progress.h"
@@ -106,12 +107,14 @@ void UpdateJob::work()
 {
     Bridge bridge(phase_, entryIndex_, entryCount_, downloaded_, downloadTotal_, currentFile_);
 
+    const Settings settings = Settings::load();
     wf::Options options;
-    options.config.root = wf::defaultRoot(options.config.branch);
-    options.config.language = wf::defaultLanguage();
-    options.config.steam = wf::defaultSteam();
-    options.config.eosSdk = wf::defaultEos();
-    options.config.dx12 = wf::defaultDx12();
+    options.config.root = settings.installRoot(options.config.branch);
+    options.config.language = settings.language;
+    options.config.steam = settings.steam();
+    options.config.eosSdk = settings.eos();
+    options.config.dx12 = settings.dx12();
+    options.config.forceHttps = !settings.allowNetworkCaches;
     options.progress = &bridge;
 
     const auto summary = wf::run(options);

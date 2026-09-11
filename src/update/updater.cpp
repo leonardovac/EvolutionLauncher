@@ -149,7 +149,8 @@ std::expected<Summary, UpdateError> run(const Options& options)
 		return summary;
 	}
 
-	const auto content = openConnection(*session, contentHost(options.config.branch));
+	const auto content = openConnection(*session, contentHost(options.config.branch,
+	                                                         options.config.forceHttps));
 	if (!content)
 		return std::unexpected(content.error());
 
