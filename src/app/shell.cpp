@@ -46,8 +46,9 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     const float chipH = ui::px(26.f);
     const Rect chip(frame.x + frame.w - ui::px(150.f), frame.y + ui::px(18.f), chipW, chipH);
     ui::dl().border(chip, gold.alpha(0.5f), ui::px(1.f), 0.f);
-    ui::text(ui::fonts().caption, chip, "LANGUAGE  EN", gold, ui::AlignH::Center,
-             ui::AlignV::Middle, ui::px(1.f));
+    if (!state.languageLabel.empty())
+        ui::text(ui::fonts().caption, chip, state.languageLabel, gold, ui::AlignH::Center,
+                 ui::AlignV::Middle, ui::px(1.f));
 
     const Rect gearBox(frame.x + frame.w - ui::px(64.f), frame.y + ui::px(16.f), ui::px(22.f),
                        ui::px(22.f));

@@ -126,6 +126,14 @@ int run(const Options& options)
         shell.panelVisible = panelSlide > 0.f;
         std::string statusBuffer;
         std::string fileBuffer;
+        std::string languageBuffer = core::narrow(settings.language);
+        if (languageBuffer.size() == 2)
+        {
+            languageBuffer[0] = static_cast<char>(languageBuffer[0] - 'a' + 'A');
+            languageBuffer[1] = static_cast<char>(languageBuffer[1] - 'a' + 'A');
+            languageBuffer = std::format("LANGUAGE  {}", languageBuffer);
+            shell.languageLabel = languageBuffer;
+        }
         switch (snap.phase)
         {
         case JobPhase::Idle:
