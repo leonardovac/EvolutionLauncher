@@ -203,7 +203,7 @@ int run(const Options& options)
                 {
                     const bool needsRecheck = working.language != settings.language
                         || working.graphicsApi != settings.graphicsApi;
-                    if (working.save())
+                    if (working.save(&settings))
                     {
                         settings = working;
                         saveFailed = false;

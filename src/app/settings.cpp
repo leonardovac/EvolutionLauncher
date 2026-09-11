@@ -85,7 +85,7 @@ Settings Settings::load()
     return out;
 }
 
-bool Settings::save() const
+bool Settings::save(const Settings* baseline) const
 {
     HKEY key = nullptr;
     if (::RegCreateKeyExW(HKEY_CURRENT_USER, launcherKey, 0, nullptr, REG_OPTION_NON_VOLATILE,
@@ -93,16 +93,26 @@ bool Settings::save() const
         return false;
 
     bool ok = true;
-    ok = writeDword(key, L"GraphicsAPI", static_cast<DWORD>(graphicsApi)) && ok;
-    ok = writeDword(key, L"GPUPreference", static_cast<DWORD>(gpuPreference)) && ok;
-    ok = writeDword(key, L"WindowMode", static_cast<DWORD>(windowMode)) && ok;
-    ok = writeString(key, L"Language", language) && ok;
-    ok = writeString(key, L"LanguageVO", audioLanguage) && ok;
-    ok = writeDword(key, L"EnableShaderCache", shaderCache ? 1u : 0u) && ok;
-    ok = writeDword(key, L"EnableBulkDownload", bulkDownload ? 1u : 0u) && ok;
-    ok = writeDword(key, L"EnableAggressiveDownload", aggressiveDownload ? 1u : 0u) && ok;
-    ok = writeDword(key, L"LauncherGPU", launcherGpu ? 1u : 0u) && ok;
-    ok = writeDword(key, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u) && ok;
+    if (!baseline || graphicsApi != baseline->graphicsApi)
+        ok = writeDword(key, L"GraphicsAPI", static_cast<DWORD>(graphicsApi)) && ok;
+    if (!baseline || gpuPreference != baseline->gpuPreference)
+        ok = writeDword(key, L"GPUPreference", static_cast<DWORD>(gpuPreference)) && ok;
+    if (!baseline || windowMode != baseline->windowMode)
+        ok = writeDword(key, L"WindowMode", static_cast<DWORD>(windowMode)) && ok;
+    if (!baseline || language != baseline->language)
+        ok = writeString(key, L"Language", language) && ok;
+    if (!baseline || audioLanguage != baseline->audioLanguage)
+        ok = writeString(key, L"LanguageVO", audioLanguage) && ok;
+    if (!baseline || shaderCache != baseline->shaderCache)
+        ok = writeDword(key, L"EnableShaderCache", shaderCache ? 1u : 0u) && ok;
+    if (!baseline || bulkDownload != baseline->bulkDownload)
+        ok = writeDword(key, L"EnableBulkDownload", bulkDownload ? 1u : 0u) && ok;
+    if (!baseline || aggressiveDownload != baseline->aggressiveDownload)
+        ok = writeDword(key, L"EnableAggressiveDownload", aggressiveDownload ? 1u : 0u) && ok;
+    if (!baseline || launcherGpu != baseline->launcherGpu)
+        ok = writeDword(key, L"LauncherGPU", launcherGpu ? 1u : 0u) && ok;
+    if (!baseline || allowNetworkCaches != baseline->allowNetworkCaches)
+        ok = writeDword(key, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u) && ok;
 
     ::RegCloseKey(key);
     return ok;

@@ -44,7 +44,7 @@ struct Settings
     std::filesystem::path launcherExe;
 
     static Settings load();
-    bool save() const;
+    bool save(const Settings* baseline = nullptr) const;
 
     [[nodiscard]] std::filesystem::path installRoot(wf::Branch branch) const;
     [[nodiscard]] bool steam() const;
