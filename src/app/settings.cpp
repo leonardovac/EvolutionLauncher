@@ -1,0 +1,139 @@
+#include "app/settings.h"
+
+#include "core/str.h"
+
+#include <windows.h>
+
+#include <array>
+#include <optional>
+
+namespace app
+{
+namespace
+{
+
+constexpr wchar_t launcherKey[] = L"Software\\Digital Extremes\\Warframe\\Launcher";
+
+std::optional<std::wstring> readString(const wchar_t* name)
+{
+    std::array<wchar_t, 1024> buffer{};
+    DWORD size = static_cast<DWORD>(buffer.size() * sizeof(wchar_t));
+    if (::RegGetValueW(HKEY_CURRENT_USER, launcherKey, name, RRF_RT_REG_SZ, nullptr, buffer.data(),
+                       &size) != ERROR_SUCCESS)
+        return std::nullopt;
+    return std::wstring(buffer.data());
+}
+
+std::optional<DWORD> readDword(const wchar_t* name)
+{
+    DWORD value = 0;
+    DWORD size = sizeof(value);
+    if (::RegGetValueW(HKEY_CURRENT_USER, launcherKey, name, RRF_RT_REG_DWORD, nullptr, &value,
+                       &size) != ERROR_SUCCESS)
+        return std::nullopt;
+    return value;
+}
+
+bool writeString(HKEY key, const wchar_t* name, std::wstring_view value)
+{
+    const DWORD bytes = static_cast<DWORD>((value.size() + 1) * sizeof(wchar_t));
+    const std::wstring owned(value);
+    return ::RegSetValueExW(key, name, 0, REG_SZ,
+                            reinterpret_cast<const BYTE*>(owned.c_str()), bytes) == ERROR_SUCCESS;
+}
+
+bool writeDword(HKEY key, const wchar_t* name, DWORD value)
+{
+    return ::RegSetValueExW(key, name, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&value),
+                            sizeof(value)) == ERROR_SUCCESS;
+}
+
+template <typename E>
+E clampEnum(DWORD raw, E fallback, DWORD highest)
+{
+    return raw <= highest ? static_cast<E>(raw) : fallback;
+}
+
+}
+
+Settings Settings::load()
+{
+    Settings out;
+    if (const auto value = readDword(L"GraphicsAPI"))
+        out.graphicsApi = clampEnum(*value, GraphicsApi::Dx11, 1u);
+    if (const auto value = readDword(L"GPUPreference"))
+        out.gpuPreference = clampEnum(*value, GpuPreference::LetWindowsDecide, 2u);
+    if (const auto value = readDword(L"WindowMode"))
+        out.windowMode = clampEnum(*value, WindowMode::Windowed, 2u);
+    if (const auto value = readString(L"Language"); value && value->size() == 2)
+        out.language = *value;
+    if (const auto value = readString(L"LanguageVO"))
+        out.audioLanguage = value->size() == 2 ? *value : std::wstring();
+    if (const auto value = readDword(L"EnableShaderCache"))
+        out.shaderCache = *value != 0;
+    if (const auto value = readDword(L"EnableBulkDownload"))
+        out.bulkDownload = *value != 0;
+    if (const auto value = readDword(L"EnableAggressiveDownload"))
+        out.aggressiveDownload = *value != 0;
+    if (const auto value = readDword(L"LauncherGPU"))
+        out.launcherGpu = *value != 0;
+    if (const auto value = readDword(L"ForceHTTPS"))
+        out.allowNetworkCaches = *value == 0;
+    if (const auto value = readString(L"LauncherExe"))
+        out.launcherExe = *value;
+    return out;
+}
+
+bool Settings::save() const
+{
+    HKEY key = nullptr;
+    if (::RegCreateKeyExW(HKEY_CURRENT_USER, launcherKey, 0, nullptr, REG_OPTION_NON_VOLATILE,
+                          KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+        return false;
+
+    bool ok = true;
+    ok = writeDword(key, L"GraphicsAPI", static_cast<DWORD>(graphicsApi)) && ok;
+    ok = writeDword(key, L"GPUPreference", static_cast<DWORD>(gpuPreference)) && ok;
+    ok = writeDword(key, L"WindowMode", static_cast<DWORD>(windowMode)) && ok;
+    ok = writeString(key, L"Language", language) && ok;
+    ok = writeString(key, L"LanguageVO", audioLanguage) && ok;
+    ok = writeDword(key, L"EnableShaderCache", shaderCache ? 1u : 0u) && ok;
+    ok = writeDword(key, L"EnableBulkDownload", bulkDownload ? 1u : 0u) && ok;
+    ok = writeDword(key, L"EnableAggressiveDownload", aggressiveDownload ? 1u : 0u) && ok;
+    ok = writeDword(key, L"LauncherGPU", launcherGpu ? 1u : 0u) && ok;
+    ok = writeDword(key, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u) && ok;
+
+    ::RegCloseKey(key);
+    return ok;
+}
+
+std::filesystem::path Settings::installRoot(wf::Branch branch) const
+{
+    if (branch == wf::Branch::Public && !launcherExe.empty())
+    {
+        const std::filesystem::path root = launcherExe.parent_path().parent_path();
+        std::error_code ec;
+        if (!root.empty() && std::filesystem::exists(root, ec))
+            return root;
+    }
+
+    std::array<wchar_t, MAX_PATH> local{};
+    const DWORD written =
+        ::GetEnvironmentVariableW(L"LOCALAPPDATA", local.data(), static_cast<DWORD>(local.size()));
+    if (written == 0 || written >= local.size())
+        return {};
+    return std::filesystem::path(local.data()) / L"Warframe" / L"Downloaded"
+           / wf::branchName(branch);
+}
+
+bool Settings::steam() const
+{
+    return core::containsNoCase(launcherExe.wstring(), L"steamapps");
+}
+
+bool Settings::eos() const
+{
+    return core::containsNoCase(launcherExe.wstring(), L"Epic");
+}
+
+}

@@ -1,3 +1,4 @@
+#include "app/settings.h"
 #include "core/cancel.h"
 #include "core/log.h"
 #include "core/str.h"
@@ -38,6 +39,8 @@ void usage()
 	          "  --dx12            keep the DirectX 12 caches (default: GraphicsAPI == 1)\n"
 	          "  --no-dx12         force off\n"
 	          "  --verbose         per-file detail\n"
+	          "  --settings        print the launcher settings and exit\n"
+	          "  --settings-write  write back the loaded settings and exit\n"
 	          "  --help\n"
 	          "\n"
 	          "  -shot <path>      (as argv[1]) launch the GUI and save a screenshot to <path>\n"
@@ -73,6 +76,8 @@ int run(int argc, wchar_t** argv)
 	std::optional<bool> steam;
 	std::optional<bool> eos;
 	std::optional<bool> dx12;
+	bool wantSettings = false;
+	bool wantSettingsWrite = false;
 
 	const auto value = [&args](std::size_t& i) -> std::optional<std::wstring_view>
 	{
@@ -125,6 +130,10 @@ int run(int argc, wchar_t** argv)
 		{
 			core::setVerbose(true);
 		}
+		else if (flag == L"--settings")
+			wantSettings = true;
+		else if (flag == L"--settings-write")
+			wantSettingsWrite = true;
 		else if (flag == L"--root")
 		{
 			const auto given = value(i);
@@ -185,6 +194,36 @@ int run(int argc, wchar_t** argv)
 	{
 		core::error("could not resolve an install root, pass --root");
 		return 2;
+	}
+
+	if (wantSettings)
+	{
+		const app::Settings settings = app::Settings::load();
+		core::info("graphicsApi {}", static_cast<std::uint32_t>(settings.graphicsApi));
+		core::info("gpuPreference {}", static_cast<std::uint32_t>(settings.gpuPreference));
+		core::info("windowMode {}", static_cast<std::uint32_t>(settings.windowMode));
+		core::info("language {}", core::narrow(settings.language));
+		core::info("audioLanguage {}", core::narrow(settings.audioLanguage));
+		core::info("shaderCache {}", settings.shaderCache);
+		core::info("bulkDownload {}", settings.bulkDownload);
+		core::info("aggressiveDownload {}", settings.aggressiveDownload);
+		core::info("launcherGpu {}", settings.launcherGpu);
+		core::info("allowNetworkCaches {}", settings.allowNetworkCaches);
+		core::info("root {}", settings.installRoot(options.config.branch).string());
+		core::info("steam {} eos {} dx12 {}", settings.steam(), settings.eos(), settings.dx12());
+		return 0;
+	}
+
+	if (wantSettingsWrite)
+	{
+		app::Settings settings = app::Settings::load();
+		if (!settings.save())
+		{
+			core::error("settings save failed");
+			return 1;
+		}
+		core::info("settings written");
+		return 0;
 	}
 
 	core::installCancelHandler();
