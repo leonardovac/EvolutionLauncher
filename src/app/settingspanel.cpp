@@ -139,6 +139,9 @@ PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings&
     int windowModeIndex = static_cast<int>(working.windowMode);
     int languageIndex = languageIndexFromCode(working.language);
     int audioLanguageIndex = audioLanguageIndexFromCode(working.audioLanguage);
+    const int originalGraphicsApiIndex = graphicsApiIndex;
+    const int originalGpuPreferenceIndex = gpuPreferenceIndex;
+    const int originalWindowModeIndex = windowModeIndex;
     const int originalLanguageIndex = languageIndex;
     const int originalAudioLanguageIndex = audioLanguageIndex;
 
@@ -199,9 +202,12 @@ PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings&
 
     dropdownOverlay();
 
-    working.graphicsApi = static_cast<GraphicsApi>(graphicsApiIndex);
-    working.gpuPreference = static_cast<GpuPreference>(gpuPreferenceIndex);
-    working.windowMode = static_cast<WindowMode>(windowModeIndex);
+    if (graphicsApiIndex != originalGraphicsApiIndex)
+        working.graphicsApi = static_cast<GraphicsApi>(graphicsApiIndex);
+    if (gpuPreferenceIndex != originalGpuPreferenceIndex)
+        working.gpuPreference = static_cast<GpuPreference>(gpuPreferenceIndex);
+    if (windowModeIndex != originalWindowModeIndex)
+        working.windowMode = static_cast<WindowMode>(windowModeIndex);
     if (languageIndex != originalLanguageIndex)
         working.language = std::wstring(languageCodeFromIndex(languageIndex));
     if (audioLanguageIndex != originalAudioLanguageIndex)
