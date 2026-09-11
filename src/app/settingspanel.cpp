@@ -139,6 +139,8 @@ PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings&
     int windowModeIndex = static_cast<int>(working.windowMode);
     int languageIndex = languageIndexFromCode(working.language);
     int audioLanguageIndex = audioLanguageIndexFromCode(working.audioLanguage);
+    const int originalLanguageIndex = languageIndex;
+    const int originalAudioLanguageIndex = audioLanguageIndex;
 
     float y = title.b() + gap;
 
@@ -200,8 +202,10 @@ PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings&
     working.graphicsApi = static_cast<GraphicsApi>(graphicsApiIndex);
     working.gpuPreference = static_cast<GpuPreference>(gpuPreferenceIndex);
     working.windowMode = static_cast<WindowMode>(windowModeIndex);
-    working.language = std::wstring(languageCodeFromIndex(languageIndex));
-    working.audioLanguage = std::wstring(audioLanguageCodeFromIndex(audioLanguageIndex));
+    if (languageIndex != originalLanguageIndex)
+        working.language = std::wstring(languageCodeFromIndex(languageIndex));
+    if (audioLanguageIndex != originalAudioLanguageIndex)
+        working.audioLanguage = std::wstring(audioLanguageCodeFromIndex(audioLanguageIndex));
 
     const float btnW = ui::px(96.f);
     const float btnH = ui::px(32.f);

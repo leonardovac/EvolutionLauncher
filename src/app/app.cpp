@@ -183,11 +183,20 @@ int run(const Options& options)
             {
                 if (panelResult == PanelResult::Accepted)
                 {
-                    if (!working.save())
+                    if (working.save())
+                    {
+                        settings = working;
+                        panelOpen = false;
+                    }
+                    else
+                    {
                         core::error("could not write the launcher settings");
-                    settings = working;
+                    }
                 }
-                panelOpen = false;
+                else
+                {
+                    panelOpen = false;
+                }
                 ui::requestFrame();
             }
         }
