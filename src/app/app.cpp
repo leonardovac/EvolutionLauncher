@@ -109,11 +109,9 @@ int run(const Options& options)
         constexpr std::array liveJobPhases{JobPhase::Checking, JobPhase::Updating};
         if (std::ranges::contains(liveJobPhases, snap.phase))
             ui::requestFrame();
-        constexpr std::array terminalPhases{JobPhase::Ready, JobPhase::Failed,
-                                            JobPhase::Cancelled};
         ShellState shell;
         shell.phase = snap.phase;
-        shell.startEnabled = std::ranges::contains(terminalPhases, snap.phase);
+        shell.startEnabled = snap.phase == JobPhase::Ready;
         std::string statusBuffer;
         std::string fileBuffer;
         switch (snap.phase)
