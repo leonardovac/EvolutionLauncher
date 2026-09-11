@@ -127,6 +127,9 @@ bool Window::create(int width, int height)
         return false;
 
     scale_ = static_cast<float>(::GetDpiForWindow(hwnd_)) / 96.f;
+    if (scale_ != 1.f)
+        ::SetWindowPos(hwnd_, nullptr, 0, 0, static_cast<int>(width * scale_),
+                       static_cast<int>(height * scale_), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
     ::ShowWindow(hwnd_, SW_SHOW);
     return true;
 }
