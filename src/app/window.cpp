@@ -2,6 +2,9 @@
 
 #include <windowsx.h>
 
+#include <algorithm>
+#include <array>
+
 namespace app
 {
 namespace
@@ -16,6 +19,17 @@ RECT closeGlyphRect(int width, float scale)
 {
     const float right = static_cast<float>(width) - 28.f * scale;
     const float x = right - 34.f * scale;
+    const float y = 28.f * scale + 16.f * scale;
+    const float size = 22.f * scale;
+    return RECT{static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x + size),
+                static_cast<LONG>(y + size)};
+}
+
+// mirrors shell.cpp's gearBox layout, immediately left of the close glyph
+RECT gearGlyphRect(int width, float scale)
+{
+    const float right = static_cast<float>(width) - 28.f * scale;
+    const float x = right - 64.f * scale;
     const float y = 28.f * scale + 16.f * scale;
     const float size = 22.f * scale;
     return RECT{static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x + size),
@@ -47,8 +61,10 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         const int strip = static_cast<int>(dragStripHeight * scale_);
         if (pt.y >= strip)
             return HTCLIENT;
-        const RECT close = closeGlyphRect(width_, scale_);
-        return ::PtInRect(&close, pt) ? HTCLIENT : HTCAPTION;
+        const std::array glyphs{closeGlyphRect(width_, scale_), gearGlyphRect(width_, scale_)};
+        const bool onGlyph =
+            std::ranges::any_of(glyphs, [&pt](const RECT& r) { return ::PtInRect(&r, pt) != 0; });
+        return onGlyph ? HTCLIENT : HTCAPTION;
     }
     case WM_SIZE:
         width_ = LOWORD(lp);

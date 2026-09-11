@@ -23,5 +23,6 @@ struct ShellState
 void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& state);
 bool shellCloseClicked();
 bool shellStartClicked();
+bool shellGearClicked();
 
 }

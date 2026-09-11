@@ -41,6 +41,16 @@ bool argAfter(int argc, wchar_t** argv, std::wstring_view flag, std::wstring& va
 	return false;
 }
 
+bool argPresent(int argc, wchar_t** argv, std::wstring_view flag)
+{
+	for (int i = 1; i < argc; ++i)
+	{
+		if (flag == argv[i])
+			return true;
+	}
+	return false;
+}
+
 }
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
@@ -60,6 +70,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 			options.shotPath = value;
 		if (argAfter(argc, argv, L"-t", value))
 			options.shotTime = static_cast<float>(::_wtof(value.c_str()));
+		options.wantPanel = argPresent(argc, argv, L"-panel");
 	}
 
 	int result = 0;

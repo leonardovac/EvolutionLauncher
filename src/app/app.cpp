@@ -2,6 +2,8 @@
 
 #include "app/assets.h"
 #include "app/resource.h"
+#include "app/settings.h"
+#include "app/settingspanel.h"
 #include "app/shell.h"
 #include "app/updatejob.h"
 #include "app/window.h"
@@ -73,6 +75,11 @@ int run(const Options& options)
     if (!options.wantShot)
         job.start();
 
+    Settings settings = Settings::load();
+    Settings working;
+    bool panelOpen = options.wantPanel;
+    float panelSlide = options.wantPanel ? 1.f : 0.f;
+
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
     int result = 0;
@@ -83,6 +90,8 @@ int run(const Options& options)
         const float dt = std::chrono::duration<float>(now - previous).count();
         previous = now;
         elapsed += dt;
+
+        panelSlide = core::clamp01(panelSlide + (panelOpen ? 1.f : -1.f) * dt * 6.f);
 
         const JobSnapshot snap = job.snapshot();
 
@@ -154,6 +163,19 @@ int run(const Options& options)
         {
             job.cancel();
             break;
+        }
+        if (shellGearClicked())
+        {
+            panelOpen = !panelOpen;
+            if (panelOpen)
+                working = settings;
+        }
+        if (panelSlide > 0.f)
+        {
+            const PanelResult panelResult = drawSettingsPanel(viewport, panelSlide, working);
+            constexpr std::array closingResults{PanelResult::Cancelled, PanelResult::Accepted};
+            if (std::ranges::contains(closingResults, panelResult))
+                panelOpen = false;
         }
         ui::endFrame();
         window.clearMouseEdge();
