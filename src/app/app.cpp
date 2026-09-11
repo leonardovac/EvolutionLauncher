@@ -7,6 +7,7 @@
 #include "app/shell.h"
 #include "app/updatejob.h"
 #include "app/window.h"
+#include "core/log.h"
 #include "core/str.h"
 #include "core/types.h"
 #include "gfx/device.h"
@@ -180,6 +181,12 @@ int run(const Options& options)
             constexpr std::array closingResults{PanelResult::Cancelled, PanelResult::Accepted};
             if (std::ranges::contains(closingResults, panelResult))
             {
+                if (panelResult == PanelResult::Accepted)
+                {
+                    if (!working.save())
+                        core::error("could not write the launcher settings");
+                    settings = working;
+                }
                 panelOpen = false;
                 ui::requestFrame();
             }
