@@ -34,7 +34,7 @@ PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings&
     const float width = ui::px(420.f);
     const core::Rect panel(viewport.r() - width * slide, viewport.y, width, viewport.h);
 
-    ui::dl().rect(panel, ui::theme().panelFill.alpha(0.97f), 0.f);
+    ui::dl().rect(panel, ui::theme().panelFill.alpha(1.f), 0.f);
     ui::dl().line(core::Vec2(panel.x, panel.y), core::Vec2(panel.x, panel.b()), ui::px(1.f), gold);
 
     const float inset = ui::px(24.f);

@@ -79,6 +79,8 @@ int run(const Options& options)
     Settings working;
     bool panelOpen = options.wantPanel;
     float panelSlide = options.wantPanel ? 1.f : 0.f;
+    if (options.wantPanel)
+        working = settings;
 
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
@@ -119,6 +121,7 @@ int run(const Options& options)
         ShellState shell;
         shell.phase = snap.phase;
         shell.startEnabled = snap.phase == JobPhase::Ready;
+        shell.panelOpen = panelOpen;
         std::string statusBuffer;
         std::string fileBuffer;
         switch (snap.phase)
@@ -169,13 +172,17 @@ int run(const Options& options)
             panelOpen = !panelOpen;
             if (panelOpen)
                 working = settings;
+            ui::requestFrame();
         }
         if (panelSlide > 0.f)
         {
             const PanelResult panelResult = drawSettingsPanel(viewport, panelSlide, working);
             constexpr std::array closingResults{PanelResult::Cancelled, PanelResult::Accepted};
             if (std::ranges::contains(closingResults, panelResult))
+            {
                 panelOpen = false;
+                ui::requestFrame();
+            }
         }
         ui::endFrame();
         window.clearMouseEdge();
