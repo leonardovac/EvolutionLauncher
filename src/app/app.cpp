@@ -79,6 +79,7 @@ int run(const Options& options)
     Settings settings = Settings::load();
     Settings working;
     bool panelOpen = options.wantPanel;
+    bool saveFailed = false;
     float panelSlide = options.wantPanel ? 1.f : 0.f;
     if (options.wantPanel)
         working = settings;
@@ -172,12 +173,16 @@ int run(const Options& options)
         {
             panelOpen = !panelOpen;
             if (panelOpen)
+            {
                 working = settings;
+                saveFailed = false;
+            }
             ui::requestFrame();
         }
         if (panelSlide > 0.f)
         {
-            const PanelResult panelResult = drawSettingsPanel(viewport, panelSlide, working);
+            const PanelResult panelResult =
+                drawSettingsPanel(viewport, panelSlide, working, saveFailed);
             constexpr std::array closingResults{PanelResult::Cancelled, PanelResult::Accepted};
             if (std::ranges::contains(closingResults, panelResult))
             {
@@ -188,6 +193,7 @@ int run(const Options& options)
                     if (working.save())
                     {
                         settings = working;
+                        saveFailed = false;
                         panelOpen = false;
                         if (needsRecheck && !options.wantShot)
                             job.restart();
@@ -195,6 +201,7 @@ int run(const Options& options)
                     else
                     {
                         core::error("could not write the launcher settings");
+                        saveFailed = true;
                     }
                 }
                 else

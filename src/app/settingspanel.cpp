@@ -111,7 +111,8 @@ std::wstring_view audioLanguageCodeFromIndex(int index)
 
 }
 
-PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings& working)
+PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings& working,
+                              bool saveFailed)
 {
     if (slide > 0.f && slide < 1.f)
         ui::requestFrame();
@@ -219,6 +220,13 @@ PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings&
     const core::Rect cancelBox(panel.x + panel.w - inset - btnW, panel.y + panel.h - inset - btnH,
                                btnW, btnH);
     const core::Rect okBox(cancelBox.x - btnGap - btnW, cancelBox.y, btnW, btnH);
+
+    if (saveFailed)
+    {
+        const core::Rect failRect(panel.x + inset, okBox.y, okBox.x - (panel.x + inset), okBox.h);
+        ui::text(ui::fonts().caption, failRect, "COULD NOT WRITE SETTINGS", ui::theme().fail,
+                 ui::AlignH::Right, ui::AlignV::Middle, ui::px(1.f));
+    }
 
     const bool okClicked = panelButton("settings.ok", okBox, "OK");
     const bool cancelClicked = panelButton("settings.cancel", cancelBox, "CANCEL");
