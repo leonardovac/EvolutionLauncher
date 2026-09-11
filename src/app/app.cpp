@@ -121,7 +121,7 @@ int run(const Options& options)
         ShellState shell;
         shell.phase = snap.phase;
         shell.startEnabled = snap.phase == JobPhase::Ready;
-        shell.panelOpen = panelOpen;
+        shell.panelVisible = panelSlide > 0.f;
         std::string statusBuffer;
         std::string fileBuffer;
         switch (snap.phase)

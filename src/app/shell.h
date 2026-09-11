@@ -18,7 +18,7 @@ struct ShellState
     std::string_view fileLine;
     float progress = 0.f;
     bool startEnabled = false;
-    bool panelOpen = false;
+    bool panelVisible = false;
 };
 
 void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& state);

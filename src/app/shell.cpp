@@ -53,7 +53,7 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
                        ui::px(22.f));
     const std::uint32_t gearId = ui::id("shell.gear");
     const bool gearHot = ui::hovered(gearId, gearBox);
-    gearClicked = ui::clicked(gearId, gearBox) && !state.panelOpen;
+    gearClicked = ui::clicked(gearId, gearBox) && !state.panelVisible;
     const Col gearCol = gold.alpha(gearHot ? 1.f : 0.7f);
     const Vec2 gearCenter = gearBox.center();
     const float gearRadius = gearBox.w * 0.3f;
@@ -70,7 +70,7 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
 
     const Rect closeBox(frame.x + frame.w - ui::px(34.f), frame.y + ui::px(16.f), ui::px(22.f),
                         ui::px(22.f));
-    closeClicked = ui::closeButton("shell.close", closeBox) && !state.panelOpen;
+    closeClicked = ui::closeButton("shell.close", closeBox) && !state.panelVisible;
 
     const Rect bottom(frame.x + ui::px(24.f), frame.y + frame.h - ui::px(78.f),
                       frame.w - ui::px(48.f), ui::px(54.f));
@@ -117,7 +117,7 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     const Rect start(bottom.x + bottom.w - ui::px(240.f), bottom.y, ui::px(240.f), ui::px(44.f));
     const Col startCol = state.startEnabled ? gold : gold.alpha(0.35f);
     const std::uint32_t startId = ui::id("shell.start");
-    startClicked = state.startEnabled && ui::clicked(startId, start) && !state.panelOpen;
+    startClicked = state.startEnabled && ui::clicked(startId, start) && !state.panelVisible;
     const bool hot = state.startEnabled && ui::hovered(startId, start);
     ui::dl().border(start, hot ? startCol : startCol.alpha(0.8f), ui::px(1.f), 0.f);
     ui::text(ui::fonts().title, start, "GAME START", startCol, ui::AlignH::Center,
