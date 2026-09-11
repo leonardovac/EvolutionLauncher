@@ -9,6 +9,7 @@ namespace
 
 constexpr wchar_t className[] = L"WFLauncherWindow";
 constexpr int dragStripHeight = 64;   // design-space; the hero top edge is draggable
+constexpr DWORD idleWaitMs = 100;     // bounded so a repaint with no message still lands promptly
 
 // mirrors shell.cpp's closeBox layout so the caption strip doesn't swallow the click
 RECT closeGlyphRect(int width, float scale)
@@ -134,6 +135,12 @@ bool Window::pump()
         ::DispatchMessageW(&msg);
     }
     return running_;
+}
+
+void Window::waitForInput() const noexcept
+{
+    // MWMO_INPUTAVAILABLE so a message that arrived since the last pump still wakes us
+    ::MsgWaitForMultipleObjectsEx(0, nullptr, idleWaitMs, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 }
 
 bool Window::takeResized() noexcept

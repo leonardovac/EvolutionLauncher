@@ -23,6 +23,7 @@ public:
     [[nodiscard]] bool mouseReleased() const noexcept { return mouseReleased_; }
 
     bool pump();
+    void waitForInput() const noexcept;
     bool takeResized() noexcept;
     bool takeScaleChanged() noexcept;
     void clearMouseEdge() noexcept;

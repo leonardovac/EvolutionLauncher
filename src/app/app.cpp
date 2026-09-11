@@ -12,8 +12,6 @@
 #include "gfx/renderer.h"
 #include "ui/ui.h"
 
-#include <windows.h>
-
 #include <objbase.h>
 
 #include <algorithm>
@@ -170,7 +168,7 @@ int run(const Options& options)
 
         device.present(true);
         if (!ui::g().animated && !window.mouseDown())
-            ::Sleep(16);
+            window.waitForInput();
     }
 
     job.cancel();
