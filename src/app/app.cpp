@@ -30,6 +30,12 @@ namespace
 constexpr int designWidth = 1180;
 constexpr int designHeight = 740;
 
+std::string_view baseName(std::string_view path)
+{
+    const std::size_t slash = path.find_last_of("\\/");
+    return slash == std::string_view::npos ? path : path.substr(slash + 1);
+}
+
 }
 
 int run(const Options& options)
@@ -108,6 +114,8 @@ int run(const Options& options)
         ShellState shell;
         shell.phase = snap.phase;
         shell.startEnabled = std::ranges::contains(terminalPhases, snap.phase);
+        std::string statusBuffer;
+        std::string fileBuffer;
         switch (snap.phase)
         {
         case JobPhase::Idle:
@@ -122,17 +130,24 @@ int run(const Options& options)
                                                         / static_cast<double>(snap.downloadTotal)))
                     : 0.f;
             shell.progress = fraction;
-            shell.statusLine = std::format("UPDATING GAME  {}%   {} / {}",
-                                           static_cast<int>(fraction * 100.f),
-                                           core::formatBytes(snap.downloaded),
-                                           core::formatBytes(snap.downloadTotal));
+            statusBuffer = std::format("UPDATING GAME  {}%   {} / {}",
+                                       static_cast<int>(fraction * 100.f),
+                                       core::formatBytes(snap.downloaded),
+                                       core::formatBytes(snap.downloadTotal));
+            shell.statusLine = statusBuffer;
+            if (snap.currentFile)
+            {
+                fileBuffer = std::format("{} OF {}   {}", snap.entryIndex, snap.entryCount,
+                                         baseName(*snap.currentFile));
+                shell.fileLine = fileBuffer;
+            }
             break;
         }
         case JobPhase::Ready:
             shell.buildLabel = "READY";
             break;
         case JobPhase::Failed:
-            shell.statusLine = snap.message.empty() ? "UPDATE FAILED" : snap.message;
+            shell.statusLine = snap.message ? std::string_view(*snap.message) : "UPDATE FAILED";
             break;
         case JobPhase::Cancelled:
             shell.statusLine = "CANCELLED";

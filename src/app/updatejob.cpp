@@ -5,6 +5,8 @@
 #include "update/progress.h"
 #include "update/updater.h"
 
+#include <utility>
+
 namespace app
 {
 namespace
@@ -13,11 +15,11 @@ namespace
 class Bridge final : public wf::Progress
 {
 public:
-    Bridge(std::atomic<JobPhase>& phase, std::atomic<std::size_t>& index, std::atomic<std::size_t>& count,
-           std::atomic<std::uint64_t>& downloaded, std::atomic<std::uint64_t>& total,
-           std::mutex& textMutex, std::string& currentFile)
+    Bridge(std::atomic<JobPhase>& phase, std::atomic<std::size_t>& index,
+           std::atomic<std::size_t>& count, std::atomic<std::uint64_t>& downloaded,
+           std::atomic<std::uint64_t>& total, std::atomic<JobText>& currentFile)
         : phase_(phase), index_(index), count_(count), downloaded_(downloaded), total_(total),
-          textMutex_(textMutex), currentFile_(currentFile)
+          currentFile_(currentFile)
     {
     }
 
@@ -32,10 +34,10 @@ public:
     void onEntryStart(std::size_t index, std::size_t count, std::wstring_view installPath,
                       std::uint64_t) override
     {
-        index_.store(index, std::memory_order_relaxed);
+        currentFile_.store(std::make_shared<const std::string>(core::narrow(installPath)),
+                           std::memory_order_release);
+        index_.store(index, std::memory_order_release);
         count_.store(count, std::memory_order_relaxed);
-        const std::lock_guard<std::mutex> lock(textMutex_);
-        currentFile_ = core::narrow(installPath);
     }
 
     void onBytes(std::uint64_t bytes) override
@@ -49,8 +51,7 @@ private:
     std::atomic<std::size_t>& count_;
     std::atomic<std::uint64_t>& downloaded_;
     std::atomic<std::uint64_t>& total_;
-    std::mutex& textMutex_;
-    std::string& currentFile_;
+    std::atomic<JobText>& currentFile_;
 };
 
 }
@@ -90,20 +91,20 @@ bool UpdateJob::running() const noexcept
 JobSnapshot UpdateJob::snapshot() const
 {
     JobSnapshot out;
-    out.phase = phase_.load(std::memory_order_relaxed);
-    out.entryIndex = entryIndex_.load(std::memory_order_relaxed);
+    // phase first: its acquire pairs with the release in work(), so message is visible with it
+    out.phase = phase_.load(std::memory_order_acquire);
+    out.message = message_.load(std::memory_order_acquire);
+    out.entryIndex = entryIndex_.load(std::memory_order_acquire);
+    out.currentFile = currentFile_.load(std::memory_order_acquire);
     out.entryCount = entryCount_.load(std::memory_order_relaxed);
     out.downloaded = downloaded_.load(std::memory_order_relaxed);
     out.downloadTotal = downloadTotal_.load(std::memory_order_relaxed);
-    const std::lock_guard<std::mutex> lock(textMutex_);
-    out.currentFile = currentFile_;
-    out.message = message_;
     return out;
 }
 
 void UpdateJob::work()
 {
-    Bridge bridge(phase_, entryIndex_, entryCount_, downloaded_, downloadTotal_, textMutex_, currentFile_);
+    Bridge bridge(phase_, entryIndex_, entryCount_, downloaded_, downloadTotal_, currentFile_);
 
     wf::Options options;
     options.config.root = wf::defaultRoot(options.config.branch);
@@ -132,11 +133,10 @@ void UpdateJob::work()
         message = std::to_string(summary->failed) + " files failed";
     }
 
-    {
-        const std::lock_guard<std::mutex> lock(textMutex_);
-        message_ = message;
-    }
-    phase_.store(phase, std::memory_order_relaxed);
+    if (!message.empty())
+        message_.store(std::make_shared<const std::string>(std::move(message)),
+                       std::memory_order_release);
+    phase_.store(phase, std::memory_order_release);
     running_.store(false, std::memory_order_release);
 }
 

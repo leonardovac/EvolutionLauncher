@@ -76,12 +76,18 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
         {
             ui::loadingLine(track, state.progress, ui::g().time, gold, 1.f);
         }
+        if (!state.fileLine.empty())
+        {
+            const Rect file(bottom.x, bottom.y + ui::px(32.f), bottom.w * 0.62f, ui::px(14.f));
+            ui::text(ui::fonts().caption, file, state.fileLine, ui::theme().subtext,
+                     ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
+        }
     }
     else
     {
         const Col line = state.phase == JobPhase::Failed ? ui::theme().fail : ui::theme().subtext;
         const Rect label(bottom.x, bottom.y + ui::px(14.f), bottom.w * 0.6f, ui::px(16.f));
-        const std::string& text =
+        const std::string_view text =
             state.phase == JobPhase::Ready ? state.buildLabel : state.statusLine;
         ui::text(ui::fonts().caption, label, text, line, ui::AlignH::Left, ui::AlignV::Middle,
                  ui::px(1.f));
