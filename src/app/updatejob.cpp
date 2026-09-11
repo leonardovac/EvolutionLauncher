@@ -88,6 +88,7 @@ void UpdateJob::restart()
 {
     cancel();
     join();
+    // must follow join, or a worker still unwinding sees the flag clear and runs on
     core::resetCancel();
     thread_ = std::thread();
     phase_.store(JobPhase::Idle, std::memory_order_relaxed);
