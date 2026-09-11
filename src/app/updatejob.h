@@ -1,5 +1,7 @@
 #pragma once
 
+#include "app/jobphase.h"
+
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -8,16 +10,6 @@
 
 namespace app
 {
-
-enum class JobPhase
-{
-    Idle,
-    Checking,
-    Updating,
-    Ready,
-    Failed,
-    Cancelled
-};
 
 // shared so the UI can hold a frame's text without copying it off the worker
 using JobText = std::shared_ptr<const std::string>;

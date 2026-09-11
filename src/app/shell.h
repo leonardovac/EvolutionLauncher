@@ -1,6 +1,6 @@
 #pragma once
 
-#include "app/updatejob.h"
+#include "app/jobphase.h"
 #include "core/types.h"
 #include "gfx/image.h"
 
