@@ -1,6 +1,7 @@
 #include "app/app.h"
 
 #include "app/assets.h"
+#include "app/controls.h"
 #include "app/resource.h"
 #include "app/settings.h"
 #include "app/settingspanel.h"
@@ -185,6 +186,10 @@ int run(const Options& options)
                 working = settings;
                 saveFailed = false;
             }
+            else
+            {
+                closeDropdown();
+            }
             ui::requestFrame();
         }
         if (panelSlide > 0.f)
@@ -203,6 +208,7 @@ int run(const Options& options)
                         settings = working;
                         saveFailed = false;
                         panelOpen = false;
+                        closeDropdown();
                         if (needsRecheck && !options.wantShot)
                             job.restart();
                     }
@@ -215,6 +221,7 @@ int run(const Options& options)
                 else
                 {
                     panelOpen = false;
+                    closeDropdown();
                 }
                 ui::requestFrame();
             }

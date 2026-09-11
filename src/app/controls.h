@@ -17,4 +17,6 @@ void dropdown(std::string_view id, const core::Rect& row, std::string_view label
 // draws the expanded list for whichever dropdown is open; call once after every row
 bool dropdownOverlay();
 
+void closeDropdown();
+
 }

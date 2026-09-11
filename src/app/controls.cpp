@@ -118,4 +118,10 @@ bool dropdownOverlay()
     return changed;
 }
 
+void closeDropdown()
+{
+    openWidget = 0;
+    openIndex = nullptr;
+}
+
 }
