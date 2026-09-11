@@ -84,6 +84,22 @@ void UpdateJob::join()
         thread_.join();
 }
 
+void UpdateJob::restart()
+{
+    cancel();
+    join();
+    core::resetCancel();
+    thread_ = std::thread();
+    phase_.store(JobPhase::Idle, std::memory_order_relaxed);
+    entryIndex_.store(0, std::memory_order_relaxed);
+    entryCount_.store(0, std::memory_order_relaxed);
+    downloaded_.store(0, std::memory_order_relaxed);
+    downloadTotal_.store(0, std::memory_order_relaxed);
+    currentFile_.store({}, std::memory_order_release);
+    message_.store({}, std::memory_order_release);
+    start();
+}
+
 bool UpdateJob::running() const noexcept
 {
     return running_.load(std::memory_order_acquire);

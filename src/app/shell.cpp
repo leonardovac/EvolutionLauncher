@@ -117,7 +117,8 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     const Rect start(bottom.x + bottom.w - ui::px(240.f), bottom.y, ui::px(240.f), ui::px(44.f));
     const Col startCol = state.startEnabled ? gold : gold.alpha(0.35f);
     const std::uint32_t startId = ui::id("shell.start");
-    startClicked = state.startEnabled && ui::clicked(startId, start) && !state.panelVisible;
+    const bool startHit = ui::clicked(startId, start);
+    startClicked = state.startEnabled && startHit && !state.panelVisible;
     const bool hot = state.startEnabled && ui::hovered(startId, start);
     ui::dl().border(start, hot ? startCol : startCol.alpha(0.8f), ui::px(1.f), 0.f);
     ui::text(ui::fonts().title, start, "GAME START", startCol, ui::AlignH::Center,

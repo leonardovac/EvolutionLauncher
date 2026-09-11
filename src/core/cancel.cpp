@@ -45,4 +45,9 @@ void requestCancel() noexcept
 	stopping.store(true, std::memory_order_relaxed);
 }
 
+void resetCancel() noexcept
+{
+	stopping.store(false, std::memory_order_relaxed);
+}
+
 }

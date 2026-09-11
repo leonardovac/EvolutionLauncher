@@ -183,10 +183,14 @@ int run(const Options& options)
             {
                 if (panelResult == PanelResult::Accepted)
                 {
+                    const bool needsRecheck = working.language != settings.language
+                        || working.graphicsApi != settings.graphicsApi;
                     if (working.save())
                     {
                         settings = working;
                         panelOpen = false;
+                        if (needsRecheck && !options.wantShot)
+                            job.restart();
                     }
                     else
                     {
