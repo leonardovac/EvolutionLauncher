@@ -44,6 +44,16 @@ RECT languageRowRect(int width, float scale)
     return RECT{rowLeft, top, rowRight, top + static_cast<LONG>(26.f * scale)};
 }
 
+// mirrors shell.cpp's nav row, which sits inside the draggable caption strip
+RECT navRowRect(int width, float scale)
+{
+    const RECT language = languageRowRect(width, scale);
+    const LONG left = static_cast<LONG>((28.f + 96.f + 24.f + 260.f + 28.f) * scale);
+    const LONG top = static_cast<LONG>((28.f + 18.f) * scale);
+    return RECT{left, top, language.left - static_cast<LONG>(24.f * scale),
+                top + static_cast<LONG>(26.f * scale)};
+}
+
 }
 
 LRESULT CALLBACK Window::proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
@@ -70,7 +80,7 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         if (pt.y >= strip)
             return HTCLIENT;
         const std::array glyphs{closeGlyphRect(width_, scale_), minimiseGlyphRect(width_, scale_),
-                                languageRowRect(width_, scale_)};
+                                languageRowRect(width_, scale_), navRowRect(width_, scale_)};
         const bool onGlyph =
             std::ranges::any_of(glyphs, [&pt](const RECT& r) { return ::PtInRect(&r, pt) != 0; });
         return onGlyph ? HTCLIENT : HTCAPTION;

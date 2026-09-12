@@ -22,6 +22,19 @@ bool closeClicked = false;
 bool startClicked = false;
 bool minimiseClicked = false;
 int languageIndex = -1;
+std::string_view navClicked;
+
+struct NavEntry
+{
+    std::string_view id;
+    std::string_view label;
+    std::string_view url;
+};
+
+constexpr std::array<NavEntry, 3> navEntries{
+    {{"shell.nav.news", "NEWS", "https://www.warframe.com/news"},
+     {"shell.nav.notes", "PATCH NOTES", "https://www.warframe.com/updates"},
+     {"shell.nav.prime", "PRIME ACCESS", "https://www.warframe.com/prime-access"}}};
 
 void globeGlyph(const core::Vec2& center, float radius, const core::Col& col)
 {
@@ -56,6 +69,23 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     const Rect title(frame.x + ui::px(24.f), frame.y + ui::px(18.f), ui::px(260.f), ui::px(28.f));
     ui::text(ui::fonts().title, title, "WARFRAME", gold, ui::AlignH::Left, ui::AlignV::Middle,
              ui::px(4.f));
+
+    navClicked = {};
+    float navX = title.r() + ui::px(28.f);
+    for (const NavEntry& entry : navEntries)
+    {
+        const float entryW = ui::px(entry.label.size() > 8 ? 132.f : 104.f);
+        const Rect box(navX, frame.y + ui::px(18.f), entryW, ui::px(26.f));
+        const std::uint32_t navId = ui::id(entry.id);
+        const bool navHot = ui::hovered(navId, box);
+        const bool navHit = ui::clicked(navId, box);
+        if (navHit && !state.panelVisible)
+            navClicked = entry.url;
+        ui::text(ui::fonts().caption, box, entry.label,
+                 navHot ? gold : ui::theme().text.alpha(0.75f), ui::AlignH::Left,
+                 ui::AlignV::Middle, ui::px(2.f));
+        navX = box.r() + ui::px(10.f);
+    }
 
     const float glyphSize = ui::px(22.f);
     const float glyphTop = frame.y + ui::px(16.f);
@@ -162,6 +192,11 @@ bool shellMinimiseClicked()
 int shellLanguageIndex()
 {
     return languageIndex;
+}
+
+std::string_view shellNavClicked()
+{
+    return navClicked;
 }
 
 }

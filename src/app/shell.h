@@ -27,5 +27,7 @@ bool shellCloseClicked();
 bool shellStartClicked();
 bool shellMinimiseClicked();
 int shellLanguageIndex();
+// the URL of the nav entry clicked this frame, empty when none was
+std::string_view shellNavClicked();
 
 }

@@ -19,6 +19,7 @@
 #include "ui/ui.h"
 
 #include <objbase.h>
+#include <shellapi.h>
 
 #include <algorithm>
 #include <array>
@@ -176,6 +177,9 @@ int run(const Options& options)
         }
         if (shellMinimiseClicked())
             window.minimise();
+        if (const std::string_view url = shellNavClicked(); !url.empty())
+            ::ShellExecuteW(nullptr, L"open", core::widen(url).c_str(), nullptr, nullptr,
+                            SW_SHOWNORMAL);
         if (const int picked = shellLanguageIndex(); picked >= 0)
         {
             Settings next = settings;
