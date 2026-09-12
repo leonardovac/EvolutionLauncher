@@ -18,7 +18,8 @@ enum class DropdownGroup
 bool checkbox(std::string_view id, const core::Rect& row, std::string_view label, bool& value);
 
 void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
-              std::string_view label, std::span<const std::string_view> options, int& index);
+              std::string_view label, std::span<const std::string_view> options, int& index,
+              std::string_view display = {});
 
 // draws the expanded list only when `group` owns the open dropdown; call once per group
 bool dropdownOverlay(DropdownGroup group);

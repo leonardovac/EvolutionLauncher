@@ -83,10 +83,10 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
                            ui::px(26.f));
     int index = state.languageIndex;
     const int before = index;
-    dropdown(DropdownGroup::Shell, "shell.language", languageRow, "", languageNames(), index);
+    dropdown(DropdownGroup::Shell, "shell.language", languageRow, "", languageNames(), index,
+             languageShortLabel(index));
     globeGlyph(Vec2(languageRow.x + ui::px(11.f), languageRow.center().y), ui::px(7.f),
                gold.alpha(0.8f));
-    languageIndex = index != before ? index : -1;
 
     const Rect bottom(frame.x + ui::px(24.f), frame.y + frame.h - ui::px(78.f),
                       frame.w - ui::px(48.f), ui::px(54.f));
@@ -139,6 +139,9 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     ui::dl().border(start, hot ? startCol : startCol.alpha(0.8f), ui::px(1.f), 0.f);
     ui::text(ui::fonts().title, start, "GAME START", startCol, ui::AlignH::Center,
              ui::AlignV::Middle, ui::px(5.f));
+
+    dropdownOverlay(DropdownGroup::Shell);
+    languageIndex = index != before ? index : -1;
 }
 
 bool shellCloseClicked()

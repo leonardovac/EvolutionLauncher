@@ -45,7 +45,8 @@ bool checkbox(std::string_view id, const core::Rect& row, std::string_view label
 }
 
 void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
-              std::string_view label, std::span<const std::string_view> options, int& index)
+              std::string_view label, std::span<const std::string_view> options, int& index,
+              std::string_view display)
 {
     const std::uint32_t widget = ui::id(id);
     const core::Rect field(row.x + row.w * 0.45f, row.y, row.w * 0.55f, row.h);
@@ -67,8 +68,10 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
 
     const bool valid = index >= 0 && index < static_cast<int>(options.size());
     const core::Rect value(field.x + ui::px(8.f), field.y, field.w - ui::px(28.f), field.h);
-    ui::text(ui::fonts().caption, value, valid ? options[static_cast<std::size_t>(index)] : "",
-             ui::theme().text, ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
+    const std::string_view valueText =
+        !display.empty() ? display : (valid ? options[static_cast<std::size_t>(index)] : "");
+    ui::text(ui::fonts().caption, value, valueText, ui::theme().text, ui::AlignH::Left,
+             ui::AlignV::Middle, ui::px(1.f));
     ui::chevron(core::Vec2(field.x + field.w - ui::px(14.f), field.y + field.h * 0.5f),
                 ui::px(5.f), gold);
 

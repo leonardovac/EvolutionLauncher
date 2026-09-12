@@ -168,7 +168,6 @@ int run(const Options& options)
             break;
         }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
-        dropdownOverlay(DropdownGroup::Shell);
         const RailResult rail = drawRail(viewport, !shell.panelVisible);
         if (shellCloseClicked())
         {
