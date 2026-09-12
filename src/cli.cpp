@@ -188,6 +188,10 @@ int run(int argc, wchar_t** argv)
 			}
 			options.only = *given;
 		}
+		else if (flag.starts_with(L"-registry:"))
+		{
+			// read straight off the command line by app::registryTag; not a CLI option
+		}
 		else
 		{
 			core::error("unknown option {}", core::narrow(flag));
