@@ -36,6 +36,7 @@ struct Summary
 	std::size_t entries = 0;
 	std::size_t rejected = 0;
 	std::size_t filtered = 0;
+	std::size_t skipped = 0;
 	std::size_t upToDate = 0;
 	std::size_t queued = 0;
 	std::size_t updated = 0;

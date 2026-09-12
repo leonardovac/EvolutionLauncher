@@ -4,6 +4,7 @@
 #include "core/cancel.h"
 #include "core/str.h"
 #include "update/progress.h"
+#include "update/skiplist.h"
 #include "update/updater.h"
 
 #include <utility>
@@ -132,6 +133,7 @@ void UpdateJob::work()
     options.config.eosSdk = settings.eos();
     options.config.dx12 = settings.dx12();
     options.config.forceHttps = !settings.allowNetworkCaches;
+    options.config.skip = wf::SkipList::load();
     options.progress = &bridge;
 
     const auto summary = wf::run(options);

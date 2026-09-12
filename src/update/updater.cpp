@@ -126,11 +126,12 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	           options.config.root.string());
 	const Plan plan = buildPlan(entries, options.config, progress);
 	summary.filtered = plan.filtered;
+	summary.skipped = plan.skipped;
 	summary.upToDate = plan.upToDate;
 	summary.queued = plan.jobs.size();
 
-	core::info("{} filtered, {} up to date, {} queued ({} to download)", plan.filtered,
-	           plan.upToDate, plan.jobs.size(), core::formatBytes(plan.downloadBytes));
+	core::info("{} filtered, {} skipped, {} up to date, {} queued ({} to download)", plan.filtered,
+	           plan.skipped, plan.upToDate, plan.jobs.size(), core::formatBytes(plan.downloadBytes));
 	if (progress != nullptr)
 		progress->onPlan(plan.jobs.size(), plan.downloadBytes);
 

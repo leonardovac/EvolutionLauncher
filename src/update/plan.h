@@ -2,6 +2,7 @@
 
 #include "update/manifest.h"
 #include "update/progress.h"
+#include "update/skiplist.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -30,6 +31,7 @@ struct Config
 	bool dx12 = false;
 	bool hashCaches = false;
 	bool forceHttps = false;
+	SkipList skip;
 };
 
 std::wstring_view originHost(Branch branch);
@@ -56,6 +58,7 @@ struct Plan
 	std::vector<Job> jobs;
 	std::uint64_t downloadBytes = 0;
 	std::size_t filtered = 0;
+	std::size_t skipped = 0;
 	std::size_t upToDate = 0;
 	std::size_t hashed = 0;
 };

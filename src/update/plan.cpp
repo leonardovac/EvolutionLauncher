@@ -128,6 +128,12 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			++plan.filtered;
 			continue;
 		}
+		if (config.skip.contains(entry.installPath))
+		{
+			++plan.skipped;
+			core::debug("skipping {}", core::narrow(entry.installPath));
+			continue;
+		}
 		applicable.push_back(&entry);
 		byPath.emplace(key(entry.installPath), &entry);
 	}

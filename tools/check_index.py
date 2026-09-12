@@ -29,7 +29,32 @@ TOOL_PREFIXES = ["/Tools/Launcher.exe", "/Tools/RemoteCrashSender.exe",
 
 LOCALIZED_EXTENSIONS = [".cache", ".toc", ".rtf"]
 
+SKIP_DEFAULTS = ["Tools\\Windows\\x64\\discord_game_sdk.dll"]
+
 HASH = re.compile(r"[0-9a-fA-F]{32}")
+
+
+def normalise_skip(path):
+    return path.strip().replace("/", "\\").lstrip("\\").lower()
+
+
+def load_skip(path):
+    entries = [normalise_skip(p) for p in SKIP_DEFAULTS]
+    try:
+        with open(path, encoding="utf-8") as handle:
+            lines = handle.readlines()
+    except OSError:
+        return entries
+    for line in lines:
+        entry = normalise_skip(line)
+        if not entry or entry.startswith("#"):
+            continue
+        if entry.startswith("-"):
+            trimmed = entry[1:]
+            entries = [e for e in entries if e != trimmed]
+        elif entry not in entries:
+            entries.append(entry)
+    return entries
 
 
 def fetch_index(branch):
@@ -95,8 +120,10 @@ def language_allows(install, language):
     return code == "en"
 
 
-def applies(entry, args):
+def applies(entry, args, skip):
     low = entry["url"].lower()
+    if normalise_skip(entry["install"]) in skip:
+        return False
     if not args.steam and "/steam" in low:
         return False
     if not args.eos and "/eossdk" in low:
@@ -116,6 +143,7 @@ def main():
     parser.add_argument("--eos", action="store_true")
     parser.add_argument("--dx12", action="store_true")
     parser.add_argument("--save", metavar="PATH")
+    parser.add_argument("--skip-file", default="skip.txt")
     args = parser.parse_args()
 
     body, meta = fetch_index(args.branch)
@@ -141,7 +169,8 @@ def main():
     print("\n%d lines, %d parsed, %d rejected" % (len(lines), len(entries), sum(errors.values())))
     print("categories: %s" % dict(collections.Counter(e["category"] for e in entries)))
 
-    kept = [e for e in entries if applies(e, args)]
+    skip = load_skip(args.skip_file)
+    kept = [e for e in entries if applies(e, args, skip)]
     total = sum(e["size"] for e in kept)
     print("lang=%s dx12=%s: %d of %d entries, %.2f GiB to download from empty"
           % (args.lang, args.dx12, len(kept), len(entries), total / 2 ** 30))
