@@ -25,17 +25,6 @@ RECT closeGlyphRect(int width, float scale)
                 static_cast<LONG>(y + size)};
 }
 
-// mirrors shell.cpp's gearBox layout, immediately left of the close glyph
-RECT gearGlyphRect(int width, float scale)
-{
-    const float right = static_cast<float>(width) - 28.f * scale;
-    const float x = right - 64.f * scale;
-    const float y = 28.f * scale + 16.f * scale;
-    const float size = 22.f * scale;
-    return RECT{static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x + size),
-                static_cast<LONG>(y + size)};
-}
-
 }
 
 LRESULT CALLBACK Window::proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
@@ -61,7 +50,7 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         const int strip = static_cast<int>(dragStripHeight * scale_);
         if (pt.y >= strip)
             return HTCLIENT;
-        const std::array glyphs{closeGlyphRect(width_, scale_), gearGlyphRect(width_, scale_)};
+        const std::array glyphs{closeGlyphRect(width_, scale_)};
         const bool onGlyph =
             std::ranges::any_of(glyphs, [&pt](const RECT& r) { return ::PtInRect(&r, pt) != 0; });
         return onGlyph ? HTCLIENT : HTCAPTION;

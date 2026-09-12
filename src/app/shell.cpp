@@ -1,5 +1,6 @@
 #include "app/shell.h"
 
+#include "app/rail.h"
 #include "ui/ui.h"
 #include "ui/widgets.h"
 
@@ -17,7 +18,6 @@ namespace
 
 bool closeClicked = false;
 bool startClicked = false;
-bool gearClicked = false;
 
 }
 
@@ -34,8 +34,10 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     ui::heroCard(viewport, hero, ui::theme().focus, 0.f, 1.f);
     ui::heroOverlay(viewport, 0.f, 0.35f);
 
-    const Rect frame(viewport.x + inset, viewport.y + inset, viewport.w - inset * 2.f,
-                     viewport.h - inset * 2.f);
+    const Rect content(viewport.x + ui::px(railWidth), viewport.y,
+                       viewport.w - ui::px(railWidth), viewport.h);
+    const Rect frame(content.x + inset, content.y + inset, content.w - inset * 2.f,
+                     content.h - inset * 2.f);
     ui::dl().border(frame, gold.alpha(0.45f), ui::px(1.f), 0.f);
 
     const Rect title(frame.x + ui::px(24.f), frame.y + ui::px(18.f), ui::px(260.f), ui::px(28.f));
@@ -49,25 +51,6 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     if (!state.languageLabel.empty())
         ui::text(ui::fonts().caption, chip, state.languageLabel, gold, ui::AlignH::Center,
                  ui::AlignV::Middle, ui::px(1.f));
-
-    const Rect gearBox(frame.x + frame.w - ui::px(64.f), frame.y + ui::px(16.f), ui::px(22.f),
-                       ui::px(22.f));
-    const std::uint32_t gearId = ui::id("shell.gear");
-    const bool gearHot = ui::hovered(gearId, gearBox);
-    gearClicked = ui::clicked(gearId, gearBox) && !state.panelVisible;
-    const Col gearCol = gold.alpha(gearHot ? 1.f : 0.7f);
-    const Vec2 gearCenter = gearBox.center();
-    const float gearRadius = gearBox.w * 0.3f;
-    ui::dl().arc(gearCenter, gearRadius, ui::px(1.5f), 0.f, core::kPi * 2.f, gearCol);
-    for (int spoke = 0; spoke < 6; ++spoke)
-    {
-        const float angle = core::kPi * 2.f * static_cast<float>(spoke) / 6.f;
-        const Vec2 dir(std::cos(angle), std::sin(angle));
-        const Vec2 inner(gearCenter.x + dir.x * gearRadius, gearCenter.y + dir.y * gearRadius);
-        const Vec2 outer(gearCenter.x + dir.x * (gearRadius + ui::px(4.f)),
-                         gearCenter.y + dir.y * (gearRadius + ui::px(4.f)));
-        ui::dl().line(inner, outer, ui::px(1.5f), gearCol);
-    }
 
     const Rect closeBox(frame.x + frame.w - ui::px(34.f), frame.y + ui::px(16.f), ui::px(22.f),
                         ui::px(22.f));
@@ -134,11 +117,6 @@ bool shellCloseClicked()
 bool shellStartClicked()
 {
     return startClicked;
-}
-
-bool shellGearClicked()
-{
-    return gearClicked;
 }
 
 }

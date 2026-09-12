@@ -2,6 +2,7 @@
 
 #include "app/assets.h"
 #include "app/controls.h"
+#include "app/rail.h"
 #include "app/resource.h"
 #include "app/settings.h"
 #include "app/settingspanel.h"
@@ -173,12 +174,13 @@ int run(const Options& options)
             break;
         }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
+        const RailResult rail = drawRail(viewport, !shell.panelVisible);
         if (shellCloseClicked())
         {
             job.cancel();
             break;
         }
-        if (shellGearClicked())
+        if (rail.cogClicked)
         {
             panelOpen = !panelOpen;
             if (panelOpen)
