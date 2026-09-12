@@ -12,6 +12,7 @@ const core::Col gold = core::Col::hex(0xD9C07A, 1.f);
 
 // set by dropdown(), consumed by dropdownOverlay() in the same frame
 std::uint32_t openWidget = 0;
+DropdownGroup openGroup = DropdownGroup::Shell;
 core::Rect openRow;
 std::span<const std::string_view> openOptions;
 int* openIndex = nullptr;
@@ -43,15 +44,18 @@ bool checkbox(std::string_view id, const core::Rect& row, std::string_view label
     return hit;
 }
 
-void dropdown(std::string_view id, const core::Rect& row, std::string_view label,
-              std::span<const std::string_view> options, int& index)
+void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
+              std::string_view label, std::span<const std::string_view> options, int& index)
 {
     const std::uint32_t widget = ui::id(id);
     const core::Rect field(row.x + row.w * 0.45f, row.y, row.w * 0.55f, row.h);
     const bool hit = ui::clicked(widget, field);
     const bool hot = ui::hovered(widget, field);
     if (hit)
+    {
         openWidget = openWidget == widget ? 0 : widget;
+        openGroup = group;
+    }
 
     const core::Rect caption(row.x, row.y, row.w * 0.45f, row.h);
     ui::text(ui::fonts().caption, caption, label, ui::theme().text, ui::AlignH::Left,
@@ -76,9 +80,9 @@ void dropdown(std::string_view id, const core::Rect& row, std::string_view label
     }
 }
 
-bool dropdownOverlay()
+bool dropdownOverlay(DropdownGroup group)
 {
-    if (openWidget == 0 || openIndex == nullptr)
+    if (openWidget == 0 || openIndex == nullptr || openGroup != group)
         return false;
 
     // a list is time-independent but must not let the idle gate park the frame loop

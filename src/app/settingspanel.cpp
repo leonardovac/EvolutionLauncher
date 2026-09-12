@@ -74,32 +74,34 @@ PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings&
     float y = title.b() + gap;
 
     const core::Rect graphicsApiRow(panel.x + inset, y, rowW, rowH);
-    dropdown("settings.graphicsApi", graphicsApiRow, "Graphics API", graphicsApiNames,
-             graphicsApiIndex);
+    dropdown(DropdownGroup::Settings, "settings.graphicsApi", graphicsApiRow, "Graphics API",
+             graphicsApiNames, graphicsApiIndex);
     const core::Rect graphicsApiNote(graphicsApiRow.x, graphicsApiRow.b() + noteGap, rowW, noteH);
     ui::text(ui::fonts().caption, graphicsApiNote, recheckNote, ui::theme().subtext,
              ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
     y = graphicsApiNote.b() + gap;
 
     const core::Rect gpuPreferenceRow(panel.x + inset, y, rowW, rowH);
-    dropdown("settings.gpuPreference", gpuPreferenceRow, "GPU Preference", gpuPreferenceNames,
-             gpuPreferenceIndex);
+    dropdown(DropdownGroup::Settings, "settings.gpuPreference", gpuPreferenceRow, "GPU Preference",
+             gpuPreferenceNames, gpuPreferenceIndex);
     y = gpuPreferenceRow.b() + gap;
 
     const core::Rect windowModeRow(panel.x + inset, y, rowW, rowH);
-    dropdown("settings.windowMode", windowModeRow, "Window Mode", windowModeNames, windowModeIndex);
+    dropdown(DropdownGroup::Settings, "settings.windowMode", windowModeRow, "Window Mode",
+             windowModeNames, windowModeIndex);
     y = windowModeRow.b() + gap;
 
     const core::Rect languageRow(panel.x + inset, y, rowW, rowH);
-    dropdown("settings.language", languageRow, "Language", languageNames(), languageIndex);
+    dropdown(DropdownGroup::Settings, "settings.language", languageRow, "Language",
+             languageNames(), languageIndex);
     const core::Rect languageNote(languageRow.x, languageRow.b() + noteGap, rowW, noteH);
     ui::text(ui::fonts().caption, languageNote, recheckNote, ui::theme().subtext, ui::AlignH::Left,
              ui::AlignV::Middle, ui::px(1.f));
     y = languageNote.b() + gap;
 
     const core::Rect audioLanguageRow(panel.x + inset, y, rowW, rowH);
-    dropdown("settings.audioLanguage", audioLanguageRow, "Audio Language", audioLanguageNames(),
-             audioLanguageIndex);
+    dropdown(DropdownGroup::Settings, "settings.audioLanguage", audioLanguageRow, "Audio Language",
+             audioLanguageNames(), audioLanguageIndex);
     y = audioLanguageRow.b() + gap;
 
     const core::Rect shaderCacheRow(panel.x + inset, y, rowW, rowH);
@@ -126,7 +128,7 @@ PanelResult drawSettingsPanel(const core::Rect& viewport, float slide, Settings&
              working.allowNetworkCaches);
     y = allowNetworkCachesRow.b() + gap;
 
-    dropdownOverlay();
+    dropdownOverlay(DropdownGroup::Settings);
 
     if (graphicsApiIndex != originalGraphicsApiIndex)
         working.graphicsApi = static_cast<GraphicsApi>(graphicsApiIndex);
