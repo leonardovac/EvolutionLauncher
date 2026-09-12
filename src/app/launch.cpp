@@ -64,16 +64,13 @@ std::optional<std::wstring> registryTag()
     return tag;
 }
 
-std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch)
+std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch,
+                                  const std::filesystem::path& root)
 {
-    const std::filesystem::path root = settings.installRoot(branch);
     if (root.empty())
         return {};
 
-    const std::filesystem::path exe = std::filesystem::weakly_canonical(root / exeName);
-    const std::filesystem::path base = std::filesystem::weakly_canonical(root);
-    if (exe.native().find(base.native()) != 0)
-        return {};
+    const std::filesystem::path exe = root / exeName;
 
     std::wstring line = std::format(
         L"\"{}\" -windowMode:{} -shaderCache:{} -graphicsDriver:{} -gpuPreference:{}",
@@ -93,11 +90,12 @@ std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch)
 
 std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch branch)
 {
-    std::wstring line = buildGameCommandLine(settings, branch);
+    const std::filesystem::path root = settings.installRoot(branch);
+    std::wstring line = buildGameCommandLine(settings, branch, root);
     if (line.empty())
         return std::unexpected(LaunchError::NoRoot);
 
-    const std::filesystem::path exe = settings.installRoot(branch) / exeName;
+    const std::filesystem::path exe = root / exeName;
     std::error_code ec;
     if (!std::filesystem::exists(exe, ec))
         return std::unexpected(LaunchError::NoExecutable);

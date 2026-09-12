@@ -245,7 +245,7 @@ int run(int argc, wchar_t** argv)
 
 	if (wantLaunchPrint)
 	{
-		const std::wstring line = app::buildGameCommandLine(settings, options.config.branch);
+		const std::wstring line = app::buildGameCommandLine(settings, options.config.branch, options.config.root);
 		if (line.empty())
 		{
 			core::error("could not build the game command line");

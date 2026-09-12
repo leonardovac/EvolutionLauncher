@@ -4,6 +4,7 @@
 #include "update/plan.h"
 
 #include <expected>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -21,7 +22,8 @@ enum class LaunchError
 // -registry:<tag> as this process was started with it; the game takes it as -clienttype
 std::optional<std::wstring> registryTag();
 
-std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch);
+std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch,
+                                  const std::filesystem::path& root);
 
 std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch branch);
 
