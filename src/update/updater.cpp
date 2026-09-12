@@ -6,6 +6,7 @@
 #include "update/apply.h"
 #include "update/http.h"
 #include "update/lzma.h"
+#include "update/stale.h"
 
 #include <format>
 #include <random>
@@ -136,6 +137,15 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	if (core::cancelled())
 	{
 		summary.cancelled = true;
+		return summary;
+	}
+
+	if (options.staleReport)
+	{
+		const StaleReport stale = findStale(entries, options.config, progress);
+		summary.staleFiles = stale.files.size();
+		summary.staleBytes = stale.bytes;
+		summary.cancelled = summary.cancelled || stale.cancelled;
 		return summary;
 	}
 

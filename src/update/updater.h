@@ -26,6 +26,7 @@ struct Options
 {
 	Config config;
 	bool dryRun = false;
+	bool staleReport = false;
 	std::wstring only;
 	Progress* progress = nullptr;
 };
@@ -40,6 +41,8 @@ struct Summary
 	std::size_t updated = 0;
 	std::size_t failed = 0;
 	std::uint64_t downloaded = 0;
+	std::size_t staleFiles = 0;
+	std::uint64_t staleBytes = 0;
 	bool cancelled = false;
 };
 

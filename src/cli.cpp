@@ -33,6 +33,7 @@ void usage()
 	          "  --only <text>     restrict to paths containing <text>\n"
 	          "  --check           plan only, download nothing\n"
 	          "  --verify          hash .cache and .toc as well as everything else\n"
+	          "  --stale           report files the index does not list, delete nothing\n"
 	          "  --steam           this install is a Steam install (default: LauncherExe path)\n"
 	          "  --no-steam        force off\n"
 	          "  --eos             this install uses the EOS SDK (default: LauncherExe path)\n"
@@ -65,6 +66,11 @@ std::optional<wf::Branch> parseBranch(std::wstring_view text)
 
 class ConsoleProgress final : public wf::Progress
 {
+public:
+	void onStale(std::wstring_view installPath, std::uint64_t bytes) override
+	{
+		core::debug("  unlisted {} ({})", core::narrow(installPath), core::formatBytes(bytes));
+	}
 };
 
 }
@@ -105,6 +111,10 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--verify")
 		{
 			options.config.hashCaches = true;
+		}
+		else if (flag == L"--stale")
+		{
+			options.staleReport = true;
 		}
 		else if (flag == L"--steam")
 		{
@@ -265,6 +275,18 @@ int run(int argc, wchar_t** argv)
 	{
 		core::error("{}", core::narrow(wf::describe(summary.error())));
 		return 1;
+	}
+
+	if (options.staleReport)
+	{
+		core::info("{} unlisted files, {}", summary->staleFiles,
+		           core::formatBytes(summary->staleBytes));
+		if (summary->cancelled)
+		{
+			core::warn("cancelled while walking");
+			return 2;
+		}
+		return 0;
 	}
 
 	if (options.dryRun)
