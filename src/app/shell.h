@@ -15,7 +15,7 @@ struct ShellState
     JobPhase phase = JobPhase::Idle;
     std::string_view buildLabel;
     std::string_view statusLine;
-    std::string_view fileLine;
+    std::string_view detailLine;
     int languageIndex = 0;
     float progress = 0.f;
     bool startEnabled = false;

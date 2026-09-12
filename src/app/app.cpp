@@ -4,6 +4,7 @@
 #include "app/controls.h"
 #include "app/languages.h"
 #include "app/rail.h"
+#include "app/rate.h"
 #include "app/resource.h"
 #include "app/settings.h"
 #include "app/settingspanel.h"
@@ -34,12 +35,6 @@ namespace
 
 constexpr int designWidth = 1180;
 constexpr int designHeight = 740;
-
-std::string_view baseName(std::string_view path)
-{
-    const std::size_t slash = path.find_last_of("\\/");
-    return slash == std::string_view::npos ? path : path.substr(slash + 1);
-}
 
 }
 
@@ -79,6 +74,7 @@ int run(const Options& options)
     UpdateJob job;
     if (!options.wantShot)
         job.start();
+    RateMeter meter;
 
     Settings settings = Settings::load();
     Settings working;
@@ -102,6 +98,7 @@ int run(const Options& options)
         panelSlide = core::clamp01(panelSlide + (panelOpen ? 1.f : -1.f) * dt * 6.f);
 
         const JobSnapshot snap = job.snapshot();
+        meter.sample(snap.downloaded, dt);
 
         if (window.takeResized())
             device.resize(window.width(), window.height());
@@ -129,7 +126,7 @@ int run(const Options& options)
         shell.startEnabled = snap.phase == JobPhase::Ready;
         shell.panelVisible = panelSlide > 0.f;
         std::string statusBuffer;
-        std::string fileBuffer;
+        std::string detailBuffer;
         shell.languageIndex = languageIndexFromCode(settings.language);
         switch (snap.phase)
         {
@@ -145,17 +142,22 @@ int run(const Options& options)
                                                         / static_cast<double>(snap.downloadTotal)))
                     : 0.f;
             shell.progress = fraction;
-            statusBuffer = std::format("UPDATING GAME  {}%   {} / {}",
-                                       static_cast<int>(fraction * 100.f),
-                                       core::formatBytes(snap.downloaded),
-                                       core::formatBytes(snap.downloadTotal));
+            statusBuffer = std::format("UPDATING GAME  {}%", static_cast<int>(fraction * 100.f));
             shell.statusLine = statusBuffer;
-            if (snap.currentFile)
+            detailBuffer = std::format("{} / {}", core::formatBytes(snap.downloaded),
+                                       core::formatBytes(snap.downloadTotal));
+            if (meter.ready())
             {
-                fileBuffer = std::format("{} OF {}   {}", snap.entryIndex, snap.entryCount,
-                                         baseName(*snap.currentFile));
-                shell.fileLine = fileBuffer;
+                if (const std::string rate = formatRate(meter.bytesPerSecond()); !rate.empty())
+                    detailBuffer += std::format("  •  {}", rate);
+                const std::uint64_t remaining = snap.downloadTotal > snap.downloaded
+                    ? snap.downloadTotal - snap.downloaded
+                    : 0u;
+                if (const std::string eta = formatEta(remaining, meter.bytesPerSecond());
+                    !eta.empty())
+                    detailBuffer += std::format("  •  {}", eta);
             }
+            shell.detailLine = detailBuffer;
             break;
         }
         case JobPhase::Ready:
@@ -190,7 +192,10 @@ int run(const Options& options)
                 {
                     settings = next;
                     if (!options.wantShot)
+                    {
+                        meter.reset();
                         job.restart();
+                    }
                 }
                 else
                 {
@@ -228,7 +233,10 @@ int run(const Options& options)
                         panelOpen = false;
                         closeDropdown();
                         if (needsRecheck && !options.wantShot)
+                        {
+                            meter.reset();
                             job.restart();
+                        }
                     }
                     else
                     {
