@@ -1,5 +1,7 @@
 #include "app/shell.h"
 
+#include "app/controls.h"
+#include "app/languages.h"
 #include "app/rail.h"
 #include "ui/ui.h"
 #include "ui/widgets.h"
@@ -18,6 +20,17 @@ namespace
 
 bool closeClicked = false;
 bool startClicked = false;
+bool minimiseClicked = false;
+int languageIndex = -1;
+
+void globeGlyph(const core::Vec2& center, float radius, const core::Col& col)
+{
+    ui::dl().arc(center, radius, ui::px(1.f), 0.f, core::kPi * 2.f, col);
+    ui::dl().line(core::Vec2(center.x - radius, center.y), core::Vec2(center.x + radius, center.y),
+                  ui::px(1.f), col);
+    ui::dl().arc(core::Vec2(center.x, center.y), radius * 0.5f, ui::px(1.f), 0.f, core::kPi * 2.f,
+                 col);
+}
 
 }
 
@@ -44,17 +57,36 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     ui::text(ui::fonts().title, title, "WARFRAME", gold, ui::AlignH::Left, ui::AlignV::Middle,
              ui::px(4.f));
 
-    const float chipW = ui::px(96.f);
-    const float chipH = ui::px(26.f);
-    const Rect chip(frame.x + frame.w - ui::px(150.f), frame.y + ui::px(18.f), chipW, chipH);
-    ui::dl().border(chip, gold.alpha(0.5f), ui::px(1.f), 0.f);
-    if (!state.languageLabel.empty())
-        ui::text(ui::fonts().caption, chip, state.languageLabel, gold, ui::AlignH::Center,
-                 ui::AlignV::Middle, ui::px(1.f));
+    const float glyphSize = ui::px(22.f);
+    const float glyphTop = frame.y + ui::px(16.f);
 
-    const Rect closeBox(frame.x + frame.w - ui::px(34.f), frame.y + ui::px(16.f), ui::px(22.f),
-                        ui::px(22.f));
+    const Rect closeBox(frame.x + frame.w - ui::px(28.f) - glyphSize, glyphTop, glyphSize,
+                        glyphSize);
     closeClicked = ui::closeButton("shell.close", closeBox) && !state.panelVisible;
+
+    const Rect minimiseBox(closeBox.x - ui::px(34.f), glyphTop, glyphSize, glyphSize);
+    const std::uint32_t minimiseId = ui::id("shell.minimise");
+    const bool minimiseHot = ui::hovered(minimiseId, minimiseBox);
+    const bool minimiseHit = ui::clicked(minimiseId, minimiseBox);
+    minimiseClicked = minimiseHit && !state.panelVisible;
+    const Vec2 minimiseCenter = minimiseBox.center();
+    ui::dl().line(Vec2(minimiseCenter.x - ui::px(6.f), minimiseCenter.y),
+                  Vec2(minimiseCenter.x + ui::px(6.f), minimiseCenter.y), ui::px(1.5f),
+                  gold.alpha(minimiseHot ? 1.f : 0.7f));
+
+    const float dividerX = minimiseBox.x - ui::px(18.f);
+    ui::dl().line(Vec2(dividerX, minimiseCenter.y - ui::px(7.f)),
+                  Vec2(dividerX, minimiseCenter.y + ui::px(7.f)), ui::px(1.f), gold.alpha(0.3f));
+
+    const float languageW = ui::px(96.f);
+    const Rect languageRow(dividerX - ui::px(16.f) - languageW, glyphTop + ui::px(-2.f), languageW,
+                           ui::px(26.f));
+    int index = state.languageIndex;
+    const int before = index;
+    dropdown(DropdownGroup::Shell, "shell.language", languageRow, "", languageNames(), index);
+    globeGlyph(Vec2(languageRow.x + ui::px(11.f), languageRow.center().y), ui::px(7.f),
+               gold.alpha(0.8f));
+    languageIndex = index != before ? index : -1;
 
     const Rect bottom(frame.x + ui::px(24.f), frame.y + frame.h - ui::px(78.f),
                       frame.w - ui::px(48.f), ui::px(54.f));
@@ -117,6 +149,16 @@ bool shellCloseClicked()
 bool shellStartClicked()
 {
     return startClicked;
+}
+
+bool shellMinimiseClicked()
+{
+    return minimiseClicked;
+}
+
+int shellLanguageIndex()
+{
+    return languageIndex;
 }
 
 }

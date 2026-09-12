@@ -16,7 +16,7 @@ struct ShellState
     std::string_view buildLabel;
     std::string_view statusLine;
     std::string_view fileLine;
-    std::string_view languageLabel;
+    int languageIndex = 0;
     float progress = 0.f;
     bool startEnabled = false;
     bool panelVisible = false;
@@ -25,5 +25,7 @@ struct ShellState
 void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& state);
 bool shellCloseClicked();
 bool shellStartClicked();
+bool shellMinimiseClicked();
+int shellLanguageIndex();
 
 }

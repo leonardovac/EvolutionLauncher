@@ -2,6 +2,7 @@
 
 #include "app/assets.h"
 #include "app/controls.h"
+#include "app/languages.h"
 #include "app/rail.h"
 #include "app/resource.h"
 #include "app/settings.h"
@@ -128,14 +129,7 @@ int run(const Options& options)
         shell.panelVisible = panelSlide > 0.f;
         std::string statusBuffer;
         std::string fileBuffer;
-        std::string languageBuffer = core::narrow(settings.language);
-        if (languageBuffer.size() == 2)
-        {
-            languageBuffer[0] = static_cast<char>(languageBuffer[0] - 'a' + 'A');
-            languageBuffer[1] = static_cast<char>(languageBuffer[1] - 'a' + 'A');
-            languageBuffer = std::format("LANGUAGE  {}", languageBuffer);
-            shell.languageLabel = languageBuffer;
-        }
+        shell.languageIndex = languageIndexFromCode(settings.language);
         switch (snap.phase)
         {
         case JobPhase::Idle:
@@ -174,23 +168,42 @@ int run(const Options& options)
             break;
         }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
+        dropdownOverlay(DropdownGroup::Shell);
         const RailResult rail = drawRail(viewport, !shell.panelVisible);
         if (shellCloseClicked())
         {
             job.cancel();
             break;
         }
+        if (shellMinimiseClicked())
+            window.minimise();
+        if (const int picked = shellLanguageIndex(); picked >= 0)
+        {
+            Settings next = settings;
+            next.language = std::wstring(languageCodeFromIndex(picked));
+            if (next.language != settings.language)
+            {
+                if (next.save(&settings))
+                {
+                    settings = next;
+                    if (!options.wantShot)
+                        job.restart();
+                }
+                else
+                {
+                    core::error("could not write the launcher settings");
+                }
+            }
+            ui::requestFrame();
+        }
         if (rail.cogClicked)
         {
             panelOpen = !panelOpen;
+            closeDropdown();
             if (panelOpen)
             {
                 working = settings;
                 saveFailed = false;
-            }
-            else
-            {
-                closeDropdown();
             }
             ui::requestFrame();
         }

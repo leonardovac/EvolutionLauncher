@@ -18,11 +18,30 @@ constexpr DWORD idleWaitMs = 100;     // bounded so a repaint with no message st
 RECT closeGlyphRect(int width, float scale)
 {
     const float right = static_cast<float>(width) - 28.f * scale;
-    const float x = right - 34.f * scale;
+    const float x = right - 28.f * scale - 22.f * scale;
     const float y = 28.f * scale + 16.f * scale;
     const float size = 22.f * scale;
     return RECT{static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x + size),
                 static_cast<LONG>(y + size)};
+}
+
+// mirrors shell.cpp's minimiseBox, 34 design-space units left of the close glyph
+RECT minimiseGlyphRect(int width, float scale)
+{
+    const RECT close = closeGlyphRect(width, scale);
+    const LONG shift = static_cast<LONG>(34.f * scale);
+    return RECT{close.left - shift, close.top, close.right - shift, close.bottom};
+}
+
+// mirrors shell.cpp's languageRow; the whole row is clickable, not just the chevron
+RECT languageRowRect(int width, float scale)
+{
+    const RECT minimiseBox = minimiseGlyphRect(width, scale);
+    const LONG divider = minimiseBox.left - static_cast<LONG>(18.f * scale);
+    const LONG rowRight = divider - static_cast<LONG>(16.f * scale);
+    const LONG rowLeft = rowRight - static_cast<LONG>(96.f * scale);
+    const LONG top = minimiseBox.top - static_cast<LONG>(2.f * scale);
+    return RECT{rowLeft, top, rowRight, top + static_cast<LONG>(26.f * scale)};
 }
 
 }
@@ -50,7 +69,8 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         const int strip = static_cast<int>(dragStripHeight * scale_);
         if (pt.y >= strip)
             return HTCLIENT;
-        const std::array glyphs{closeGlyphRect(width_, scale_)};
+        const std::array glyphs{closeGlyphRect(width_, scale_), minimiseGlyphRect(width_, scale_),
+                                languageRowRect(width_, scale_)};
         const bool onGlyph =
             std::ranges::any_of(glyphs, [&pt](const RECT& r) { return ::PtInRect(&r, pt) != 0; });
         return onGlyph ? HTCLIENT : HTCAPTION;
@@ -130,6 +150,12 @@ void Window::destroy()
         ::DestroyWindow(hwnd_);
         hwnd_ = nullptr;
     }
+}
+
+void Window::minimise() const noexcept
+{
+    if (hwnd_ != nullptr)
+        ::ShowWindow(hwnd_, SW_MINIMIZE);
 }
 
 bool Window::pump()
