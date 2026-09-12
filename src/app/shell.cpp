@@ -47,7 +47,7 @@ void globeGlyph(const core::Vec2& center, float radius, const core::Col& col)
 
 void hexFrame(const core::Rect& box, float thickness, const core::Col& col)
 {
-    const float chamfer = box.h * 0.45f;
+    const float chamfer = std::min(box.h * 0.45f, box.w * 0.5f);
     const std::array<core::Vec2, 6> points{
         core::Vec2(box.x + chamfer, box.y),
         core::Vec2(box.r() - chamfer, box.y),

@@ -98,7 +98,8 @@ int run(const Options& options)
         panelSlide = core::clamp01(panelSlide + (panelOpen ? 1.f : -1.f) * dt * 6.f);
 
         const JobSnapshot snap = job.snapshot();
-        meter.sample(snap.downloaded, dt);
+        if (snap.phase == JobPhase::Updating)
+            meter.sample(snap.downloaded, dt);
 
         if (window.takeResized())
             device.resize(window.width(), window.height());
