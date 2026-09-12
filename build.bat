@@ -28,7 +28,7 @@ if errorlevel 1 (echo [!] asset resource build failed & exit /b 1)
 
 set "CXXFLAGS=/nologo /std:c++latest /EHsc /W4 /sdl /permissive- /Zc:preprocessor /utf-8 /DNOMINMAX /DWIN32_LEAN_AND_MEAN /D_UNICODE /DUNICODE /Isrc /Ithird_party"
 set "CFLAGS=/nologo /W3 /sdl /utf-8 /D_7ZIP_ST"
-set "LDFLAGS=winhttp.lib shlwapi.lib shell32.lib advapi32.lib user32.lib gdi32.lib ole32.lib d3d11.lib dxgi.lib dcomp.lib dxguid.lib windowscodecs.lib /SUBSYSTEM:WINDOWS"
+set "LDFLAGS=winhttp.lib shlwapi.lib shell32.lib advapi32.lib user32.lib gdi32.lib ole32.lib d3d11.lib dxgi.lib dcomp.lib dxguid.lib windowscodecs.lib version.lib /SUBSYSTEM:WINDOWS"
 
 if /i "%~1"=="debug" (
   set "CXXFLAGS=!CXXFLAGS! /Od /Zi /MDd /RTC1 /D_DEBUG"

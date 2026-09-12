@@ -1,5 +1,6 @@
 #include "app/launch.h"
 #include "app/settings.h"
+#include "app/versions.h"
 #include "core/cancel.h"
 #include "core/log.h"
 #include "core/str.h"
@@ -44,6 +45,7 @@ void usage()
 	          "  --verbose         per-file detail\n"
 	          "  --settings        print the launcher settings and exit\n"
 	          "  --settings-write  write back the loaded settings and exit\n"
+	          "  --versions        print the launcher and engine versions and exit\n"
 	          "  --launch-print    print the game command line and exit\n"
 	          "  --help\n"
 	          "\n"
@@ -88,6 +90,7 @@ int run(int argc, wchar_t** argv)
 	std::optional<bool> dx12;
 	bool wantSettings = false;
 	bool wantSettingsWrite = false;
+	bool wantVersions = false;
 	bool wantLaunchPrint = false;
 
 	const auto value = [&args](std::size_t& i) -> std::optional<std::wstring_view>
@@ -152,6 +155,10 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--settings-write")
 		{
 			wantSettingsWrite = true;
+		}
+		else if (flag == L"--versions")
+		{
+			wantVersions = true;
 		}
 		else if (flag == L"--launch-print")
 		{
@@ -264,6 +271,14 @@ int run(int argc, wchar_t** argv)
 			return 1;
 		}
 		core::info("{}", core::narrow(line));
+		return 0;
+	}
+
+	if (wantVersions)
+	{
+		core::info("launcher {}", core::narrow(app::launcherVersion()));
+		const auto engine = app::engineVersion(settings, options.config.branch);
+		core::info("engine {}", engine ? core::narrow(*engine) : "unknown");
 		return 0;
 	}
 
