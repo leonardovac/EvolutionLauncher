@@ -15,14 +15,14 @@ namespace wf
 namespace
 {
 
-// listed by the index but optional in practice; a user who removes one means it
+// present in the index but optional at runtime; users routinely delete it on purpose
 constexpr std::array<std::wstring_view, 1> defaults{L"Tools\\Windows\\x64\\discord_game_sdk.dll"};
 
 std::wstring normalise(std::wstring_view path)
 {
 	std::wstring out = core::lower(path);
 	std::ranges::replace(out, L'/', L'\\');
-	while (!out.empty() && out.front() == L'\\')
+	while (!out.empty() && (out.front() == L'\\' || out.front() == L' ' || out.front() == L'\t'))
 		out.erase(out.begin());
 	while (!out.empty() && (out.back() == L'\r' || out.back() == L' ' || out.back() == L'\t'))
 		out.pop_back();
@@ -49,14 +49,22 @@ SkipList SkipList::load()
 	const std::filesystem::path file = skipFilePath();
 	if (file.empty())
 		return list;
-	std::wifstream input(file);
+	std::ifstream input(file);
 	if (!input)
 		return list;
 
-	std::wstring line;
+	constexpr std::string_view bom = "\xEF\xBB\xBF";
+	std::string line;
+	bool firstLine = true;
 	while (std::getline(input, line))
 	{
-		const std::wstring entry = normalise(line);
+		if (firstLine)
+		{
+			firstLine = false;
+			if (line.starts_with(bom))
+				line.erase(0, bom.size());
+		}
+		const std::wstring entry = normalise(core::widen(line));
 		if (entry.empty() || entry.front() == L'#')
 			continue;
 		if (entry.front() == L'-')
