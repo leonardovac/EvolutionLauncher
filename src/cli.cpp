@@ -23,7 +23,7 @@ namespace
 
 void usage()
 {
-	std::puts("WFUpdate - Warframe content updater\n"
+	std::puts("Launcher - Warframe content updater\n"
 	          "\n"
 	          "  --root <dir>      install root (default: LauncherExe's grandparent, else\n"
 	          "                    %LOCALAPPDATA%\\Warframe\\Downloaded\\<branch>)\n"

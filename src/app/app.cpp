@@ -56,7 +56,7 @@ int run(const Options& options)
     if (!renderer.create(device.dev()))
         return 1;
 
-    const auto fontBytes = resource(WF_RES_FONT);
+    const auto fontBytes = resource(RES_FONT);
     ui::FontData fontData;
     fontData.semiBold = fontBytes.data();
     fontData.semiBoldSize = fontBytes.size();
@@ -67,7 +67,7 @@ int run(const Options& options)
     ui::rebuildFonts(device.dev(), window.scale());
 
     gfx::Image hero;
-    if (const auto bytes = resource(WF_RES_HERO); !bytes.empty())
+    if (const auto bytes = resource(RES_HERO); !bytes.empty())
     {
         if (auto loaded = gfx::loadImageMemory(device.dev(), bytes))
             hero = std::move(*loaded);

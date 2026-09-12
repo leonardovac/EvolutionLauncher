@@ -45,6 +45,6 @@ set SRC=
 for %%f in (src\*.cpp src\core\*.cpp src\gfx\*.cpp src\ui\*.cpp src\app\*.cpp src\update\*.cpp) do set "SRC=!SRC! %%f"
 
 cl !CFLAGS! /c /Fobin\obj\ third_party\lzma\LzmaDec.c || exit /b 1
-cl !CXXFLAGS! /Fobin\obj\ /Fdbin\obj\ !SRC! bin\obj\LzmaDec.obj bin\obj\assets.res /Febin\WFUpdate.exe /link !LDFLAGS! || exit /b 1
+cl !CXXFLAGS! /Fobin\obj\ /Fdbin\obj\ !SRC! bin\obj\LzmaDec.obj bin\obj\assets.res /Febin\Launcher.exe /link !LDFLAGS! || exit /b 1
 
-echo [+] bin\WFUpdate.exe
+echo [+] bin\Launcher.exe
