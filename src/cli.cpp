@@ -1,3 +1,4 @@
+#include "app/launch.h"
 #include "app/settings.h"
 #include "core/cancel.h"
 #include "core/log.h"
@@ -41,6 +42,7 @@ void usage()
 	          "  --verbose         per-file detail\n"
 	          "  --settings        print the launcher settings and exit\n"
 	          "  --settings-write  write back the loaded settings and exit\n"
+	          "  --launch-print    print the game command line and exit\n"
 	          "  --help\n"
 	          "\n"
 	          "  -shot <path>      (as argv[1]) launch the GUI and save a screenshot to <path>\n"
@@ -79,6 +81,7 @@ int run(int argc, wchar_t** argv)
 	std::optional<bool> dx12;
 	bool wantSettings = false;
 	bool wantSettingsWrite = false;
+	bool wantLaunchPrint = false;
 
 	const auto value = [&args](std::size_t& i) -> std::optional<std::wstring_view>
 	{
@@ -138,6 +141,10 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--settings-write")
 		{
 			wantSettingsWrite = true;
+		}
+		else if (flag == L"--launch-print")
+		{
+			wantLaunchPrint = true;
 		}
 		else if (flag == L"--root")
 		{
@@ -229,6 +236,18 @@ int run(int argc, wchar_t** argv)
 		core::info("allowNetworkCaches {}", settings.allowNetworkCaches);
 		core::info("root {}", settings.installRoot(options.config.branch).string());
 		core::info("steam {} eos {} dx12 {}", settings.steam(), settings.eos(), settings.dx12());
+		return 0;
+	}
+
+	if (wantLaunchPrint)
+	{
+		const std::wstring line = app::buildGameCommandLine(settings, options.config.branch);
+		if (line.empty())
+		{
+			core::error("could not build the game command line");
+			return 1;
+		}
+		core::info("{}", core::narrow(line));
 		return 0;
 	}
 

@@ -113,6 +113,35 @@ Under the root, content lives in `Cache.Windows`, `Tools` and `Lotus`, with
 `Warframe.x64.exe` at the top. The same key also holds `Language` (the two-letter code the
 applicability filter needs), `GraphicsAPI`, and `EnableBulkDownload`.
 
+## Game launch
+
+`WF_BuildGameCommandLine` (0x41714) composes the retail command line in this order, then
+`WF_SpawnGame` (0x4108C) runs it with
+`CreateProcessW(nullptr, line, …, CREATE_UNICODE_ENVIRONMENT | NORMAL_PRIORITY_CLASS)`:
+
+    "<root>\Warframe.x64.exe" -windowMode:N -shaderCache:N -graphicsDriver:dx11|dx12
+      -gpuPreference:N -cluster:public|test|dev -language:xx [-languageVO:xx]
+      [-clienttype:<tag>] [-forceHTTPS]
+
+| Fragment | Source |
+|---|---|
+| exe path | branch root + `\Warframe.x64.exe` (`WF_GameExePath`, 0x3F3E0) |
+| `-windowMode` | `gWindowMode`, the registry `WindowMode` |
+| `-shaderCache` | `byte_105EA3`, the registry `ShaderCache` |
+| `-graphicsDriver` | `gGraphicsDriverNames[gGraphicsApi]` (0xD5550) = `dx11`, `dx12` |
+| `-gpuPreference` | `gGpuPreference`, the registry `GPUPreference` |
+| cluster | `gClusterArgs[gBranchIndex]` (0xD5538) |
+| `-language` | the registry `Language` |
+| `-languageVO` | omitted when the VO index is 15, the "no override" sentinel |
+| `-clienttype` | the launcher's own `-registry:<tag>` argument, not the registry |
+| `-forceHTTPS` | `gForceHttps`, the registry `ForceHTTPS` |
+
+`-allowmultiple` is emitted only when the launcher already tracks a live instance, and the
+`-dedicated`, `-dscfg`, `-epic`, `-onlive` and `-relaunch` branches belong to the dedicated
+server and store relaunch paths. None of them apply here.
+
+On success the stock launcher reaches `PostQuitMessage(0)` and exits once the game is up.
+
 ## Applicability filter
 
 `WF_EntryAppliesToClient` (0x26D18) drops entries before any I/O:
