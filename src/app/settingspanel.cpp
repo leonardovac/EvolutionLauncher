@@ -30,8 +30,8 @@ bool panelButton(std::string_view id, const core::Rect& box, std::string_view la
 constexpr std::array<std::string_view, 2> graphicsApiNames{"DirectX 11", "DirectX 12"};
 constexpr std::array<std::string_view, 3> gpuPreferenceNames{"Let Windows Decide", "Power Saving",
                                                               "High Performance"};
-constexpr std::array<std::string_view, 3> windowModeNames{"Windowed", "Borderless Fullscreen",
-                                                           "Fullscreen"};
+constexpr std::array<std::string_view, 3> windowModeNames{"Windowed", "Fullscreen",
+                                                           "Borderless Fullscreen"};
 
 struct Language
 {

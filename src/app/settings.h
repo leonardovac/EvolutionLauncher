@@ -25,8 +25,8 @@ enum class GpuPreference : std::uint32_t
 enum class WindowMode : std::uint32_t
 {
     Windowed = 0,
-    Borderless = 1,
-    Fullscreen = 2
+    Fullscreen = 1,
+    Borderless = 2
 };
 
 struct Settings
