@@ -3,7 +3,6 @@
 #include "update/md5.h"
 
 #include <filesystem>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>

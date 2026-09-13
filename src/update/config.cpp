@@ -262,6 +262,11 @@ LauncherConfig LauncherConfig::load()
 				}
 				scan.consume(']');
 			}
+			else
+			{
+				core::warn("launcher.json: \"{}\" is not an array; ignoring", key);
+				scan.skipValue();
+			}
 		}
 		else if (key == "patched")
 		{
@@ -304,10 +309,17 @@ LauncherConfig LauncherConfig::load()
 					if (haveSource && haveResult)
 						config.patched_[normalise(core::widen(*pathOpt))] =
 							PatchRecord{source, result};
+					else
+						core::warn("launcher.json: patched entry for \"{}\" missing source or result", *pathOpt);
 					if (!scan.consume(','))
 						break;
 				}
 				scan.consume('}');
+			}
+			else
+			{
+				core::warn("launcher.json: \"patched\" is not an object; ignoring");
+				scan.skipValue();
 			}
 		}
 		else

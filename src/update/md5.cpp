@@ -3,8 +3,10 @@
 #include "core/str.h"
 #include "core/win.h"
 
+#include <algorithm>
 #include <array>
 #include <bit>
+#include <cctype>
 #include <cstring>
 #include <vector>
 
@@ -155,7 +157,9 @@ std::expected<Digest, std::uint32_t> md5File(const std::filesystem::path& path)
 
 std::string toHex(const Digest& digest)
 {
-	return core::hex(digest);
+	std::string out = core::hex(digest);
+	std::ranges::transform(out, out.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+	return out;
 }
 
 std::optional<Digest> parseDigest(std::string_view text)
