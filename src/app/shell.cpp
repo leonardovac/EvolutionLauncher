@@ -125,10 +125,18 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     const float languageW = ui::px(96.f);
     const Rect languageRow(dividerX - ui::px(16.f) - languageW, glyphTop + ui::px(-2.f), languageW,
                            ui::px(26.f));
-    int index = state.languageIndex;
-    const int before = index;
-    dropdown(DropdownGroup::Shell, "shell.language", languageRow, "", languageNames(), index,
-             languageShortLabel(index));
+    if (!state.panelVisible)
+    {
+        int index = state.languageIndex;
+        const int before = index;
+        dropdown(DropdownGroup::Shell, "shell.language", languageRow, "", languageNames(), index,
+                 languageShortLabel(index));
+        languageIndex = index != before ? index : -1;
+    }
+    else
+    {
+        languageIndex = -1;
+    }
     globeGlyph(Vec2(languageRow.x + ui::px(11.f), languageRow.center().y), ui::px(7.f),
                gold.alpha(0.8f));
 
@@ -186,8 +194,8 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
                  ui::px(1.f));
     }
 
-    dropdownOverlay(DropdownGroup::Shell);
-    languageIndex = index != before ? index : -1;
+    if (!state.panelVisible)
+        dropdownOverlay(DropdownGroup::Shell);
 }
 
 bool shellCloseClicked()

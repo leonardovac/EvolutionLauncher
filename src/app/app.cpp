@@ -234,6 +234,7 @@ int run(const Options& options)
             menuOpen = !menuOpen;
             if (menuOpen)
                 menu.view = MenuView::Rows;
+            closeDropdown();
             ui::requestFrame();
         }
         if (panelSlide > 0.f)
