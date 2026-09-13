@@ -274,21 +274,22 @@ int run(const Options& options)
                 ui::requestFrame();
             }
         }
+        // outside the menu's slide test: the walk must be reaped even if the panel is gone
+        if (menu.optimizeRunning && !job.running())
+        {
+            menu.optimizeRunning = false;
+            menu.optimizeLine = std::format("{} UNLISTED FILES, {}", job.staleFiles(),
+                                            core::formatBytes(job.staleBytes()));
+            // a stale walk leaves the job idle, not ready; a real check finds out which
+            if (!options.wantShot)
+            {
+                meter.reset();
+                job.restart();
+            }
+            ui::requestFrame();
+        }
         if (menuSlide > 0.f)
         {
-            if (menu.view == MenuView::Optimize && menu.optimizeRunning && !job.running())
-            {
-                menu.optimizeRunning = false;
-                menu.optimizeLine = std::format("{} UNLISTED FILES, {}", job.staleFiles(),
-                                                core::formatBytes(job.staleBytes()));
-                // a stale walk leaves the job idle, not ready; a real check finds out which
-                if (!options.wantShot)
-                {
-                    meter.reset();
-                    job.restart();
-                }
-                ui::requestFrame();
-            }
             switch (drawRailMenu(viewport, menuSlide, menu))
             {
             case MenuAction::Settings:
