@@ -281,6 +281,13 @@ int run(const Options& options)
                 menu.optimizeRunning = false;
                 menu.optimizeLine = std::format("{} UNLISTED FILES, {}", job.staleFiles(),
                                                 core::formatBytes(job.staleBytes()));
+                // a stale walk leaves the job idle, not ready; a real check finds out which
+                if (!options.wantShot)
+                {
+                    meter.reset();
+                    job.restart();
+                }
+                ui::requestFrame();
             }
             switch (drawRailMenu(viewport, menuSlide, menu))
             {
