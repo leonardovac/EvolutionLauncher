@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -49,6 +50,7 @@ struct Summary
 	std::uint64_t purgeBytes = 0;
 	std::size_t purgeFailed = 0;
 	bool cancelled = false;
+	std::optional<Entry> mainExe;  // from the fetched index, for the caller to sideload-patch
 };
 
 std::expected<Summary, UpdateError> run(const Options& options);

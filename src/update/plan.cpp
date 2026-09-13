@@ -179,6 +179,13 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			++plan.upToDate;
 			continue;
 		}
+		if (const PatchRecord* record = config.launcher.patchFor(entry->installPath);
+		    record != nullptr && digest && *digest == record->result &&
+		    record->source == entry->hash)
+		{
+			++plan.upToDate;
+			continue;
+		}
 		if (!digest)
 			core::warn("could not read {} (0x{:08X})", core::narrow(entry->installPath),
 			           digest.error());

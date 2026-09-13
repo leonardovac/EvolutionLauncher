@@ -1,5 +1,6 @@
 #include "app/launch.h"
 #include "app/settings.h"
+#include "app/sideload.h"
 #include "app/versions.h"
 #include "core/cancel.h"
 #include "core/log.h"
@@ -317,6 +318,9 @@ int run(int argc, wchar_t** argv)
 		core::error("{}", core::narrow(wf::describe(summary.error())));
 		return 1;
 	}
+
+	if (summary->mainExe && !options.purgePrint && !options.staleReport)
+		app::ensureSideloaded(options.config.launcher, *summary->mainExe, options.config.root);
 
 	if (options.purgePrint)
 	{

@@ -9,6 +9,7 @@
 #include "update/purge.h"
 #include "update/stale.h"
 
+#include <algorithm>
 #include <format>
 #include <random>
 #include <string>
@@ -122,6 +123,10 @@ std::expected<Summary, UpdateError> run(const Options& options)
 		              { return !core::containsNoCase(entry.urlPath, options.only); });
 		core::info("--only kept {} of {} entries", entries.size(), before);
 	}
+
+	if (const auto mainExeIt = std::ranges::find(entries, Category::MainExe, &Entry::category);
+	    mainExeIt != entries.end())
+		summary.mainExe = *mainExeIt;
 
 	if (options.purgePrint)
 	{

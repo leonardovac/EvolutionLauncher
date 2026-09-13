@@ -16,7 +16,6 @@ namespace app
 namespace
 {
 
-constexpr std::wstring_view exeName = L"Warframe.x64.exe";
 constexpr std::wstring_view defragArgs =
     L" -applet:/EE/Types/Framework/CacheDefraggerIOCP /Tools/CachePlan.txt";
 constexpr std::wstring_view defragLog = L"Defrag.log";
@@ -67,6 +66,18 @@ std::expected<void, LaunchError> spawn(std::wstring& line)
 
 }
 
+std::wstring_view gameExeName(wf::Branch branch)
+{
+    switch (branch)
+    {
+    case wf::Branch::Public:
+    case wf::Branch::Test:
+    case wf::Branch::Dev:
+        break;
+    }
+    return L"Warframe.x64.exe";
+}
+
 std::optional<std::wstring> registryTag()
 {
     int count = 0;
@@ -91,7 +102,7 @@ std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch,
     if (root.empty())
         return {};
 
-    const std::filesystem::path exe = root / exeName;
+    const std::filesystem::path exe = root / gameExeName(branch);
 
     std::wstring line = std::format(
         L"\"{}\" -windowMode:{} -shaderCache:{} -graphicsDriver:{} -gpuPreference:{}",
@@ -116,7 +127,7 @@ std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch
     if (line.empty())
         return std::unexpected(LaunchError::NoRoot);
 
-    const std::filesystem::path exe = root / exeName;
+    const std::filesystem::path exe = root / gameExeName(branch);
     std::error_code ec;
     if (!std::filesystem::exists(exe, ec))
         return std::unexpected(LaunchError::NoExecutable);
@@ -132,7 +143,7 @@ std::expected<void, LaunchError> launchDefrag(const Settings& settings, wf::Bran
         return std::unexpected(LaunchError::NoRoot);
 
     std::error_code ec;
-    if (!std::filesystem::exists(root / exeName, ec))
+    if (!std::filesystem::exists(root / gameExeName(branch), ec))
         return std::unexpected(LaunchError::NoExecutable);
 
     std::error_code planEc;

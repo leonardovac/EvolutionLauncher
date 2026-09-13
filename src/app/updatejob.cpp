@@ -1,6 +1,7 @@
 #include "app/updatejob.h"
 
 #include "app/settings.h"
+#include "app/sideload.h"
 #include "core/cancel.h"
 #include "core/str.h"
 #include "update/progress.h"
@@ -152,6 +153,9 @@ void UpdateJob::work()
     options.progress = &bridge;
 
     const auto summary = wf::run(options);
+
+    if (summary && summary->mainExe && !options.staleReport)
+        ensureSideloaded(options.config.launcher, *summary->mainExe, options.config.root);
 
     JobPhase phase = JobPhase::Ready;
     std::string message;

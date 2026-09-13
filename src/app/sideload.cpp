@@ -1,5 +1,9 @@
 #include "app/sideload.h"
 
+#include "core/log.h"
+#include "core/str.h"
+#include "update/md5.h"
+
 #include <windows.h>
 
 #include <cstddef>
@@ -80,6 +84,47 @@ std::expected<bool, SideloadError> stripDependentLoadFlags(const std::filesystem
     if (!file)
         return std::unexpected(SideloadError::Write);
     return true;
+}
+
+void ensureSideloaded(wf::LauncherConfig& config, const wf::Entry& mainExe,
+                      const std::filesystem::path& root)
+{
+    const std::filesystem::path exe = root / mainExe.installPath;
+    std::error_code ec;
+    if (!std::filesystem::exists(exe, ec))
+        return;
+
+    const auto onDisk = wf::md5File(exe);
+    if (!onDisk)
+        return;
+
+    if (const wf::PatchRecord* record = config.patchFor(mainExe.installPath);
+        record && *onDisk == record->result && record->source == mainExe.hash)
+        return;  // already patched from the current index version
+
+    // only patch bytes that match the index; a mismatch means a re-download is pending
+    if (*onDisk != mainExe.hash)
+        return;
+
+    const auto changed = stripDependentLoadFlags(exe);
+    if (!changed)
+    {
+        core::warn("sideload patch failed: {}", core::narrow(describe(changed.error())));
+        return;
+    }
+    if (!*changed)
+    {
+        // flag was already 0; record identity so we do not md5 it every check
+        config.recordPatch(mainExe.installPath, mainExe.hash, mainExe.hash);
+        config.save();
+        return;
+    }
+    const auto patched = wf::md5File(exe);
+    if (!patched)
+        return;
+    config.recordPatch(mainExe.installPath, mainExe.hash, *patched);
+    config.save();
+    core::info("sideloaded {}", core::narrow(mainExe.installPath));
 }
 
 std::wstring_view describe(SideloadError error)
