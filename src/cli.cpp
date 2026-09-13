@@ -35,6 +35,7 @@ void usage()
 	          "  --check           plan only, download nothing\n"
 	          "  --verify          hash .cache and .toc as well as everything else\n"
 	          "  --stale           report files the index does not list, delete nothing\n"
+	          "  --purge-print     preview the unlisted files a real run would delete\n"
 	          "  --steam           this install is a Steam install (default: LauncherExe path)\n"
 	          "  --no-steam        force off\n"
 	          "  --eos             this install uses the EOS SDK (default: LauncherExe path)\n"
@@ -121,6 +122,10 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--stale")
 		{
 			options.staleReport = true;
+		}
+		else if (flag == L"--purge-print")
+		{
+			options.purgePrint = true;
 		}
 		else if (flag == L"--steam")
 		{
@@ -311,6 +316,18 @@ int run(int argc, wchar_t** argv)
 	{
 		core::error("{}", core::narrow(wf::describe(summary.error())));
 		return 1;
+	}
+
+	if (options.purgePrint)
+	{
+		core::info("{} unlisted files, {}", summary->purgeFiles,
+		           core::formatBytes(summary->purgeBytes));
+		if (summary->cancelled)
+		{
+			core::warn("cancelled while walking");
+			return 2;
+		}
+		return 0;
 	}
 
 	if (options.staleReport)

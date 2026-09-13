@@ -27,6 +27,7 @@ struct Options
 	Config config;
 	bool dryRun = false;
 	bool staleReport = false;
+	bool purgePrint = false;
 	std::wstring only;
 	Progress* progress = nullptr;
 };
@@ -44,6 +45,8 @@ struct Summary
 	std::uint64_t downloaded = 0;
 	std::size_t staleFiles = 0;
 	std::uint64_t staleBytes = 0;
+	std::size_t purgeFiles = 0;
+	std::uint64_t purgeBytes = 0;
 	bool cancelled = false;
 };
 

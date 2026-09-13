@@ -6,6 +6,7 @@
 #include "update/apply.h"
 #include "update/http.h"
 #include "update/lzma.h"
+#include "update/purge.h"
 #include "update/stale.h"
 
 #include <format>
@@ -120,6 +121,29 @@ std::expected<Summary, UpdateError> run(const Options& options)
 		std::erase_if(entries, [&options](const Entry& entry)
 		              { return !core::containsNoCase(entry.urlPath, options.only); });
 		core::info("--only kept {} of {} entries", entries.size(), before);
+	}
+
+	if (options.purgePrint)
+	{
+		const PurgeReport preview = runPurge(entries, options.config, /*dryRun*/ true, progress);
+		summary.purgeFiles = preview.wouldRemove.size();
+		summary.purgeBytes = preview.bytes;
+		summary.cancelled = preview.cancelled;
+		return summary;
+	}
+
+	if (!options.staleReport)
+	{
+		const PurgeReport purge = runPurge(entries, options.config, /*dryRun*/ false, progress);
+		summary.purgeFiles = purge.removed.size();
+		summary.purgeBytes = purge.bytes;
+		core::info("{} unlisted files removed, {}", purge.removed.size(),
+		           core::formatBytes(purge.bytes));
+		if (purge.cancelled)
+		{
+			summary.cancelled = true;
+			return summary;
+		}
 	}
 
 	core::info("checking {} against {}", core::narrow(branchName(options.config.branch)),
