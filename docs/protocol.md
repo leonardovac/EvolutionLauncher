@@ -159,6 +159,10 @@ and writes `Defrag.log`.
 The unused-binary purge is the same code path as the vestigial purge below and is not
 reproduced here.
 
+This launcher's own free-space guard checks 1.5x the size of `Tools/CachePlan.txt` instead
+of the largest known file: the stock launcher already has the full index in hand at this
+point in its flow, and this launcher's defragment path does not.
+
 ## Applicability filter
 
 `WF_EntryAppliesToClient` (0x26D18) drops entries before any I/O:

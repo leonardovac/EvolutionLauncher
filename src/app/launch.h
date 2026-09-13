@@ -16,6 +16,7 @@ enum class LaunchError
 {
     NoRoot,
     NoExecutable,
+    NoCachePlan,
     NoSpace,
     SpawnFailed
 };

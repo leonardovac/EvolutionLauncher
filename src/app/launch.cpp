@@ -135,12 +135,15 @@ std::expected<void, LaunchError> launchDefrag(const Settings& settings, wf::Bran
     if (!std::filesystem::exists(root / exeName, ec))
         return std::unexpected(LaunchError::NoExecutable);
 
-    std::error_code spaceEc;
-    const std::filesystem::space_info space = std::filesystem::space(root, spaceEc);
     std::error_code planEc;
     const std::uintmax_t plan =
         std::filesystem::file_size(root / L"Tools" / L"CachePlan.txt", planEc);
-    if (spaceEc || planEc || space.available < plan + plan / 2)
+    if (planEc)
+        return std::unexpected(LaunchError::NoCachePlan);
+
+    std::error_code spaceEc;
+    const std::filesystem::space_info space = std::filesystem::space(root, spaceEc);
+    if (spaceEc || space.available < plan + plan / 2)
         return std::unexpected(LaunchError::NoSpace);
 
     // the launcher's own artefact from a previous run, not user content
@@ -161,6 +164,8 @@ std::wstring_view describe(LaunchError error)
         return L"could not resolve the install root";
     case LaunchError::NoExecutable:
         return L"the game executable is missing";
+    case LaunchError::NoCachePlan:
+        return L"could not read Tools/CachePlan.txt to size the defragment guard";
     case LaunchError::NoSpace:
         return L"not enough free disk space to defragment safely";
     case LaunchError::SpawnFailed:
