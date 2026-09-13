@@ -1,8 +1,8 @@
 #pragma once
 
+#include "update/config.h"
 #include "update/manifest.h"
 #include "update/progress.h"
-#include "update/skiplist.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -31,7 +31,7 @@ struct Config
 	bool dx12 = false;
 	bool hashCaches = false;
 	bool forceHttps = false;
-	SkipList skip;
+	LauncherConfig launcher;
 };
 
 std::wstring_view originHost(Branch branch);

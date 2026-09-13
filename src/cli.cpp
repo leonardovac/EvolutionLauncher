@@ -6,7 +6,6 @@
 #include "core/str.h"
 #include "update/plan.h"
 #include "update/progress.h"
-#include "update/skiplist.h"
 #include "update/updater.h"
 
 #include <array>
@@ -244,7 +243,7 @@ int run(int argc, wchar_t** argv)
 	options.config.eosSdk = eos.value_or(settings.eos());
 	options.config.dx12 = dx12.value_or(settings.dx12());
 	options.config.forceHttps = !settings.allowNetworkCaches;
-	options.config.skip = wf::SkipList::load();
+	options.config.launcher = wf::LauncherConfig::load();
 	options.config.root = root.empty() ? settings.installRoot(options.config.branch) : root;
 	if (options.config.root.empty())
 	{
