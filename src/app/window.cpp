@@ -1,5 +1,8 @@
 #include "app/window.h"
 
+#include "app/rail.h"
+#include "app/shelllayout.h"
+
 #include <windowsx.h>
 
 #include <algorithm>
@@ -17,19 +20,19 @@ constexpr DWORD idleWaitMs = 100;     // bounded so a repaint with no message st
 // mirrors shell.cpp's closeBox layout so the caption strip doesn't swallow the click
 RECT closeGlyphRect(int width, float scale)
 {
-    const float right = static_cast<float>(width) - 28.f * scale;
-    const float x = right - 28.f * scale - 22.f * scale;
-    const float y = 28.f * scale + 16.f * scale;
-    const float size = 22.f * scale;
+    const float right = static_cast<float>(width) - shellFrameInset * scale;
+    const float x = right - shellCloseMargin * scale - shellGlyphSize * scale;
+    const float y = shellFrameInset * scale + shellGlyphTopOffset * scale;
+    const float size = shellGlyphSize * scale;
     return RECT{static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x + size),
                 static_cast<LONG>(y + size)};
 }
 
-// mirrors shell.cpp's minimiseBox, 34 design-space units left of the close glyph
+// mirrors shell.cpp's minimiseBox, left of the close glyph
 RECT minimiseGlyphRect(int width, float scale)
 {
     const RECT close = closeGlyphRect(width, scale);
-    const LONG shift = static_cast<LONG>(34.f * scale);
+    const LONG shift = static_cast<LONG>(shellMinimiseGap * scale);
     return RECT{close.left - shift, close.top, close.right - shift, close.bottom};
 }
 
@@ -37,21 +40,22 @@ RECT minimiseGlyphRect(int width, float scale)
 RECT languageRowRect(int width, float scale)
 {
     const RECT minimiseBox = minimiseGlyphRect(width, scale);
-    const LONG divider = minimiseBox.left - static_cast<LONG>(18.f * scale);
-    const LONG rowRight = divider - static_cast<LONG>(16.f * scale);
-    const LONG rowLeft = rowRight - static_cast<LONG>(96.f * scale);
-    const LONG top = minimiseBox.top - static_cast<LONG>(2.f * scale);
-    return RECT{rowLeft, top, rowRight, top + static_cast<LONG>(26.f * scale)};
+    const LONG divider = minimiseBox.left - static_cast<LONG>(shellDividerGap * scale);
+    const LONG rowRight = divider - static_cast<LONG>(shellLanguageGap * scale);
+    const LONG rowLeft = rowRight - static_cast<LONG>(shellLanguageWidth * scale);
+    const LONG top = minimiseBox.top + static_cast<LONG>(shellLanguageTopOffset * scale);
+    return RECT{rowLeft, top, rowRight, top + static_cast<LONG>(shellRowHeight * scale)};
 }
 
 // mirrors shell.cpp's nav row, which sits inside the draggable caption strip
 RECT navRowRect(int width, float scale)
 {
     const RECT language = languageRowRect(width, scale);
-    const LONG left = static_cast<LONG>((28.f + 96.f + 24.f + 260.f + 28.f) * scale);
-    const LONG top = static_cast<LONG>((28.f + 18.f) * scale);
+    const LONG left = static_cast<LONG>(
+        (shellFrameInset + railWidth + shellTitleOffsetX + shellTitleWidth + shellNavGap) * scale);
+    const LONG top = static_cast<LONG>((shellFrameInset + shellTitleOffsetY) * scale);
     return RECT{left, top, language.left - static_cast<LONG>(24.f * scale),
-                top + static_cast<LONG>(26.f * scale)};
+                top + static_cast<LONG>(shellRowHeight * scale)};
 }
 
 }

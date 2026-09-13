@@ -3,6 +3,7 @@
 #include "app/controls.h"
 #include "app/languages.h"
 #include "app/rail.h"
+#include "app/shelllayout.h"
 #include "ui/ui.h"
 #include "ui/widgets.h"
 
@@ -68,7 +69,7 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     using core::Vec2;
 
     const Col gold = Col::hex(0xD9C07A, 1.f);
-    const float inset = ui::px(28.f);
+    const float inset = ui::px(shellFrameInset);
 
     ui::dl().rect(viewport, ui::theme().body);
     ui::heroCard(viewport, hero, ui::theme().focus, 0.f, 1.f);
@@ -80,16 +81,17 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
                      content.h - inset * 2.f);
     ui::dl().border(frame, gold.alpha(0.45f), ui::px(1.f), 0.f);
 
-    const Rect title(frame.x + ui::px(24.f), frame.y + ui::px(18.f), ui::px(260.f), ui::px(28.f));
+    const Rect title(frame.x + ui::px(shellTitleOffsetX), frame.y + ui::px(shellTitleOffsetY),
+                     ui::px(shellTitleWidth), ui::px(28.f));
     ui::text(ui::fonts().title, title, "WARFRAME", gold, ui::AlignH::Left, ui::AlignV::Middle,
              ui::px(4.f));
 
     navClicked = {};
-    float navX = title.r() + ui::px(28.f);
+    float navX = title.r() + ui::px(shellNavGap);
     for (const NavEntry& entry : navEntries)
     {
         const float entryW = ui::px(entry.label.size() > 8 ? 132.f : 104.f);
-        const Rect box(navX, frame.y + ui::px(18.f), entryW, ui::px(26.f));
+        const Rect box(navX, frame.y + ui::px(shellTitleOffsetY), entryW, ui::px(shellRowHeight));
         const std::uint32_t navId = ui::id(entry.id);
         const bool navHot = ui::hovered(navId, box);
         const bool navHit = ui::clicked(navId, box);
@@ -101,14 +103,14 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
         navX = box.r() + ui::px(10.f);
     }
 
-    const float glyphSize = ui::px(22.f);
-    const float glyphTop = frame.y + ui::px(16.f);
+    const float glyphSize = ui::px(shellGlyphSize);
+    const float glyphTop = frame.y + ui::px(shellGlyphTopOffset);
 
-    const Rect closeBox(frame.x + frame.w - ui::px(28.f) - glyphSize, glyphTop, glyphSize,
-                        glyphSize);
+    const Rect closeBox(frame.x + frame.w - ui::px(shellCloseMargin) - glyphSize, glyphTop,
+                        glyphSize, glyphSize);
     closeClicked = ui::closeButton("shell.close", closeBox) && !state.panelVisible;
 
-    const Rect minimiseBox(closeBox.x - ui::px(34.f), glyphTop, glyphSize, glyphSize);
+    const Rect minimiseBox(closeBox.x - ui::px(shellMinimiseGap), glyphTop, glyphSize, glyphSize);
     const std::uint32_t minimiseId = ui::id("shell.minimise");
     const bool minimiseHot = ui::hovered(minimiseId, minimiseBox);
     const bool minimiseHit = ui::clicked(minimiseId, minimiseBox);
@@ -118,13 +120,14 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
                   Vec2(minimiseCenter.x + ui::px(6.f), minimiseCenter.y), ui::px(1.5f),
                   gold.alpha(minimiseHot ? 1.f : 0.7f));
 
-    const float dividerX = minimiseBox.x - ui::px(18.f);
+    const float dividerX = minimiseBox.x - ui::px(shellDividerGap);
     ui::dl().line(Vec2(dividerX, minimiseCenter.y - ui::px(7.f)),
                   Vec2(dividerX, minimiseCenter.y + ui::px(7.f)), ui::px(1.f), gold.alpha(0.3f));
 
-    const float languageW = ui::px(96.f);
-    const Rect languageRow(dividerX - ui::px(16.f) - languageW, glyphTop + ui::px(-2.f), languageW,
-                           ui::px(26.f));
+    const float languageW = ui::px(shellLanguageWidth);
+    const Rect languageRow(dividerX - ui::px(shellLanguageGap) - languageW,
+                           glyphTop + ui::px(shellLanguageTopOffset), languageW,
+                           ui::px(shellRowHeight));
     if (!state.panelVisible)
     {
         int index = state.languageIndex;
