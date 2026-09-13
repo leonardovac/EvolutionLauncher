@@ -163,6 +163,14 @@ This launcher's own free-space guard checks 1.5x the size of `Tools/CachePlan.tx
 of the largest known file: the stock launcher already has the full index in hand at this
 point in its flow, and this launcher's defragment path does not.
 
+The applet is not a console binary. `Warframe.x64.exe` is subsystem 2 (GUI) and calls
+`AllocConsole` itself, so `CREATE_NO_WINDOW` does not apply to it; the console is suppressed
+by spawning with `STARTF_USESHOWWINDOW` and `SW_HIDE`, which is the show state `AllocConsole`
+gives its new window. Its byte progress is written with `WriteConsole` and by
+`SetConsoleTitleW` as `Defrag <done>/<total> <n>% complete`, never to `EE.log`, so the title
+of the hidden window is the only place to read it from. `EE.log` carries the per-file
+`Defragmenting <path>` lines and nothing else of use here.
+
 ## Sideload patch
 
 Not a wire behaviour: a local patch of the game executable applied after each update. The
