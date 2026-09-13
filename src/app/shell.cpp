@@ -34,7 +34,7 @@ struct NavEntry
 
 constexpr std::array<NavEntry, 3> navEntries{
     {{"shell.nav.news", "NEWS", "https://www.warframe.com/news"},
-     {"shell.nav.notes", "PATCH NOTES", "https://www.warframe.com/updates"},
+     {"shell.nav.notes", "PATCH NOTES", "https://www.warframe.com/patch-notes"},
      {"shell.nav.prime", "PRIME ACCESS", "https://www.warframe.com/prime-access"}}};
 
 void globeGlyph(const core::Vec2& center, float radius, const core::Col& col)
