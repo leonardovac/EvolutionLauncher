@@ -67,7 +67,8 @@ StaleReport findStale(std::span<const Entry> entries, const Config& config, Prog
 		const std::filesystem::path relative = it->path().lexically_relative(config.root);
 		const std::wstring key = normalise(relative.wstring());
 		// lexical, so a reparse point cannot report a path outside the root
-		if (key.empty() || key.starts_with(L"..") || key.ends_with(L".tmp") || known.contains(key))
+		if (key.empty() || key.starts_with(L"..") || key.ends_with(L".tmp") ||
+		    key == L"defrag.log" || known.contains(key))
 			continue;
 		const std::uintmax_t size = it->file_size(ec);
 		const std::uint64_t bytes = ec ? 0u : static_cast<std::uint64_t>(size);

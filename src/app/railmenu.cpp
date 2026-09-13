@@ -98,7 +98,7 @@ MenuAction drawRailMenu(const core::Rect& viewport, float slide, const MenuState
                  ui::theme().text, ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
         y = line.b() + gap;
         const core::Rect note(panel.x + inset, y, rowW, ui::px(14.f));
-        ui::text(ui::fonts().caption, note, "NONE OF IT IS REMOVED", ui::theme().subtext,
+        ui::text(ui::fonts().caption, note, "NOTHING IS REMOVED", ui::theme().subtext,
                  ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
         y = note.b() + gap;
         if (!state.optimizeRunning)
