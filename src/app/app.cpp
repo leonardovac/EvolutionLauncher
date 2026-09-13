@@ -3,6 +3,7 @@
 #include "app/assets.h"
 #include "app/controls.h"
 #include "app/languages.h"
+#include "app/launch.h"
 #include "app/rail.h"
 #include "app/railmenu.h"
 #include "app/rate.h"
@@ -83,6 +84,7 @@ int run(const Options& options)
     Settings working;
     bool panelOpen = options.wantPanel;
     bool saveFailed = false;
+    std::string launchFailure;
     float panelSlide = options.wantPanel ? 1.f : 0.f;
     if (options.wantPanel)
         working = settings;
@@ -170,7 +172,7 @@ int run(const Options& options)
             break;
         }
         case JobPhase::Ready:
-            shell.buildLabel = "READY";
+            shell.buildLabel = launchFailure.empty() ? "READY" : std::string_view(launchFailure);
             break;
         case JobPhase::Failed:
             shell.statusLine = snap.message ? std::string_view(*snap.message) : "UPDATE FAILED";
@@ -212,6 +214,19 @@ int run(const Options& options)
                 }
             }
             ui::requestFrame();
+        }
+        if (shellStartClicked())
+        {
+            if (const auto launched = launchGame(settings, wf::Branch::Public); launched)
+            {
+                job.cancel();
+                break;
+            }
+            else
+            {
+                launchFailure = core::narrow(describe(launched.error()));
+                core::error("{}", launchFailure);
+            }
         }
         if (rail.cogClicked)
         {
