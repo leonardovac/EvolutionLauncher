@@ -101,6 +101,24 @@ MenuAction drawRailMenu(const core::Rect& viewport, float slide, const MenuState
         ui::text(ui::fonts().caption, note, "NOTHING IS REMOVED", ui::theme().subtext,
                  ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
         y = note.b() + gap;
+        if (!state.optimizeRunning)
+        {
+            const core::Rect defragBox(panel.x + inset, y, rowW, rowH);
+            if (menuRow("menu.defrag", defragBox, "DEFRAGMENT THE CACHE"))
+                action = MenuAction::Defragment;
+            y = defragBox.b() + gap;
+            const core::Rect caution(panel.x + inset, y, rowW, ui::px(14.f));
+            ui::text(ui::fonts().caption, caution, "RUNS THE GAME'S OWN DEFRAGMENTER",
+                     ui::theme().subtext, ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
+            y = caution.b() + gap;
+        }
+        if (!state.defragLine.empty())
+        {
+            const core::Rect failure(panel.x + inset, y, rowW, ui::px(14.f));
+            ui::text(ui::fonts().caption, failure, state.defragLine, ui::theme().fail,
+                     ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
+            y = failure.b() + gap;
+        }
         if (state.optimizeRunning)
             ui::requestFrame();
     }

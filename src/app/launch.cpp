@@ -17,6 +17,9 @@ namespace
 {
 
 constexpr std::wstring_view exeName = L"Warframe.x64.exe";
+constexpr std::wstring_view defragArgs =
+    L" -applet:/EE/Types/Framework/CacheDefraggerIOCP /Tools/CachePlan.txt";
+constexpr std::wstring_view defragLog = L"Defrag.log";
 
 constexpr std::array<std::wstring_view, 3> clusterArgs{L" -cluster:public", L" -cluster:test",
                                                        L" -cluster:dev"};
@@ -43,6 +46,24 @@ struct ProcessTraits
 };
 
 using ProcessHandle = core::UniqueHandle<ProcessTraits>;
+
+std::expected<void, LaunchError> spawn(std::wstring& line)
+{
+    core::info("launching: {}", core::narrow(line));
+
+    STARTUPINFOW startup{};
+    startup.cb = sizeof(startup);
+    PROCESS_INFORMATION info{};
+    const BOOL ok = ::CreateProcessW(nullptr, line.data(), nullptr, nullptr, FALSE,
+                                     CREATE_UNICODE_ENVIRONMENT | NORMAL_PRIORITY_CLASS, nullptr,
+                                     nullptr, &startup, &info);
+    if (ok == FALSE)
+        return std::unexpected(LaunchError::SpawnFailed);
+
+    const ProcessHandle process(info.hProcess);
+    const ProcessHandle thread(info.hThread);
+    return {};
+}
 
 }
 
@@ -100,20 +121,36 @@ std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch
     if (!std::filesystem::exists(exe, ec))
         return std::unexpected(LaunchError::NoExecutable);
 
-    core::info("launching: {}", core::narrow(line));
+    return spawn(line);
+}
 
-    STARTUPINFOW startup{};
-    startup.cb = sizeof(startup);
-    PROCESS_INFORMATION info{};
-    const BOOL ok = ::CreateProcessW(nullptr, line.data(), nullptr, nullptr, FALSE,
-                                     CREATE_UNICODE_ENVIRONMENT | NORMAL_PRIORITY_CLASS, nullptr,
-                                     nullptr, &startup, &info);
-    if (ok == FALSE)
-        return std::unexpected(LaunchError::SpawnFailed);
+std::expected<void, LaunchError> launchDefrag(const Settings& settings, wf::Branch branch)
+{
+    const std::filesystem::path root = settings.installRoot(branch);
+    std::wstring line = buildGameCommandLine(settings, branch, root);
+    if (line.empty())
+        return std::unexpected(LaunchError::NoRoot);
 
-    const ProcessHandle process(info.hProcess);
-    const ProcessHandle thread(info.hThread);
-    return {};
+    std::error_code ec;
+    if (!std::filesystem::exists(root / exeName, ec))
+        return std::unexpected(LaunchError::NoExecutable);
+
+    std::error_code spaceEc;
+    const std::filesystem::space_info space = std::filesystem::space(root, spaceEc);
+    std::error_code planEc;
+    const std::uintmax_t plan =
+        std::filesystem::file_size(root / L"Tools" / L"CachePlan.txt", planEc);
+    if (spaceEc || planEc || space.available < plan + plan / 2)
+        return std::unexpected(LaunchError::NoSpace);
+
+    // the launcher's own artefact from a previous run, not user content
+    ec.clear();
+    std::filesystem::remove(root / defragLog, ec);
+    if (ec)
+        core::warn("could not remove {}: {}", core::narrow(defragLog), ec.message());
+
+    line += defragArgs;
+    return spawn(line);
 }
 
 std::wstring_view describe(LaunchError error)
@@ -124,6 +161,8 @@ std::wstring_view describe(LaunchError error)
         return L"could not resolve the install root";
     case LaunchError::NoExecutable:
         return L"the game executable is missing";
+    case LaunchError::NoSpace:
+        return L"not enough free disk space to defragment safely";
     case LaunchError::SpawnFailed:
         return L"could not start the game";
     }

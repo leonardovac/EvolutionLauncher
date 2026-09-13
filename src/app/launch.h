@@ -16,6 +16,7 @@ enum class LaunchError
 {
     NoRoot,
     NoExecutable,
+    NoSpace,
     SpawnFailed
 };
 
@@ -26,6 +27,9 @@ std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch,
                                   const std::filesystem::path& root);
 
 std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch branch);
+
+// runs the game's own cache defragmenter; removes a stale Defrag.log first
+std::expected<void, LaunchError> launchDefrag(const Settings& settings, wf::Branch branch);
 
 std::wstring_view describe(LaunchError error);
 

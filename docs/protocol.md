@@ -142,6 +142,23 @@ server and store relaunch paths. None of them apply here.
 
 On success the stock launcher reaches `PostQuitMessage(0)` and exits once the game is up.
 
+## Cache defragment
+
+The launcher's Optimize action is not a download. `sub_31FB8` prompts with
+`OPTIMIZE_CACHE_PROMPT`, purges its unused-binary list, checks free space with
+`GetDiskFreeSpaceExW` against 1.5x the largest known file, and then `sub_238D4` removes
+`<root>\Defrag.log` and spawns the **game** through the `ReqSpawnProcess` dialog with the
+arguments `WF_BuildDefragArgs` (0x32710) composes:
+
+    -applet:/EE/Types/Framework/CacheDefraggerIOCP /Tools/CachePlan.txt
+
+A trailing ` benchmark` is appended when the launcher itself was started with `-benchmark`.
+`Tools/CachePlan.txt` is an index-listed file; the applet rewrites the `.cache` set in place
+and writes `Defrag.log`.
+
+The unused-binary purge is the same code path as the vestigial purge below and is not
+reproduced here.
+
 ## Applicability filter
 
 `WF_EntryAppliesToClient` (0x26D18) drops entries before any I/O:

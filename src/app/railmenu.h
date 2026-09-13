@@ -22,7 +22,8 @@ enum class MenuAction
     Optimize,
     Versions,
     Back,
-    Dismiss
+    Dismiss,
+    Defragment
 };
 
 struct MenuState
@@ -32,6 +33,7 @@ struct MenuState
     std::string engineLine;
     std::string optimizeLine;
     bool optimizeRunning = false;
+    std::string defragLine;
 };
 
 // slide is 0 (offscreen) to 1 (fully open)

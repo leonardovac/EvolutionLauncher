@@ -47,6 +47,7 @@ void usage()
 	          "  --settings-write  write back the loaded settings and exit\n"
 	          "  --versions        print the launcher and engine versions and exit\n"
 	          "  --launch-print    print the game command line and exit\n"
+	          "  --defrag-print    print the cache defragment command line and exit\n"
 	          "  --help\n"
 	          "\n"
 	          "  -shot <path>      (as argv[1]) launch the GUI and save a screenshot to <path>\n"
@@ -93,6 +94,7 @@ int run(int argc, wchar_t** argv)
 	bool wantSettingsWrite = false;
 	bool wantVersions = false;
 	bool wantLaunchPrint = false;
+	bool wantDefragPrint = false;
 
 	const auto value = [&args](std::size_t& i) -> std::optional<std::wstring_view>
 	{
@@ -164,6 +166,10 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--launch-print")
 		{
 			wantLaunchPrint = true;
+		}
+		else if (flag == L"--defrag-print")
+		{
+			wantDefragPrint = true;
 		}
 		else if (flag == L"--root")
 		{
@@ -271,6 +277,19 @@ int run(int argc, wchar_t** argv)
 			core::error("could not build the game command line");
 			return 1;
 		}
+		core::info("{}", core::narrow(line));
+		return 0;
+	}
+
+	if (wantDefragPrint)
+	{
+		std::wstring line = app::buildGameCommandLine(settings, options.config.branch, options.config.root);
+		if (line.empty())
+		{
+			core::error("could not build the game command line");
+			return 1;
+		}
+		line += L" -applet:/EE/Types/Framework/CacheDefraggerIOCP /Tools/CachePlan.txt";
 		core::info("{}", core::narrow(line));
 		return 0;
 	}

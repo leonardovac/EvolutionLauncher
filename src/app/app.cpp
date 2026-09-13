@@ -85,6 +85,7 @@ int run(const Options& options)
     bool panelOpen = options.wantPanel;
     bool saveFailed = false;
     std::string launchFailure;
+    bool defragStarted = false;
     float panelSlide = options.wantPanel ? 1.f : 0.f;
     if (options.wantPanel)
         working = settings;
@@ -313,6 +314,7 @@ int run(const Options& options)
             case MenuAction::Optimize:
                 menu.view = MenuView::Optimize;
                 menu.optimizeLine.clear();
+                menu.defragLine.clear();
                 if (!options.wantShot)
                 {
                     menu.optimizeRunning = true;
@@ -326,6 +328,23 @@ int run(const Options& options)
                 break;
             case MenuAction::Dismiss:
                 menuOpen = false;
+                ui::requestFrame();
+                break;
+            case MenuAction::Defragment:
+                if (!options.wantShot)
+                {
+                    if (const auto started = launchDefrag(settings, wf::Branch::Public); started)
+                    {
+                        job.cancel();
+                        menuOpen = false;
+                        defragStarted = true;
+                    }
+                    else
+                    {
+                        menu.defragLine = core::narrow(describe(started.error()));
+                        core::error("{}", menu.defragLine);
+                    }
+                }
                 ui::requestFrame();
                 break;
             case MenuAction::None:
@@ -342,6 +361,9 @@ int run(const Options& options)
                 result = 1;
             break;
         }
+
+        if (defragStarted)
+            break;
 
         device.present(true);
         if (!ui::g().animated && !window.mouseDown())
