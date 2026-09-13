@@ -1,5 +1,6 @@
 #include "update/md5.h"
 
+#include "core/str.h"
 #include "core/win.h"
 
 #include <array>
@@ -150,6 +151,16 @@ std::expected<Digest, std::uint32_t> md5File(const std::filesystem::path& path)
 		md5.update(std::span<const std::uint8_t>(chunk.data(), read));
 	}
 	return md5.finish();
+}
+
+std::string toHex(const Digest& digest)
+{
+	return core::hex(digest);
+}
+
+std::optional<Digest> parseDigest(std::string_view text)
+{
+	return core::parseHash(core::widen(text));
 }
 
 }

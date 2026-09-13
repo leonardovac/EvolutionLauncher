@@ -4,7 +4,10 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <span>
+#include <string>
+#include <string_view>
 
 namespace wf
 {
@@ -29,5 +32,8 @@ private:
 };
 
 std::expected<Digest, std::uint32_t> md5File(const std::filesystem::path& path);
+
+std::string toHex(const Digest& digest);
+std::optional<Digest> parseDigest(std::string_view text);
 
 }
