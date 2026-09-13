@@ -3,6 +3,8 @@
 #include "ui/ui.h"
 #include "ui/widgets.h"
 
+#include <algorithm>
+
 namespace app
 {
 namespace
@@ -16,6 +18,7 @@ DropdownGroup openGroup = DropdownGroup::Shell;
 core::Rect openRow;
 std::span<const std::string_view> openOptions;
 int* openIndex = nullptr;
+float openListWidth = 0.f;
 
 }
 
@@ -46,7 +49,7 @@ bool checkbox(std::string_view id, const core::Rect& row, std::string_view label
 
 void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
               std::string_view label, std::span<const std::string_view> options, int& index,
-              std::string_view display)
+              std::string_view display, float listWidth)
 {
     const std::uint32_t widget = ui::id(id);
     const core::Rect field(row.x + row.w * 0.45f, row.y, row.w * 0.55f, row.h);
@@ -80,6 +83,7 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
         openRow = field;
         openOptions = options;
         openIndex = &index;
+        openListWidth = listWidth > 0.f ? listWidth : field.w;
     }
 }
 
@@ -93,7 +97,8 @@ bool dropdownOverlay(DropdownGroup group)
 
     const float line = ui::px(22.f);
     const float height = line * static_cast<float>(openOptions.size());
-    const core::Rect list(openRow.x, openRow.y + openRow.h, openRow.w, height);
+    const float listX = std::max(0.f, openRow.r() - openListWidth);
+    const core::Rect list(listX, openRow.y + openRow.h, openListWidth, height);
     ui::dl().rect(list, ui::theme().panelFill.alpha(0.98f), ui::px(2.f));
     ui::dl().border(list, gold.alpha(0.6f), ui::px(1.f), ui::px(2.f));
 

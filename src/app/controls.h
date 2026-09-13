@@ -17,9 +17,10 @@ enum class DropdownGroup
 // returns true when the value changed this frame
 bool checkbox(std::string_view id, const core::Rect& row, std::string_view label, bool& value);
 
+// listWidth defaults to the field's own width; a wider list extends left of the field's right edge
 void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
               std::string_view label, std::span<const std::string_view> options, int& index,
-              std::string_view display = {});
+              std::string_view display = {}, float listWidth = 0.f);
 
 // draws the expanded list only when `group` owns the open dropdown; call once per group
 bool dropdownOverlay(DropdownGroup group);

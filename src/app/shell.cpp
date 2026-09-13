@@ -46,6 +46,15 @@ void globeGlyph(const core::Vec2& center, float radius, const core::Col& col)
                  col);
 }
 
+// wide enough for "Chinese (Traditional)", the longest entry, at the caption font
+float languageListWidth()
+{
+    float widest = 0.f;
+    for (const std::string_view name : languageNames())
+        widest = std::max(widest, ui::fonts().caption.measure(name));
+    return widest + ui::px(16.f);
+}
+
 void hexFrame(const core::Rect& box, float thickness, const core::Col& col)
 {
     const float chamfer = std::min(box.h * 0.45f, box.w * 0.5f);
@@ -133,7 +142,7 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
         int index = state.languageIndex;
         const int before = index;
         dropdown(DropdownGroup::Shell, "shell.language", languageRow, "", languageNames(), index,
-                 languageShortLabel(index));
+                 languageShortLabel(index), languageListWidth());
         languageIndex = index != before ? index : -1;
     }
     else
