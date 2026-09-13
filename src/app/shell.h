@@ -15,8 +15,8 @@ struct ShellState
     JobPhase phase = JobPhase::Idle;
     std::string_view buildLabel;
     std::string_view statusLine;
-    std::string_view fileLine;
-    std::string_view languageLabel;
+    std::string_view detailLine;
+    int languageIndex = 0;
     float progress = 0.f;
     bool startEnabled = false;
     bool panelVisible = false;
@@ -25,6 +25,9 @@ struct ShellState
 void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& state);
 bool shellCloseClicked();
 bool shellStartClicked();
-bool shellGearClicked();
+bool shellMinimiseClicked();
+int shellLanguageIndex();
+// the URL of the nav entry clicked this frame, empty when none was
+std::string_view shellNavClicked();
 
 }

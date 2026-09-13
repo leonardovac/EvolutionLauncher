@@ -33,12 +33,16 @@ public:
     void start();
     void cancel();
     void join();
-    void restart();
+    void restart(bool verify = false);
+    void startStaleReport();
     [[nodiscard]] bool running() const noexcept;
     [[nodiscard]] JobSnapshot snapshot() const;
+    [[nodiscard]] std::size_t staleFiles() const noexcept;
+    [[nodiscard]] std::uint64_t staleBytes() const noexcept;
 
 private:
     void work();
+    void reset(bool verify, bool stale);
 
     std::thread thread_;
     std::atomic<bool> running_{false};
@@ -49,6 +53,10 @@ private:
     std::atomic<std::uint64_t> downloadTotal_{0};
     std::atomic<JobText> currentFile_;
     std::atomic<JobText> message_;
+    std::atomic<bool> verify_{false};
+    std::atomic<bool> stale_{false};
+    std::atomic<std::size_t> staleFiles_{0};
+    std::atomic<std::uint64_t> staleBytes_{0};
 };
 
 }

@@ -12,6 +12,7 @@ class Window
 public:
     bool create(int width, int height);
     void destroy();
+    void minimise() const noexcept;
 
     [[nodiscard]] HWND handle() const noexcept { return hwnd_; }
     [[nodiscard]] int width() const noexcept { return width_; }

@@ -32,6 +32,11 @@ public:
 		(void)installPath;
 		(void)reason;
 	}
+	virtual void onStale(std::wstring_view installPath, std::uint64_t bytes)
+	{
+		(void)installPath;
+		(void)bytes;
+	}
 };
 
 }

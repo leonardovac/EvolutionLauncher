@@ -1,9 +1,12 @@
+#include "app/launch.h"
 #include "app/settings.h"
+#include "app/versions.h"
 #include "core/cancel.h"
 #include "core/log.h"
 #include "core/str.h"
 #include "update/plan.h"
 #include "update/progress.h"
+#include "update/skiplist.h"
 #include "update/updater.h"
 
 #include <array>
@@ -23,7 +26,7 @@ namespace
 
 void usage()
 {
-	std::puts("WFUpdate - Warframe content updater\n"
+	std::puts("Launcher - Warframe content updater\n"
 	          "\n"
 	          "  --root <dir>      install root (default: LauncherExe's grandparent, else\n"
 	          "                    %LOCALAPPDATA%\\Warframe\\Downloaded\\<branch>)\n"
@@ -32,6 +35,7 @@ void usage()
 	          "  --only <text>     restrict to paths containing <text>\n"
 	          "  --check           plan only, download nothing\n"
 	          "  --verify          hash .cache and .toc as well as everything else\n"
+	          "  --stale           report files the index does not list, delete nothing\n"
 	          "  --steam           this install is a Steam install (default: LauncherExe path)\n"
 	          "  --no-steam        force off\n"
 	          "  --eos             this install uses the EOS SDK (default: LauncherExe path)\n"
@@ -41,11 +45,15 @@ void usage()
 	          "  --verbose         per-file detail\n"
 	          "  --settings        print the launcher settings and exit\n"
 	          "  --settings-write  write back the loaded settings and exit\n"
+	          "  --versions        print the launcher and engine versions and exit\n"
+	          "  --launch-print    print the game command line and exit\n"
+	          "  --defrag-print    print the cache defragment command line and exit\n"
 	          "  --help\n"
 	          "\n"
 	          "  -shot <path>      (as argv[1]) launch the GUI and save a screenshot to <path>\n"
 	          "  -t <seconds>      delay before the -shot capture           (default 0.6)\n"
 	          "  -panel            (with -shot) open the settings panel before capturing\n"
+	          "  -menu             (with -shot) open the rail menu before capturing\n"
 	          "\n"
 	          "exit: 0 ok, 1 failed, 2 cancelled, 3 --check found work to do");
 }
@@ -63,6 +71,11 @@ std::optional<wf::Branch> parseBranch(std::wstring_view text)
 
 class ConsoleProgress final : public wf::Progress
 {
+public:
+	void onStale(std::wstring_view installPath, std::uint64_t bytes) override
+	{
+		core::debug("  unlisted {} ({})", core::narrow(installPath), core::formatBytes(bytes));
+	}
 };
 
 }
@@ -79,6 +92,9 @@ int run(int argc, wchar_t** argv)
 	std::optional<bool> dx12;
 	bool wantSettings = false;
 	bool wantSettingsWrite = false;
+	bool wantVersions = false;
+	bool wantLaunchPrint = false;
+	bool wantDefragPrint = false;
 
 	const auto value = [&args](std::size_t& i) -> std::optional<std::wstring_view>
 	{
@@ -102,6 +118,10 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--verify")
 		{
 			options.config.hashCaches = true;
+		}
+		else if (flag == L"--stale")
+		{
+			options.staleReport = true;
 		}
 		else if (flag == L"--steam")
 		{
@@ -138,6 +158,18 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--settings-write")
 		{
 			wantSettingsWrite = true;
+		}
+		else if (flag == L"--versions")
+		{
+			wantVersions = true;
+		}
+		else if (flag == L"--launch-print")
+		{
+			wantLaunchPrint = true;
+		}
+		else if (flag == L"--defrag-print")
+		{
+			wantDefragPrint = true;
 		}
 		else if (flag == L"--root")
 		{
@@ -181,6 +213,10 @@ int run(int argc, wchar_t** argv)
 			}
 			options.only = *given;
 		}
+		else if (flag.starts_with(L"-registry:"))
+		{
+			// read straight off the command line by app::registryTag; not a CLI option
+		}
 		else
 		{
 			core::error("unknown option {}", core::narrow(flag));
@@ -208,6 +244,7 @@ int run(int argc, wchar_t** argv)
 	options.config.eosSdk = eos.value_or(settings.eos());
 	options.config.dx12 = dx12.value_or(settings.dx12());
 	options.config.forceHttps = !settings.allowNetworkCaches;
+	options.config.skip = wf::SkipList::load();
 	options.config.root = root.empty() ? settings.installRoot(options.config.branch) : root;
 	if (options.config.root.empty())
 	{
@@ -232,6 +269,39 @@ int run(int argc, wchar_t** argv)
 		return 0;
 	}
 
+	if (wantLaunchPrint)
+	{
+		const std::wstring line = app::buildGameCommandLine(settings, options.config.branch, options.config.root);
+		if (line.empty())
+		{
+			core::error("could not build the game command line");
+			return 1;
+		}
+		core::info("{}", core::narrow(line));
+		return 0;
+	}
+
+	if (wantDefragPrint)
+	{
+		std::wstring line = app::buildGameCommandLine(settings, options.config.branch, options.config.root);
+		if (line.empty())
+		{
+			core::error("could not build the game command line");
+			return 1;
+		}
+		line += L" -applet:/EE/Types/Framework/CacheDefraggerIOCP /Tools/CachePlan.txt";
+		core::info("{}", core::narrow(line));
+		return 0;
+	}
+
+	if (wantVersions)
+	{
+		core::info("launcher {}", core::narrow(app::launcherVersion()));
+		const auto engine = app::engineVersion(settings, options.config.branch);
+		core::info("engine {}", engine ? core::narrow(*engine) : "unknown");
+		return 0;
+	}
+
 	core::installCancelHandler();
 
 	ConsoleProgress progress;
@@ -244,10 +314,22 @@ int run(int argc, wchar_t** argv)
 		return 1;
 	}
 
+	if (options.staleReport)
+	{
+		core::info("{} unlisted files, {}", summary->staleFiles,
+		           core::formatBytes(summary->staleBytes));
+		if (summary->cancelled)
+		{
+			core::warn("cancelled while walking");
+			return 2;
+		}
+		return 0;
+	}
+
 	if (options.dryRun)
 	{
-		core::info("{} queued, {} up to date, {} filtered", summary->queued, summary->upToDate,
-		           summary->filtered);
+		core::info("{} queued, {} up to date, {} filtered, {} skipped", summary->queued,
+		           summary->upToDate, summary->filtered, summary->skipped);
 		if (summary->cancelled)
 		{
 			core::warn("cancelled while checking");

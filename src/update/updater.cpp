@@ -6,6 +6,7 @@
 #include "update/apply.h"
 #include "update/http.h"
 #include "update/lzma.h"
+#include "update/stale.h"
 
 #include <format>
 #include <random>
@@ -125,17 +126,27 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	           options.config.root.string());
 	const Plan plan = buildPlan(entries, options.config, progress);
 	summary.filtered = plan.filtered;
+	summary.skipped = plan.skipped;
 	summary.upToDate = plan.upToDate;
 	summary.queued = plan.jobs.size();
 
-	core::info("{} filtered, {} up to date, {} queued ({} to download)", plan.filtered,
-	           plan.upToDate, plan.jobs.size(), core::formatBytes(plan.downloadBytes));
+	core::info("{} filtered, {} skipped, {} up to date, {} queued ({} to download)", plan.filtered,
+	           plan.skipped, plan.upToDate, plan.jobs.size(), core::formatBytes(plan.downloadBytes));
 	if (progress != nullptr)
 		progress->onPlan(plan.jobs.size(), plan.downloadBytes);
 
 	if (core::cancelled())
 	{
 		summary.cancelled = true;
+		return summary;
+	}
+
+	if (options.staleReport)
+	{
+		const StaleReport stale = findStale(entries, options.config, progress);
+		summary.staleFiles = stale.files.size();
+		summary.staleBytes = stale.bytes;
+		summary.cancelled = summary.cancelled || stale.cancelled;
 		return summary;
 	}
 

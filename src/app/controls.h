@@ -8,14 +8,22 @@
 namespace app
 {
 
+enum class DropdownGroup
+{
+    Shell,
+    Settings
+};
+
 // returns true when the value changed this frame
 bool checkbox(std::string_view id, const core::Rect& row, std::string_view label, bool& value);
 
-void dropdown(std::string_view id, const core::Rect& row, std::string_view label,
-              std::span<const std::string_view> options, int& index);
+// listWidth defaults to the field's own width; a wider list extends left of the field's right edge
+void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
+              std::string_view label, std::span<const std::string_view> options, int& index,
+              std::string_view display = {}, float listWidth = 0.f);
 
-// draws the expanded list for whichever dropdown is open; call once after every row
-bool dropdownOverlay();
+// draws the expanded list only when `group` owns the open dropdown; call once per group
+bool dropdownOverlay(DropdownGroup group);
 
 void closeDropdown();
 

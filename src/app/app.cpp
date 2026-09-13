@@ -2,11 +2,17 @@
 
 #include "app/assets.h"
 #include "app/controls.h"
+#include "app/languages.h"
+#include "app/launch.h"
+#include "app/rail.h"
+#include "app/railmenu.h"
+#include "app/rate.h"
 #include "app/resource.h"
 #include "app/settings.h"
 #include "app/settingspanel.h"
 #include "app/shell.h"
 #include "app/updatejob.h"
+#include "app/versions.h"
 #include "app/window.h"
 #include "core/log.h"
 #include "core/str.h"
@@ -15,8 +21,10 @@
 #include "gfx/image.h"
 #include "gfx/renderer.h"
 #include "ui/ui.h"
+#include "update/plan.h"
 
 #include <objbase.h>
+#include <shellapi.h>
 
 #include <algorithm>
 #include <array>
@@ -31,12 +39,6 @@ namespace
 
 constexpr int designWidth = 1180;
 constexpr int designHeight = 740;
-
-std::string_view baseName(std::string_view path)
-{
-    const std::size_t slash = path.find_last_of("\\/");
-    return slash == std::string_view::npos ? path : path.substr(slash + 1);
-}
 
 }
 
@@ -56,7 +58,7 @@ int run(const Options& options)
     if (!renderer.create(device.dev()))
         return 1;
 
-    const auto fontBytes = resource(WF_RES_FONT);
+    const auto fontBytes = resource(RES_FONT);
     ui::FontData fontData;
     fontData.semiBold = fontBytes.data();
     fontData.semiBoldSize = fontBytes.size();
@@ -67,7 +69,7 @@ int run(const Options& options)
     ui::rebuildFonts(device.dev(), window.scale());
 
     gfx::Image hero;
-    if (const auto bytes = resource(WF_RES_HERO); !bytes.empty())
+    if (const auto bytes = resource(RES_HERO); !bytes.empty())
     {
         if (auto loaded = gfx::loadImageMemory(device.dev(), bytes))
             hero = std::move(*loaded);
@@ -76,14 +78,21 @@ int run(const Options& options)
     UpdateJob job;
     if (!options.wantShot)
         job.start();
+    RateMeter meter;
 
     Settings settings = Settings::load();
     Settings working;
     bool panelOpen = options.wantPanel;
     bool saveFailed = false;
+    std::string launchFailure;
+    bool defragStarted = false;
     float panelSlide = options.wantPanel ? 1.f : 0.f;
     if (options.wantPanel)
         working = settings;
+
+    MenuState menu;
+    bool menuOpen = options.wantMenu;
+    float menuSlide = options.wantMenu ? 1.f : 0.f;
 
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
@@ -97,8 +106,11 @@ int run(const Options& options)
         elapsed += dt;
 
         panelSlide = core::clamp01(panelSlide + (panelOpen ? 1.f : -1.f) * dt * 6.f);
+        menuSlide = core::clamp01(menuSlide + (menuOpen ? 1.f : -1.f) * dt * 6.f);
 
         const JobSnapshot snap = job.snapshot();
+        if (snap.phase == JobPhase::Updating)
+            meter.sample(snap.downloaded, dt);
 
         if (window.takeResized())
             device.resize(window.width(), window.height());
@@ -124,17 +136,10 @@ int run(const Options& options)
         ShellState shell;
         shell.phase = snap.phase;
         shell.startEnabled = snap.phase == JobPhase::Ready;
-        shell.panelVisible = panelSlide > 0.f;
+        shell.panelVisible = panelSlide > 0.f || menuSlide > 0.f;
         std::string statusBuffer;
-        std::string fileBuffer;
-        std::string languageBuffer = core::narrow(settings.language);
-        if (languageBuffer.size() == 2)
-        {
-            languageBuffer[0] = static_cast<char>(languageBuffer[0] - 'a' + 'A');
-            languageBuffer[1] = static_cast<char>(languageBuffer[1] - 'a' + 'A');
-            languageBuffer = std::format("LANGUAGE  {}", languageBuffer);
-            shell.languageLabel = languageBuffer;
-        }
+        std::string detailBuffer;
+        shell.languageIndex = languageIndexFromCode(settings.language);
         switch (snap.phase)
         {
         case JobPhase::Idle:
@@ -149,21 +154,26 @@ int run(const Options& options)
                                                         / static_cast<double>(snap.downloadTotal)))
                     : 0.f;
             shell.progress = fraction;
-            statusBuffer = std::format("UPDATING GAME  {}%   {} / {}",
-                                       static_cast<int>(fraction * 100.f),
-                                       core::formatBytes(snap.downloaded),
-                                       core::formatBytes(snap.downloadTotal));
+            statusBuffer = std::format("UPDATING GAME  {}%", static_cast<int>(fraction * 100.f));
             shell.statusLine = statusBuffer;
-            if (snap.currentFile)
+            detailBuffer = std::format("{} / {}", core::formatBytes(snap.downloaded),
+                                       core::formatBytes(snap.downloadTotal));
+            if (meter.ready())
             {
-                fileBuffer = std::format("{} OF {}   {}", snap.entryIndex, snap.entryCount,
-                                         baseName(*snap.currentFile));
-                shell.fileLine = fileBuffer;
+                if (const std::string rate = formatRate(meter.bytesPerSecond()); !rate.empty())
+                    detailBuffer += std::format("  •  {}", rate);
+                const std::uint64_t remaining = snap.downloadTotal > snap.downloaded
+                    ? snap.downloadTotal - snap.downloaded
+                    : 0u;
+                if (const std::string eta = formatEta(remaining, meter.bytesPerSecond());
+                    !eta.empty())
+                    detailBuffer += std::format("  •  {}", eta);
             }
+            shell.detailLine = detailBuffer;
             break;
         }
         case JobPhase::Ready:
-            shell.buildLabel = "READY";
+            shell.buildLabel = launchFailure.empty() ? "READY" : std::string_view(launchFailure);
             break;
         case JobPhase::Failed:
             shell.statusLine = snap.message ? std::string_view(*snap.message) : "UPDATE FAILED";
@@ -173,23 +183,58 @@ int run(const Options& options)
             break;
         }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
+        const RailResult rail = drawRail(viewport, !shell.panelVisible);
         if (shellCloseClicked())
         {
             job.cancel();
             break;
         }
-        if (shellGearClicked())
+        if (shellMinimiseClicked())
+            window.minimise();
+        if (const std::string_view url = shellNavClicked(); !url.empty())
+            ::ShellExecuteW(nullptr, L"open", core::widen(url).c_str(), nullptr, nullptr,
+                            SW_SHOWNORMAL);
+        if (const int picked = shellLanguageIndex(); picked >= 0)
         {
-            panelOpen = !panelOpen;
-            if (panelOpen)
+            Settings next = settings;
+            next.language = std::wstring(languageCodeFromIndex(picked));
+            if (next.language != settings.language)
             {
-                working = settings;
-                saveFailed = false;
+                if (next.save(&settings))
+                {
+                    settings = next;
+                    if (!options.wantShot)
+                    {
+                        meter.reset();
+                        job.restart();
+                    }
+                }
+                else
+                {
+                    core::error("could not write the launcher settings");
+                }
+            }
+            ui::requestFrame();
+        }
+        if (shellStartClicked())
+        {
+            if (const auto launched = launchGame(settings, wf::Branch::Public); launched)
+            {
+                job.cancel();
+                break;
             }
             else
             {
-                closeDropdown();
+                launchFailure = core::narrow(describe(launched.error()));
+                core::error("{}", launchFailure);
             }
+        }
+        if (rail.cogClicked)
+        {
+            menuOpen = !menuOpen;
+            if (menuOpen)
+                menu.view = MenuView::Rows;
+            closeDropdown();
             ui::requestFrame();
         }
         if (panelSlide > 0.f)
@@ -210,7 +255,10 @@ int run(const Options& options)
                         panelOpen = false;
                         closeDropdown();
                         if (needsRecheck && !options.wantShot)
+                        {
+                            meter.reset();
                             job.restart();
+                        }
                     }
                     else
                     {
@@ -226,6 +274,92 @@ int run(const Options& options)
                 ui::requestFrame();
             }
         }
+        // outside the menu's slide test: the walk must be reaped even if the panel is gone
+        if (menu.optimizeRunning && !job.running())
+        {
+            menu.optimizeRunning = false;
+            menu.optimizeLine = std::format("{} UNLISTED FILES, {}", job.staleFiles(),
+                                            core::formatBytes(job.staleBytes()));
+            // a stale walk leaves the job idle, not ready; a real check finds out which
+            if (!options.wantShot)
+            {
+                meter.reset();
+                job.restart();
+            }
+            ui::requestFrame();
+        }
+        if (menuSlide > 0.f)
+        {
+            switch (drawRailMenu(viewport, menuSlide, menu))
+            {
+            case MenuAction::Settings:
+                menuOpen = false;
+                panelOpen = true;
+                working = settings;
+                saveFailed = false;
+                closeDropdown();
+                ui::requestFrame();
+                break;
+            case MenuAction::Verify:
+                menuOpen = false;
+                if (!options.wantShot)
+                {
+                    meter.reset();
+                    job.restart(true);
+                }
+                ui::requestFrame();
+                break;
+            case MenuAction::Versions:
+            {
+                menu.view = MenuView::Versions;
+                menu.launcherLine =
+                    std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
+                const auto engine = engineVersion(settings, wf::Branch::Public);
+                menu.engineLine = engine ? std::format("ENGINE   {}", core::narrow(*engine))
+                                         : std::string();
+                ui::requestFrame();
+                break;
+            }
+            case MenuAction::Optimize:
+                menu.view = MenuView::Optimize;
+                menu.optimizeLine.clear();
+                menu.defragLine.clear();
+                if (!options.wantShot)
+                {
+                    menu.optimizeRunning = true;
+                    job.startStaleReport();
+                }
+                ui::requestFrame();
+                break;
+            case MenuAction::Back:
+                menu.view = MenuView::Rows;
+                ui::requestFrame();
+                break;
+            case MenuAction::Dismiss:
+                menuOpen = false;
+                ui::requestFrame();
+                break;
+            case MenuAction::Defragment:
+                if (!options.wantShot)
+                {
+                    if (const auto started = launchDefrag(settings, wf::Branch::Public); started)
+                    {
+                        job.cancel();
+                        menuOpen = false;
+                        defragStarted = true;
+                    }
+                    else
+                    {
+                        menu.defragLine = core::narrow(describe(started.error()));
+                        core::error("{}", menu.defragLine);
+                    }
+                }
+                ui::requestFrame();
+                break;
+            case MenuAction::None:
+                break;
+            }
+        }
         ui::endFrame();
         window.clearMouseEdge();
         renderer.render(device.ctx(), ui::dl(), device.width(), device.height());
@@ -236,6 +370,9 @@ int run(const Options& options)
                 result = 1;
             break;
         }
+
+        if (defragStarted)
+            break;
 
         device.present(true);
         if (!ui::g().animated && !window.mouseDown())

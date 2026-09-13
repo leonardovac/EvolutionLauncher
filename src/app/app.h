@@ -11,6 +11,7 @@ struct Options
     float shotTime = 0.6f;
     bool wantShot = false;
     bool wantPanel = false;
+    bool wantMenu = false;
 };
 
 int run(const Options& options);
