@@ -91,6 +91,8 @@ int run(const Options& options)
         working = settings;
 
     DefragJob defrag;
+    float defragNotice = 0.f;
+    std::uint32_t defragExit = 0;
 
     MenuState menu;
     bool menuOpen = options.wantMenu;
@@ -225,11 +227,23 @@ int run(const Options& options)
         {
             defrag.clearFinished();
             defrag.join();
+            defragExit = defragSnap.exitCode;
+            // an already-tidy cache finishes in seconds, so say so instead of flicking past
+            defragNotice = 3.f;
             if (!options.wantShot)
             {
                 meter.reset();
                 job.restart();
             }
+            ui::requestFrame();
+        }
+        else if (defragNotice > 0.f)
+        {
+            defragNotice -= dt;
+            shell.progress = 0.f;
+            shell.detailLine = {};
+            shell.statusLine =
+                defragExit == 0 ? "CACHE DEFRAGMENTED" : "THE DEFRAGMENTER REPORTED A FAILURE";
             ui::requestFrame();
         }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
