@@ -109,7 +109,7 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 		const std::wstring dir = parentDir(key);
 		if (dir.empty() || !populatedDirs.contains(dir))
 			continue;  // root-level or a dir the index never fills: protected
-		if (config.launcher.shouldKeep(key))
+		if (config.launcher.isProtected(key))
 			continue;
 
 		const std::uintmax_t size = it->file_size(ec);
@@ -141,14 +141,14 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 	}
 
 	// a skipped path is one the user does not want fetched, so it does not stay here either
-	for (const std::wstring& skip : config.launcher.skipPaths())
+	for (const std::wstring& skip : config.launcher.excludedPaths())
 	{
 		if (core::cancelled())
 		{
 			report.cancelled = true;
 			break;
 		}
-		if (skip.empty() || config.launcher.shouldKeep(skip))
+		if (skip.empty() || config.launcher.isProtected(skip))
 			continue;
 		const std::filesystem::path target = (config.root / skip).lexically_normal();
 		// the skip list is user input, so reject anything that climbs out of the root
@@ -180,7 +180,7 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 			ec.clear();
 			continue;
 		}
-		core::info("removed skipped {}", core::narrow(skip));
+		core::info("removed excluded {}", core::narrow(skip));
 		report.removed.push_back(skip);
 		report.bytes += bytes;
 		if (progress != nullptr)

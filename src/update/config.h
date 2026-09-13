@@ -24,17 +24,17 @@ public:
 	static LauncherConfig load();
 	bool save() const;
 
-	bool shouldSkip(std::wstring_view installPath) const;
-	bool shouldKeep(std::wstring_view relativePath) const;
+	bool isExcluded(std::wstring_view installPath) const;
+	bool isProtected(std::wstring_view relativePath) const;
 
 	const PatchRecord* patchFor(std::wstring_view installPath) const;
 	void recordPatch(std::wstring_view installPath, const Digest& source, const Digest& result);
 
-	std::span<const std::wstring> skipPaths() const { return skip_; }
+	std::span<const std::wstring> excludedPaths() const { return exclude_; }
 
 private:
-	std::vector<std::wstring> skip_;
-	std::vector<std::wstring> keep_;
+	std::vector<std::wstring> exclude_;
+	std::vector<std::wstring> protect_;
 	std::unordered_map<std::wstring, PatchRecord> patched_;
 };
 

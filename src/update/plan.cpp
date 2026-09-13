@@ -128,7 +128,7 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			++plan.filtered;
 			continue;
 		}
-		if (config.launcher.shouldSkip(entry.installPath))
+		if (config.launcher.isExcluded(entry.installPath))
 		{
 			++plan.skipped;
 			core::debug("skipping {}", core::narrow(entry.installPath));
