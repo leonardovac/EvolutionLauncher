@@ -320,8 +320,8 @@ int run(int argc, wchar_t** argv)
 
 	if (options.purgePrint)
 	{
-		core::info("{} unlisted files, {}", summary->purgeFiles,
-		           core::formatBytes(summary->purgeBytes));
+		core::info("{} unlisted files, {}, {} failed", summary->purgeFiles,
+		           core::formatBytes(summary->purgeBytes), summary->purgeFailed);
 		if (summary->cancelled)
 		{
 			core::warn("cancelled while walking");
@@ -346,6 +346,7 @@ int run(int argc, wchar_t** argv)
 	{
 		core::info("{} queued, {} up to date, {} filtered, {} skipped", summary->queued,
 		           summary->upToDate, summary->filtered, summary->skipped);
+		core::info("{} unlisted files removed, {} failed", summary->purgeFiles, summary->purgeFailed);
 		if (summary->cancelled)
 		{
 			core::warn("cancelled while checking");
@@ -356,6 +357,7 @@ int run(int argc, wchar_t** argv)
 
 	core::info("{} updated, {} failed, {} downloaded", summary->updated, summary->failed,
 	           core::formatBytes(summary->downloaded));
+	core::info("{} unlisted files removed, {} failed", summary->purgeFiles, summary->purgeFailed);
 	if (summary->cancelled)
 	{
 		core::warn("cancelled with {} of {} done", summary->updated, summary->queued);

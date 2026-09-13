@@ -125,18 +125,20 @@ std::expected<Summary, UpdateError> run(const Options& options)
 
 	if (options.purgePrint)
 	{
-		const PurgeReport preview = runPurge(entries, options.config, /*dryRun*/ true, progress);
+		const PurgeReport preview = runPurge(index->entries, options.config, /*dryRun*/ true, progress);
 		summary.purgeFiles = preview.wouldRemove.size();
 		summary.purgeBytes = preview.bytes;
+		summary.purgeFailed = preview.failures;
 		summary.cancelled = preview.cancelled;
 		return summary;
 	}
 
 	if (!options.staleReport)
 	{
-		const PurgeReport purge = runPurge(entries, options.config, /*dryRun*/ false, progress);
+		const PurgeReport purge = runPurge(index->entries, options.config, /*dryRun*/ false, progress);
 		summary.purgeFiles = purge.removed.size();
 		summary.purgeBytes = purge.bytes;
+		summary.purgeFailed = purge.failures;
 		core::info("{} unlisted files removed, {}", purge.removed.size(),
 		           core::formatBytes(purge.bytes));
 		if (purge.cancelled)

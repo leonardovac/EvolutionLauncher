@@ -47,6 +47,7 @@ struct Summary
 	std::uint64_t staleBytes = 0;
 	std::size_t purgeFiles = 0;
 	std::uint64_t purgeBytes = 0;
+	std::size_t purgeFailed = 0;
 	bool cancelled = false;
 };
 

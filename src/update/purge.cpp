@@ -114,6 +114,8 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 		core::info("removed unlisted {}", core::narrow(key));
 		report.removed.push_back(relative);
 		report.bytes += bytes;
+		if (progress != nullptr)
+			progress->onStale(relative.wstring(), bytes);
 	}
 	return report;
 }
