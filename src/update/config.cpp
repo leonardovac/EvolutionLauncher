@@ -28,6 +28,40 @@ std::wstring normalise(std::wstring_view path)
 	return out;
 }
 
+// `*` spans separators and `?` takes one character; everything else is literal
+bool globMatch(std::wstring_view pattern, std::wstring_view text)
+{
+	std::size_t p = 0;
+	std::size_t t = 0;
+	std::size_t star = std::wstring_view::npos;
+	std::size_t mark = 0;
+	while (t < text.size())
+	{
+		if (p < pattern.size() && (pattern[p] == L'?' || pattern[p] == text[t]))
+		{
+			++p;
+			++t;
+		}
+		else if (p < pattern.size() && pattern[p] == L'*')
+		{
+			star = p++;
+			mark = t;
+		}
+		else if (star != std::wstring_view::npos)
+		{
+			p = star + 1;
+			t = ++mark;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	while (p < pattern.size() && pattern[p] == L'*')
+		++p;
+	return p == pattern.size();
+}
+
 std::filesystem::path beside(std::wstring_view name)
 {
 	wchar_t module[MAX_PATH]{};
@@ -150,7 +184,14 @@ bool LauncherConfig::isExcluded(std::wstring_view installPath) const
 
 bool LauncherConfig::isProtected(std::wstring_view relativePath) const
 {
-	return std::ranges::contains(protect_, normalise(relativePath));
+	const std::wstring key = normalise(relativePath);
+	const std::size_t slash = key.find_last_of(L'\\');
+	const std::wstring_view leaf =
+		slash == std::wstring::npos ? std::wstring_view(key) : std::wstring_view(key).substr(slash + 1);
+	return std::ranges::any_of(protect_, [&](const std::wstring& pattern) {
+		// a pattern with no separator matches the file name wherever it sits
+		return globMatch(pattern, pattern.contains(L'\\') ? std::wstring_view(key) : leaf);
+	});
 }
 
 const PatchRecord* LauncherConfig::patchFor(std::wstring_view installPath) const
