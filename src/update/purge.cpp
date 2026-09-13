@@ -5,6 +5,7 @@
 #include "core/str.h"
 
 #include <algorithm>
+#include <array>
 #include <string>
 #include <system_error>
 #include <unordered_set>
@@ -27,6 +28,15 @@ std::wstring parentDir(std::wstring_view key)
 {
 	const std::size_t slash = key.find_last_of(L'\\');
 	return slash == std::wstring_view::npos ? std::wstring() : std::wstring(key.substr(0, slash));
+}
+
+// working files that are never index content: a partial fetch, or a disassembler database
+constexpr std::array<std::wstring_view, 3> protectedExtensions{L".tmp", L".i64", L".til"};
+
+bool protectedFile(std::wstring_view key)
+{
+	return std::ranges::any_of(protectedExtensions,
+	                           [key](std::wstring_view ext) { return key.ends_with(ext); });
 }
 
 }
@@ -81,7 +91,7 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 		}
 		const std::filesystem::path relative = it->path().lexically_relative(config.root);
 		const std::wstring key = normalise(relative.wstring());
-		if (key.empty() || key.starts_with(L"..") || key.ends_with(L".tmp") ||
+		if (key.empty() || key.starts_with(L"..") || protectedFile(key) ||
 		    key == L"defrag.log" || known.contains(key))
 			continue;
 		const std::wstring dir = parentDir(key);
@@ -116,6 +126,53 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 		report.bytes += bytes;
 		if (progress != nullptr)
 			progress->onStale(relative.wstring(), bytes);
+	}
+
+	// a skipped path is one the user does not want fetched, so it does not stay here either
+	for (const std::wstring& skip : config.launcher.skipPaths())
+	{
+		if (core::cancelled())
+		{
+			report.cancelled = true;
+			break;
+		}
+		if (skip.empty() || config.launcher.shouldKeep(skip))
+			continue;
+		const std::filesystem::path target = (config.root / skip).lexically_normal();
+		// the skip list is user input, so reject anything that climbs out of the root
+		if (target.lexically_relative(config.root).wstring().starts_with(L".."))
+			continue;
+		if (!std::filesystem::is_regular_file(target, ec))
+		{
+			ec.clear();
+			continue;
+		}
+		const std::uintmax_t size = std::filesystem::file_size(target, ec);
+		const std::uint64_t bytes = ec ? 0u : static_cast<std::uint64_t>(size);
+		ec.clear();
+
+		if (dryRun)
+		{
+			report.wouldRemove.push_back(skip);
+			report.bytes += bytes;
+			if (progress != nullptr)
+				progress->onStale(skip, bytes);
+			continue;
+		}
+
+		std::filesystem::remove(target, ec);
+		if (ec)
+		{
+			core::warn("could not remove {}: {}", core::narrow(skip), ec.message());
+			++report.failures;
+			ec.clear();
+			continue;
+		}
+		core::info("removed skipped {}", core::narrow(skip));
+		report.removed.push_back(skip);
+		report.bytes += bytes;
+		if (progress != nullptr)
+			progress->onStale(skip, bytes);
 	}
 	return report;
 }
