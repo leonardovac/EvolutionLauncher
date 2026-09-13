@@ -137,6 +137,15 @@ std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch
 
 std::expected<void, LaunchError> launchDefrag(const Settings& settings, wf::Branch branch)
 {
+    auto line = buildDefragCommandLine(settings, branch);
+    if (!line)
+        return std::unexpected(line.error());
+    return spawn(*line);
+}
+
+std::expected<std::wstring, LaunchError> buildDefragCommandLine(const Settings& settings,
+                                                                wf::Branch branch)
+{
     const std::filesystem::path root = settings.installRoot(branch);
     std::wstring line = buildGameCommandLine(settings, branch, root);
     if (line.empty())
@@ -164,7 +173,7 @@ std::expected<void, LaunchError> launchDefrag(const Settings& settings, wf::Bran
         core::warn("could not remove {}: {}", core::narrow(defragLog), ec.message());
 
     line += defragArgs;
-    return spawn(line);
+    return line;
 }
 
 std::wstring_view describe(LaunchError error)
