@@ -33,7 +33,7 @@ void usage()
 	          "  --branch <name>   public | test | dev            (default public)\n"
 	          "  --lang <code>     two-letter language (default: registry Language, else en)\n"
 	          "  --only <text>     restrict to paths containing <text>\n"
-	          "  --check           plan only, download nothing\n"
+	          "  --check           plan and purge unlisted, download nothing\n"
 	          "  --verify          hash .cache and .toc as well as everything else\n"
 	          "  --stale           report files the index does not list, delete nothing\n"
 	          "  --purge-print     preview the unlisted files a real run would delete\n"
@@ -319,7 +319,8 @@ int run(int argc, wchar_t** argv)
 		return 1;
 	}
 
-	if (summary->mainExe && !options.purgePrint && !options.staleReport)
+	// patch only after a real update, never on a --check preview
+	if (summary->mainExe && !options.dryRun && !options.purgePrint && !options.staleReport)
 		app::ensureSideloaded(options.config.launcher, *summary->mainExe, options.config.root);
 
 	if (options.purgePrint)
