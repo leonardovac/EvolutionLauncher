@@ -159,6 +159,7 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	summary.filtered = plan.filtered;
 	summary.skipped = plan.skipped;
 	summary.upToDate = plan.upToDate;
+	summary.cacheDiffers = plan.cacheDiffers;
 	summary.queued = plan.jobs.size();
 
 	core::info("{} filtered, {} skipped, {} up to date, {} queued ({} to download)", plan.filtered,

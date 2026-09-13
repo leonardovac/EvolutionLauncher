@@ -351,6 +351,9 @@ int run(int argc, wchar_t** argv)
 	{
 		core::info("{} queued, {} up to date, {} filtered, {} skipped", summary->queued,
 		           summary->upToDate, summary->filtered, summary->skipped);
+		if (summary->cacheDiffers != 0)
+			core::info("{} cache files differ from the index and were left alone",
+			           summary->cacheDiffers);
 		core::info("{} unlisted files removed, {} failed", summary->purgeFiles, summary->purgeFailed);
 		if (summary->cancelled)
 		{

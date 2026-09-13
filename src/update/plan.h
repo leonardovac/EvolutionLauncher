@@ -61,6 +61,7 @@ struct Plan
 	std::size_t skipped = 0;
 	std::size_t upToDate = 0;
 	std::size_t hashed = 0;
+	std::size_t cacheDiffers = 0;  // hashed caches left alone: defragmenting changes their bytes
 };
 
 Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* progress = nullptr);
