@@ -4,12 +4,14 @@
 #include "app/controls.h"
 #include "app/languages.h"
 #include "app/rail.h"
+#include "app/railmenu.h"
 #include "app/rate.h"
 #include "app/resource.h"
 #include "app/settings.h"
 #include "app/settingspanel.h"
 #include "app/shell.h"
 #include "app/updatejob.h"
+#include "app/versions.h"
 #include "app/window.h"
 #include "core/log.h"
 #include "core/str.h"
@@ -18,6 +20,7 @@
 #include "gfx/image.h"
 #include "gfx/renderer.h"
 #include "ui/ui.h"
+#include "update/plan.h"
 
 #include <objbase.h>
 #include <shellapi.h>
@@ -84,6 +87,10 @@ int run(const Options& options)
     if (options.wantPanel)
         working = settings;
 
+    MenuState menu;
+    bool menuOpen = options.wantMenu;
+    float menuSlide = options.wantMenu ? 1.f : 0.f;
+
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
     int result = 0;
@@ -96,6 +103,7 @@ int run(const Options& options)
         elapsed += dt;
 
         panelSlide = core::clamp01(panelSlide + (panelOpen ? 1.f : -1.f) * dt * 6.f);
+        menuSlide = core::clamp01(menuSlide + (menuOpen ? 1.f : -1.f) * dt * 6.f);
 
         const JobSnapshot snap = job.snapshot();
         if (snap.phase == JobPhase::Updating)
@@ -125,7 +133,7 @@ int run(const Options& options)
         ShellState shell;
         shell.phase = snap.phase;
         shell.startEnabled = snap.phase == JobPhase::Ready;
-        shell.panelVisible = panelSlide > 0.f;
+        shell.panelVisible = panelSlide > 0.f || menuSlide > 0.f;
         std::string statusBuffer;
         std::string detailBuffer;
         shell.languageIndex = languageIndexFromCode(settings.language);
@@ -207,13 +215,9 @@ int run(const Options& options)
         }
         if (rail.cogClicked)
         {
-            panelOpen = !panelOpen;
-            closeDropdown();
-            if (panelOpen)
-            {
-                working = settings;
-                saveFailed = false;
-            }
+            menuOpen = !menuOpen;
+            if (menuOpen)
+                menu.view = MenuView::Rows;
             ui::requestFrame();
         }
         if (panelSlide > 0.f)
@@ -251,6 +255,66 @@ int run(const Options& options)
                     closeDropdown();
                 }
                 ui::requestFrame();
+            }
+        }
+        if (menuSlide > 0.f)
+        {
+            if (menu.view == MenuView::Optimize && menu.optimizeRunning && !job.running())
+            {
+                menu.optimizeRunning = false;
+                menu.optimizeLine = std::format("{} UNLISTED FILES, {}", job.staleFiles(),
+                                                core::formatBytes(job.staleBytes()));
+            }
+            switch (drawRailMenu(viewport, menuSlide, menu))
+            {
+            case MenuAction::Settings:
+                menuOpen = false;
+                panelOpen = true;
+                working = settings;
+                saveFailed = false;
+                closeDropdown();
+                ui::requestFrame();
+                break;
+            case MenuAction::Verify:
+                menuOpen = false;
+                if (!options.wantShot)
+                {
+                    meter.reset();
+                    job.restart(true);
+                }
+                ui::requestFrame();
+                break;
+            case MenuAction::Versions:
+            {
+                menu.view = MenuView::Versions;
+                menu.launcherLine =
+                    std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
+                const auto engine = engineVersion(settings, wf::Branch::Public);
+                menu.engineLine = engine ? std::format("ENGINE   {}", core::narrow(*engine))
+                                         : std::string();
+                ui::requestFrame();
+                break;
+            }
+            case MenuAction::Optimize:
+                menu.view = MenuView::Optimize;
+                menu.optimizeLine.clear();
+                if (!options.wantShot)
+                {
+                    menu.optimizeRunning = true;
+                    job.startStaleReport();
+                }
+                ui::requestFrame();
+                break;
+            case MenuAction::Back:
+                menu.view = MenuView::Rows;
+                ui::requestFrame();
+                break;
+            case MenuAction::Dismiss:
+                menuOpen = false;
+                ui::requestFrame();
+                break;
+            case MenuAction::None:
+                break;
             }
         }
         ui::endFrame();

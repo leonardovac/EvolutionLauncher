@@ -85,21 +85,35 @@ void UpdateJob::join()
         thread_.join();
 }
 
-void UpdateJob::restart()
+void UpdateJob::reset(bool verify, bool stale)
 {
     cancel();
     join();
     // must follow join, or a worker still unwinding sees the flag clear and runs on
     core::resetCancel();
     thread_ = std::thread();
+    verify_.store(verify, std::memory_order_relaxed);
+    stale_.store(stale, std::memory_order_relaxed);
     phase_.store(JobPhase::Idle, std::memory_order_relaxed);
     entryIndex_.store(0, std::memory_order_relaxed);
     entryCount_.store(0, std::memory_order_relaxed);
     downloaded_.store(0, std::memory_order_relaxed);
     downloadTotal_.store(0, std::memory_order_relaxed);
+    staleFiles_.store(0, std::memory_order_relaxed);
+    staleBytes_.store(0, std::memory_order_relaxed);
     currentFile_.store({}, std::memory_order_release);
     message_.store({}, std::memory_order_release);
     start();
+}
+
+void UpdateJob::restart(bool verify)
+{
+    reset(verify, false);
+}
+
+void UpdateJob::startStaleReport()
+{
+    reset(false, true);
 }
 
 bool UpdateJob::running() const noexcept
@@ -134,6 +148,8 @@ void UpdateJob::work()
     options.config.dx12 = settings.dx12();
     options.config.forceHttps = !settings.allowNetworkCaches;
     options.config.skip = wf::SkipList::load();
+    options.config.hashCaches = verify_.load(std::memory_order_relaxed);
+    options.staleReport = stale_.load(std::memory_order_relaxed);
     options.progress = &bridge;
 
     const auto summary = wf::run(options);
@@ -155,11 +171,27 @@ void UpdateJob::work()
         message = std::to_string(summary->failed) + " files failed";
     }
 
+    if (summary)
+    {
+        staleFiles_.store(summary->staleFiles, std::memory_order_relaxed);
+        staleBytes_.store(summary->staleBytes, std::memory_order_release);
+    }
+
     if (!message.empty())
         message_.store(std::make_shared<const std::string>(std::move(message)),
                        std::memory_order_release);
     phase_.store(phase, std::memory_order_release);
     running_.store(false, std::memory_order_release);
+}
+
+std::size_t UpdateJob::staleFiles() const noexcept
+{
+    return staleFiles_.load(std::memory_order_acquire);
+}
+
+std::uint64_t UpdateJob::staleBytes() const noexcept
+{
+    return staleBytes_.load(std::memory_order_acquire);
 }
 
 }

@@ -71,6 +71,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 		if (argAfter(argc, argv, L"-t", value))
 			options.shotTime = static_cast<float>(::_wtof(value.c_str()));
 		options.wantPanel = argPresent(argc, argv, L"-panel");
+		options.wantMenu = argPresent(argc, argv, L"-menu");
 	}
 
 	// Steam and Epic start the launcher with -registry:<tag>; that is not a CLI invocation
