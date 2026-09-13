@@ -21,6 +21,7 @@ struct JobSnapshot
     std::size_t entryCount = 0;
     std::uint64_t downloaded = 0;
     std::uint64_t downloadTotal = 0;
+    std::uint64_t hashedBytes = 0;
     JobText currentFile;
     JobText message;
 };
@@ -51,6 +52,7 @@ private:
     std::atomic<std::size_t> entryCount_{0};
     std::atomic<std::uint64_t> downloaded_{0};
     std::atomic<std::uint64_t> downloadTotal_{0};
+    std::atomic<std::uint64_t> hashedBytes_{0};
     std::atomic<JobText> currentFile_;
     std::atomic<JobText> message_;
     std::atomic<bool> verify_{false};

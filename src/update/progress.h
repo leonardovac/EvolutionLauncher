@@ -12,7 +12,12 @@ public:
 	virtual ~Progress() = default;
 
 	virtual void onIndex(std::size_t entries, std::size_t rejected) { (void)entries; (void)rejected; }
-	virtual void onChecking(std::size_t checked, std::size_t total) { (void)checked; (void)total; }
+	virtual void onChecking(std::size_t checked, std::size_t total, std::uint64_t hashedBytes)
+	{
+		(void)checked;
+		(void)total;
+		(void)hashedBytes;
+	}
 	virtual void onPlan(std::size_t queued, std::uint64_t downloadBytes)
 	{
 		(void)queued;

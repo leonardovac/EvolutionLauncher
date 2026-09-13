@@ -19,10 +19,18 @@ class Bridge final : public wf::Progress
 public:
     Bridge(std::atomic<JobPhase>& phase, std::atomic<std::size_t>& index,
            std::atomic<std::size_t>& count, std::atomic<std::uint64_t>& downloaded,
-           std::atomic<std::uint64_t>& total, std::atomic<JobText>& currentFile)
+           std::atomic<std::uint64_t>& total, std::atomic<JobText>& currentFile,
+           std::atomic<std::uint64_t>& hashed)
         : phase_(phase), index_(index), count_(count), downloaded_(downloaded), total_(total),
-          currentFile_(currentFile)
+          currentFile_(currentFile), hashed_(hashed)
     {
+    }
+
+    void onChecking(std::size_t checked, std::size_t total, std::uint64_t hashedBytes) override
+    {
+        index_.store(checked, std::memory_order_relaxed);
+        count_.store(total, std::memory_order_relaxed);
+        hashed_.store(hashedBytes, std::memory_order_relaxed);
     }
 
     void onPlan(std::size_t queued, std::uint64_t downloadBytes) override
@@ -54,6 +62,7 @@ private:
     std::atomic<std::uint64_t>& downloaded_;
     std::atomic<std::uint64_t>& total_;
     std::atomic<JobText>& currentFile_;
+    std::atomic<std::uint64_t>& hashed_;
 };
 
 }
@@ -99,6 +108,7 @@ void UpdateJob::reset(bool verify, bool stale)
     entryCount_.store(0, std::memory_order_relaxed);
     downloaded_.store(0, std::memory_order_relaxed);
     downloadTotal_.store(0, std::memory_order_relaxed);
+    hashedBytes_.store(0, std::memory_order_relaxed);
     staleFiles_.store(0, std::memory_order_relaxed);
     staleBytes_.store(0, std::memory_order_relaxed);
     currentFile_.store({}, std::memory_order_release);
@@ -132,12 +142,14 @@ JobSnapshot UpdateJob::snapshot() const
     out.entryCount = entryCount_.load(std::memory_order_relaxed);
     out.downloaded = downloaded_.load(std::memory_order_relaxed);
     out.downloadTotal = downloadTotal_.load(std::memory_order_relaxed);
+    out.hashedBytes = hashedBytes_.load(std::memory_order_relaxed);
     return out;
 }
 
 void UpdateJob::work()
 {
-    Bridge bridge(phase_, entryIndex_, entryCount_, downloaded_, downloadTotal_, currentFile_);
+    Bridge bridge(phase_, entryIndex_, entryCount_, downloaded_, downloadTotal_, currentFile_,
+                  hashedBytes_);
 
     const Settings settings = Settings::load();
     wf::Options options;

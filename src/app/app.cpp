@@ -143,9 +143,23 @@ int run(const Options& options)
         switch (snap.phase)
         {
         case JobPhase::Idle:
-        case JobPhase::Checking:
             shell.statusLine = "CHECKING FOR UPDATES";
             break;
+        case JobPhase::Checking:
+        {
+            shell.statusLine = "CHECKING FOR UPDATES";
+            if (snap.entryCount != 0)
+            {
+                shell.progress = core::clamp01(static_cast<float>(
+                    static_cast<double>(snap.entryIndex) / static_cast<double>(snap.entryCount)));
+                detailBuffer = std::format("{} / {}", snap.entryIndex, snap.entryCount);
+                if (snap.hashedBytes != 0)
+                    detailBuffer += std::format("  •  {} HASHED",
+                                                core::formatBytes(snap.hashedBytes));
+                shell.detailLine = detailBuffer;
+            }
+            break;
+        }
         case JobPhase::Updating:
         {
             const float fraction =
