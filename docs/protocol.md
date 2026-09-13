@@ -163,6 +163,22 @@ This launcher's own free-space guard checks 1.5x the size of `Tools/CachePlan.tx
 of the largest known file: the stock launcher already has the full index in hand at this
 point in its flow, and this launcher's defragment path does not.
 
+## Sideload patch
+
+Not a wire behaviour: a local patch of the game executable applied after each update. The
+retail launcher links the game with `/DEPENDENTLOADFLAG:0x800`
+(LOAD_LIBRARY_SEARCH_SYSTEM32), which forces DLL resolution to System32 and defeats a proxy
+DLL dropped beside the executable. This launcher zeroes that field so the default search
+order (including the application directory) applies.
+
+The field is `IMAGE_LOAD_CONFIG_DIRECTORY64::DependentLoadFlags`, at offset 0x4E into the
+load-config directory (data directory index 10, `IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG`). On
+the live `Warframe.x64.exe` it was `0x800` at file offset `0x253e68e`. Patching flips the
+two bytes to `00 00`. Because this changes the file's MD5, the pre-patch (index) hash and
+the post-patch hash are stored in `launcher.json`'s `patched` section so the check does not
+re-queue the patched file, and re-patches automatically once the index hash moves past the
+recorded `source`.
+
 ## Applicability filter
 
 `WF_EntryAppliesToClient` (0x26D18) drops entries before any I/O:

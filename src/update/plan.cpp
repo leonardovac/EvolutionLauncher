@@ -128,7 +128,7 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			++plan.filtered;
 			continue;
 		}
-		if (config.skip.contains(entry.installPath))
+		if (config.launcher.shouldSkip(entry.installPath))
 		{
 			++plan.skipped;
 			core::debug("skipping {}", core::narrow(entry.installPath));
@@ -175,6 +175,13 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 		}
 
 		if (digest && *digest == entry->hash)
+		{
+			++plan.upToDate;
+			continue;
+		}
+		if (const PatchRecord* record = config.launcher.patchFor(entry->installPath);
+		    record != nullptr && digest && *digest == record->result &&
+		    record->source == entry->hash)
 		{
 			++plan.upToDate;
 			continue;

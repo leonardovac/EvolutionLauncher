@@ -12,7 +12,9 @@ applicability filter.
 
 import argparse
 import collections
+import json
 import lzma
+import os
 import random
 import re
 import struct
@@ -39,22 +41,29 @@ def normalise_skip(path):
 
 
 def load_skip(path):
-    entries = [normalise_skip(p) for p in SKIP_DEFAULTS]
-    try:
-        with open(path, encoding="utf-8-sig") as handle:
-            lines = handle.readlines()
-    except OSError:
-        return entries
-    for line in lines:
-        entry = normalise_skip(line)
-        if not entry or entry.startswith("#"):
-            continue
-        if entry.startswith("-"):
-            trimmed = entry[1:]
-            entries = [e for e in entries if e != trimmed]
-        elif entry not in entries:
-            entries.append(entry)
-    return entries
+    skips = set(normalise_skip(p) for p in SKIP_DEFAULTS)
+    cfg = os.path.join(os.path.dirname(path), "launcher.json")
+    if os.path.exists(cfg):
+        try:
+            with open(cfg, "r", encoding="utf-8-sig") as handle:
+                data = json.load(handle)
+            for entry in data.get("skip", []):
+                skips.add(normalise_skip(entry))
+        except (OSError, ValueError):
+            pass
+        return skips
+    # legacy skip.txt fallback keeps the leading-'-' removal affordance
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8-sig") as handle:
+            for line in handle:
+                entry = normalise_skip(line)
+                if not entry or entry.startswith("#"):
+                    continue
+                if entry.startswith("-"):
+                    skips.discard(normalise_skip(entry[1:]))
+                else:
+                    skips.add(entry)
+    return skips
 
 
 def fetch_index(branch):

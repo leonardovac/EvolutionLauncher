@@ -1,5 +1,7 @@
 #include "app/versions.h"
 
+#include "app/launch.h"
+
 #include <windows.h>
 
 #include <format>
@@ -7,12 +9,6 @@
 
 namespace app
 {
-namespace
-{
-
-constexpr std::wstring_view exeName = L"Warframe.x64.exe";
-
-}
 
 std::optional<std::wstring> fileVersion(const std::filesystem::path& file)
 {
@@ -50,7 +46,7 @@ std::optional<std::wstring> engineVersion(const Settings& settings, wf::Branch b
     const std::filesystem::path root = settings.installRoot(branch);
     if (root.empty())
         return std::nullopt;
-    return fileVersion(root / exeName);
+    return fileVersion(root / gameExeName(branch));
 }
 
 }

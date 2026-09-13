@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -27,6 +28,7 @@ struct Options
 	Config config;
 	bool dryRun = false;
 	bool staleReport = false;
+	bool purgePrint = false;
 	std::wstring only;
 	Progress* progress = nullptr;
 };
@@ -44,7 +46,11 @@ struct Summary
 	std::uint64_t downloaded = 0;
 	std::size_t staleFiles = 0;
 	std::uint64_t staleBytes = 0;
+	std::size_t purgeFiles = 0;
+	std::uint64_t purgeBytes = 0;
+	std::size_t purgeFailed = 0;
 	bool cancelled = false;
+	std::optional<Entry> mainExe;  // from the fetched index, for the caller to sideload-patch
 };
 
 std::expected<Summary, UpdateError> run(const Options& options);

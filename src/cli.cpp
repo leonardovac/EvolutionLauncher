@@ -1,12 +1,12 @@
 #include "app/launch.h"
 #include "app/settings.h"
+#include "app/sideload.h"
 #include "app/versions.h"
 #include "core/cancel.h"
 #include "core/log.h"
 #include "core/str.h"
 #include "update/plan.h"
 #include "update/progress.h"
-#include "update/skiplist.h"
 #include "update/updater.h"
 
 #include <array>
@@ -33,9 +33,10 @@ void usage()
 	          "  --branch <name>   public | test | dev            (default public)\n"
 	          "  --lang <code>     two-letter language (default: registry Language, else en)\n"
 	          "  --only <text>     restrict to paths containing <text>\n"
-	          "  --check           plan only, download nothing\n"
+	          "  --check           plan and purge unlisted, download nothing\n"
 	          "  --verify          hash .cache and .toc as well as everything else\n"
 	          "  --stale           report files the index does not list, delete nothing\n"
+	          "  --purge-print     preview the unlisted files a real run would delete\n"
 	          "  --steam           this install is a Steam install (default: LauncherExe path)\n"
 	          "  --no-steam        force off\n"
 	          "  --eos             this install uses the EOS SDK (default: LauncherExe path)\n"
@@ -122,6 +123,10 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--stale")
 		{
 			options.staleReport = true;
+		}
+		else if (flag == L"--purge-print")
+		{
+			options.purgePrint = true;
 		}
 		else if (flag == L"--steam")
 		{
@@ -244,7 +249,7 @@ int run(int argc, wchar_t** argv)
 	options.config.eosSdk = eos.value_or(settings.eos());
 	options.config.dx12 = dx12.value_or(settings.dx12());
 	options.config.forceHttps = !settings.allowNetworkCaches;
-	options.config.skip = wf::SkipList::load();
+	options.config.launcher = wf::LauncherConfig::load();
 	options.config.root = root.empty() ? settings.installRoot(options.config.branch) : root;
 	if (options.config.root.empty())
 	{
@@ -314,6 +319,22 @@ int run(int argc, wchar_t** argv)
 		return 1;
 	}
 
+	// patch only after a real update, never on a --check preview
+	if (summary->mainExe && !options.dryRun && !options.purgePrint && !options.staleReport)
+		app::ensureSideloaded(options.config.launcher, *summary->mainExe, options.config.root);
+
+	if (options.purgePrint)
+	{
+		core::info("{} unlisted files, {}, {} failed", summary->purgeFiles,
+		           core::formatBytes(summary->purgeBytes), summary->purgeFailed);
+		if (summary->cancelled)
+		{
+			core::warn("cancelled while walking");
+			return 2;
+		}
+		return 0;
+	}
+
 	if (options.staleReport)
 	{
 		core::info("{} unlisted files, {}", summary->staleFiles,
@@ -330,6 +351,7 @@ int run(int argc, wchar_t** argv)
 	{
 		core::info("{} queued, {} up to date, {} filtered, {} skipped", summary->queued,
 		           summary->upToDate, summary->filtered, summary->skipped);
+		core::info("{} unlisted files removed, {} failed", summary->purgeFiles, summary->purgeFailed);
 		if (summary->cancelled)
 		{
 			core::warn("cancelled while checking");
@@ -340,6 +362,7 @@ int run(int argc, wchar_t** argv)
 
 	core::info("{} updated, {} failed, {} downloaded", summary->updated, summary->failed,
 	           core::formatBytes(summary->downloaded));
+	core::info("{} unlisted files removed, {} failed", summary->purgeFiles, summary->purgeFailed);
 	if (summary->cancelled)
 	{
 		core::warn("cancelled with {} of {} done", summary->updated, summary->queued);

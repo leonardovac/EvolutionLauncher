@@ -6,8 +6,10 @@
 #include "update/apply.h"
 #include "update/http.h"
 #include "update/lzma.h"
+#include "update/purge.h"
 #include "update/stale.h"
 
+#include <algorithm>
 #include <format>
 #include <random>
 #include <string>
@@ -120,6 +122,35 @@ std::expected<Summary, UpdateError> run(const Options& options)
 		std::erase_if(entries, [&options](const Entry& entry)
 		              { return !core::containsNoCase(entry.urlPath, options.only); });
 		core::info("--only kept {} of {} entries", entries.size(), before);
+	}
+
+	if (const auto mainExeIt = std::ranges::find(entries, Category::MainExe, &Entry::category);
+	    mainExeIt != entries.end())
+		summary.mainExe = *mainExeIt;
+
+	if (options.purgePrint)
+	{
+		const PurgeReport preview = runPurge(index->entries, options.config, /*dryRun*/ true, progress);
+		summary.purgeFiles = preview.wouldRemove.size();
+		summary.purgeBytes = preview.bytes;
+		summary.purgeFailed = preview.failures;
+		summary.cancelled = preview.cancelled;
+		return summary;
+	}
+
+	if (!options.staleReport)
+	{
+		const PurgeReport purge = runPurge(index->entries, options.config, /*dryRun*/ false, progress);
+		summary.purgeFiles = purge.removed.size();
+		summary.purgeBytes = purge.bytes;
+		summary.purgeFailed = purge.failures;
+		core::info("{} unlisted files removed, {}", purge.removed.size(),
+		           core::formatBytes(purge.bytes));
+		if (purge.cancelled)
+		{
+			summary.cancelled = true;
+			return summary;
+		}
 	}
 
 	core::info("checking {} against {}", core::narrow(branchName(options.config.branch)),
