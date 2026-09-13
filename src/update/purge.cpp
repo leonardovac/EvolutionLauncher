@@ -30,13 +30,24 @@ std::wstring parentDir(std::wstring_view key)
 	return slash == std::wstring_view::npos ? std::wstring() : std::wstring(key.substr(0, slash));
 }
 
-// working files that are never index content: a partial fetch, or a disassembler database
-constexpr std::array<std::wstring_view, 3> protectedExtensions{L".tmp", L".i64", L".til"};
+// the stock launcher's vestigial set (WF_PurgeVestigialFiles, 0x2C500); nothing else qualifies
+constexpr std::array<std::wstring_view, 7> purgeableExtensions{L".exe", L".dll", L".dat",
+                                                               L".bin", L".pak", L".zip",
+                                                               L".dmp"};
+constexpr std::array<std::wstring_view, 2> purgeableFragments{L"charactercodescachedx", L"dx9"};
+// stock spares the first three; `.tmp` is ours, a partial fetch the resume path still needs
+constexpr std::array<std::wstring_view, 4> spared{L".texture.", L".texture_", L"unins00",
+                                                  L".tmp"};
 
-bool protectedFile(std::wstring_view key)
+bool purgeable(std::wstring_view key)
 {
-	return std::ranges::any_of(protectedExtensions,
-	                           [key](std::wstring_view ext) { return key.ends_with(ext); });
+	if (std::ranges::any_of(spared, [key](std::wstring_view f) { return key.contains(f); }))
+		return false;
+	if (std::ranges::any_of(purgeableExtensions,
+	                        [key](std::wstring_view e) { return key.ends_with(e); }))
+		return true;
+	return std::ranges::any_of(purgeableFragments,
+	                           [key](std::wstring_view f) { return key.contains(f); });
 }
 
 }
@@ -91,8 +102,9 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 		}
 		const std::filesystem::path relative = it->path().lexically_relative(config.root);
 		const std::wstring key = normalise(relative.wstring());
-		if (key.empty() || key.starts_with(L"..") || protectedFile(key) ||
-		    key == L"defrag.log" || known.contains(key))
+		if (key.empty() || key.starts_with(L"..") || key == L"defrag.log" || known.contains(key))
+			continue;
+		if (!purgeable(key))
 			continue;
 		const std::wstring dir = parentDir(key);
 		if (dir.empty() || !populatedDirs.contains(dir))
