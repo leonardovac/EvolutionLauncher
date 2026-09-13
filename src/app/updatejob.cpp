@@ -170,6 +170,11 @@ void UpdateJob::work()
         phase = JobPhase::Failed;
         message = std::to_string(summary->failed) + " files failed";
     }
+    else if (options.staleReport)
+    {
+        // a stale walk never checked the install, so it cannot claim Ready
+        phase = JobPhase::Idle;
+    }
 
     if (summary)
     {
