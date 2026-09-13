@@ -41,7 +41,7 @@ def normalise_skip(path):
 def load_skip(path):
     entries = [normalise_skip(p) for p in SKIP_DEFAULTS]
     try:
-        with open(path, encoding="utf-8") as handle:
+        with open(path, encoding="utf-8-sig") as handle:
             lines = handle.readlines()
     except OSError:
         return entries
@@ -120,10 +120,8 @@ def language_allows(install, language):
     return code == "en"
 
 
-def applies(entry, args, skip):
+def applies(entry, args):
     low = entry["url"].lower()
-    if normalise_skip(entry["install"]) in skip:
-        return False
     if not args.steam and "/steam" in low:
         return False
     if not args.eos and "/eossdk" in low:
@@ -170,10 +168,14 @@ def main():
     print("categories: %s" % dict(collections.Counter(e["category"] for e in entries)))
 
     skip = load_skip(args.skip_file)
-    kept = [e for e in entries if applies(e, args, skip)]
+    applicable = [e for e in entries if applies(e, args)]
+    filtered = len(entries) - len(applicable)
+    kept = [e for e in applicable if normalise_skip(e["install"]) not in skip]
+    skipped = len(applicable) - len(kept)
     total = sum(e["size"] for e in kept)
-    print("lang=%s dx12=%s: %d of %d entries, %.2f GiB to download from empty"
-          % (args.lang, args.dx12, len(kept), len(entries), total / 2 ** 30))
+    print("lang=%s dx12=%s: %d of %d entries, %.2f GiB to download from empty "
+          "(%d filtered, %d skipped)"
+          % (args.lang, args.dx12, len(kept), len(entries), total / 2 ** 30, filtered, skipped))
 
     partners = collections.defaultdict(set)
     for entry in entries:
