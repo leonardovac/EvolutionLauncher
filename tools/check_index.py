@@ -47,7 +47,8 @@ def load_skip(path):
         try:
             with open(cfg, "r", encoding="utf-8-sig") as handle:
                 data = json.load(handle)
-            for entry in data.get("skip", []):
+            # "skip" was the original spelling; read it so an early file still loads
+            for entry in data.get("exclude", data.get("skip", [])):
                 skips.add(normalise_skip(entry))
         except (OSError, ValueError):
             pass

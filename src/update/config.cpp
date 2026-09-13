@@ -14,7 +14,7 @@ namespace wf
 namespace
 {
 
-constexpr std::array<std::wstring_view, 1> skipDefaults{
+constexpr std::array<std::wstring_view, 1> excludeDefaults{
 	L"Tools\\Windows\\x64\\discord_game_sdk.dll"};
 
 std::wstring normalise(std::wstring_view path)
@@ -91,27 +91,12 @@ struct Scanner
 				return out;
 			if (c == '\\' && pos < text.size())
 			{
+				// every string here is a Windows path, so `\n` is a separator, not a newline
 				const char e = text[pos++];
-				switch (e)
-				{
-				case '"': out.push_back('"'); break;
-				case '\\': out.push_back('\\'); break;
-				case '/': out.push_back('/'); break;
-				case 'n': out.push_back('\n'); break;
-				case 't': out.push_back('\t'); break;
-				case 'r': out.push_back('\r'); break;
-				case 'b': out.push_back('\b'); break;
-				case 'f': out.push_back('\f'); break;
-				case 'u':
-					if (pos + 4 <= text.size())
-					{
-						// paths are ASCII in practice; keep escapes opaque rather than decode
-						out.push_back('?');
-						pos += 4;
-					}
-					break;
-				default: out.push_back(e); break;
-				}
+				constexpr std::array<char, 3> unescaped{'"', '\\', '/'};
+				if (!std::ranges::contains(unescaped, e))
+					out.push_back('\\');
+				out.push_back(e);
 				continue;
 			}
 			out.push_back(c);
@@ -158,14 +143,14 @@ struct Scanner
 
 }
 
-bool LauncherConfig::shouldSkip(std::wstring_view installPath) const
+bool LauncherConfig::isExcluded(std::wstring_view installPath) const
 {
-	return std::ranges::contains(skip_, normalise(installPath));
+	return std::ranges::contains(exclude_, normalise(installPath));
 }
 
-bool LauncherConfig::shouldKeep(std::wstring_view relativePath) const
+bool LauncherConfig::isProtected(std::wstring_view relativePath) const
 {
-	return std::ranges::contains(keep_, normalise(relativePath));
+	return std::ranges::contains(protect_, normalise(relativePath));
 }
 
 const PatchRecord* LauncherConfig::patchFor(std::wstring_view installPath) const
@@ -183,8 +168,8 @@ void LauncherConfig::recordPatch(std::wstring_view installPath, const Digest& so
 LauncherConfig LauncherConfig::load()
 {
 	LauncherConfig config;
-	for (const std::wstring_view path : skipDefaults)
-		config.skip_.push_back(normalise(path));
+	for (const std::wstring_view path : excludeDefaults)
+		config.exclude_.push_back(normalise(path));
 
 	const std::filesystem::path file = beside(L"launcher.json");
 	std::string bytes;
@@ -215,16 +200,16 @@ LauncherConfig LauncherConfig::load()
 					continue;
 				if (entry.front() == L'-')
 				{
-					std::erase(config.skip_, entry.substr(1));
+					std::erase(config.exclude_, entry.substr(1));
 					continue;
 				}
-				if (!std::ranges::contains(config.skip_, entry))
-					config.skip_.push_back(entry);
+				if (!std::ranges::contains(config.exclude_, entry))
+					config.exclude_.push_back(entry);
 			}
 			config.save();
 		}
-		core::info("config: {} skip, {} keep, {} patched", config.skip_.size(),
-		           config.keep_.size(), config.patched_.size());
+		core::info("config: {} exclude, {} protect, {} patched", config.exclude_.size(),
+		           config.protect_.size(), config.patched_.size());
 		return config;
 	}
 
@@ -240,12 +225,15 @@ LauncherConfig LauncherConfig::load()
 		if (!keyOpt || !scan.consume(':'))
 			break;
 		const std::string key = *keyOpt;
-		if (key == "skip" || key == "keep")
+		// skip/keep were the original spellings; read them so an early file still loads
+		const bool excludeKey = key == "exclude" || key == "skip";
+		const bool protectKey = key == "protect" || key == "keep";
+		if (excludeKey || protectKey)
 		{
-			auto& list = key == "skip" ? config.skip_ : config.keep_;
+			auto& list = excludeKey ? config.exclude_ : config.protect_;
 			list.clear();
-			if (key == "skip")
-				for (const std::wstring_view path : skipDefaults)
+			if (excludeKey)
+				for (const std::wstring_view path : excludeDefaults)
 					list.push_back(normalise(path));
 			if (scan.consume('['))
 			{
@@ -330,8 +318,8 @@ LauncherConfig LauncherConfig::load()
 			break;
 	}
 
-	core::info("config: {} skip, {} keep, {} patched", config.skip_.size(), config.keep_.size(),
-	           config.patched_.size());
+	core::info("config: {} exclude, {} protect, {} patched", config.exclude_.size(),
+	           config.protect_.size(), config.patched_.size());
 	return config;
 }
 
@@ -353,9 +341,9 @@ bool LauncherConfig::save() const
 	};
 
 	out << "{\n";
-	emitList("skip", skip_);
+	emitList("exclude", exclude_);
 	out << ",\n";
-	emitList("keep", keep_);
+	emitList("protect", protect_);
 	out << ",\n  \"patched\": {";
 	std::size_t i = 0;
 	for (const auto& [path, record] : patched_)
