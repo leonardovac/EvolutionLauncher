@@ -2,6 +2,7 @@
 
 #include "app/assets.h"
 #include "app/controls.h"
+#include "app/defragjob.h"
 #include "app/languages.h"
 #include "app/launch.h"
 #include "app/rail.h"
@@ -85,10 +86,11 @@ int run(const Options& options)
     bool panelOpen = options.wantPanel;
     bool saveFailed = false;
     std::string launchFailure;
-    bool defragStarted = false;
     float panelSlide = options.wantPanel ? 1.f : 0.f;
     if (options.wantPanel)
         working = settings;
+
+    DefragJob defrag;
 
     MenuState menu;
     bool menuOpen = options.wantMenu;
@@ -143,9 +145,23 @@ int run(const Options& options)
         switch (snap.phase)
         {
         case JobPhase::Idle:
-        case JobPhase::Checking:
             shell.statusLine = "CHECKING FOR UPDATES";
             break;
+        case JobPhase::Checking:
+        {
+            shell.statusLine = "CHECKING FOR UPDATES";
+            if (snap.entryCount != 0)
+            {
+                shell.progress = core::clamp01(static_cast<float>(
+                    static_cast<double>(snap.entryIndex) / static_cast<double>(snap.entryCount)));
+                detailBuffer = std::format("{} / {}", snap.entryIndex, snap.entryCount);
+                if (snap.hashedBytes != 0)
+                    detailBuffer += std::format("  •  {} HASHED",
+                                                core::formatBytes(snap.hashedBytes));
+                shell.detailLine = detailBuffer;
+            }
+            break;
+        }
         case JobPhase::Updating:
         {
             const float fraction =
@@ -181,6 +197,40 @@ int run(const Options& options)
         case JobPhase::Cancelled:
             shell.statusLine = "CANCELLED";
             break;
+        }
+        const DefragSnapshot defragSnap = defrag.snapshot();
+        if (defragSnap.running)
+        {
+            shell.startEnabled = false;
+            shell.statusLine = "DEFRAGMENTING CACHE";
+            detailBuffer.clear();
+            if (defragSnap.total != 0)
+            {
+                shell.progress = core::clamp01(
+                    static_cast<float>(static_cast<double>(defragSnap.processed)
+                                       / static_cast<double>(defragSnap.total)));
+                detailBuffer = std::format("{} / {}", core::formatBytes(defragSnap.processed),
+                                           core::formatBytes(defragSnap.total));
+            }
+            if (defragSnap.currentFile)
+            {
+                if (!detailBuffer.empty())
+                    detailBuffer += "  •  ";
+                detailBuffer += *defragSnap.currentFile;
+            }
+            shell.detailLine = detailBuffer;
+            ui::requestFrame();
+        }
+        else if (defragSnap.finished)
+        {
+            defrag.clearFinished();
+            defrag.join();
+            if (!options.wantShot)
+            {
+                meter.reset();
+                job.restart();
+            }
+            ui::requestFrame();
         }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
         const RailResult rail = drawRail(viewport, !shell.panelVisible);
@@ -342,11 +392,13 @@ int run(const Options& options)
             case MenuAction::Defragment:
                 if (!options.wantShot)
                 {
-                    if (const auto started = launchDefrag(settings, wf::Branch::Public); started)
+                    // the applet wants the disk to itself
+                    job.cancel();
+                    job.join();
+                    if (const auto started = defrag.start(settings, wf::Branch::Public); started)
                     {
-                        job.cancel();
                         menuOpen = false;
-                        defragStarted = true;
+                        menu.defragLine.clear();
                     }
                     else
                     {
@@ -370,9 +422,6 @@ int run(const Options& options)
                 result = 1;
             break;
         }
-
-        if (defragStarted)
-            break;
 
         device.present(true);
         if (!ui::g().animated && !window.mouseDown())

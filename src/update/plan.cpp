@@ -147,7 +147,7 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			break;
 		++checked;
 		if (progress != nullptr)
-			progress->onChecking(checked, applicable.size());
+			progress->onChecking(checked, applicable.size(), hashedBytes);
 
 		const std::filesystem::path destination = config.root / entry->installPath;
 		std::error_code ec;
@@ -191,6 +191,27 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			           digest.error());
 		plan.jobs.push_back({entry, Reason::HashMismatch});
 		queued.insert(key(entry->installPath));
+	}
+
+	// the defragmenter rewrites the cache in place, so its bytes stop matching the index hash
+	// for good; a present-but-different cache file is reported, never re-fetched
+	if (config.hashCaches)
+	{
+		const auto dropped = std::ranges::remove_if(plan.jobs, [](const Job& job) {
+			return job.entry->category == Category::CacheOrToc &&
+			       job.reason == Reason::HashMismatch;
+		});
+		const auto count = static_cast<std::size_t>(std::ranges::distance(dropped));
+		if (count != 0)
+		{
+			core::warn("{} cache files differ from the index: that is what defragmenting does, "
+			           "and re-fetching them would only undo it, so they are left alone",
+			           count);
+			plan.cacheDiffers = count;
+			for (const Job& job : dropped)
+				queued.erase(key(job.entry->installPath));
+			plan.jobs.erase(dropped.begin(), dropped.end());
+		}
 	}
 
 	// a .cache and its .toc must move together or the pair is inconsistent on disk

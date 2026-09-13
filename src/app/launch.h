@@ -34,6 +34,10 @@ std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch
 // runs the game's own cache defragmenter; removes a stale Defrag.log first
 std::expected<void, LaunchError> launchDefrag(const Settings& settings, wf::Branch branch);
 
+// the defragmenter line and its guards, without spawning; also clears a stale Defrag.log
+std::expected<std::wstring, LaunchError> buildDefragCommandLine(const Settings& settings,
+                                                                wf::Branch branch);
+
 std::wstring_view describe(LaunchError error);
 
 }
