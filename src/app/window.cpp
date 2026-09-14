@@ -65,6 +65,21 @@ RECT navRowRect(int width, float scale)
                 top + static_cast<LONG>(shellRowHeight * scale)};
 }
 
+// the window is a WS_POPUP, so CW_USEDEFAULT would place it at 0,0
+POINT centredOrigin(int width, int height)
+{
+    POINT cursor{};
+    ::GetCursorPos(&cursor);
+    HMONITOR monitor = ::MonitorFromPoint(cursor, MONITOR_DEFAULTTOPRIMARY);
+    MONITORINFO info{sizeof(info)};
+    if (::GetMonitorInfoW(monitor, &info) == 0)
+        return POINT{0, 0};
+    const RECT& work = info.rcWork;
+    const LONG x = work.left + ((work.right - work.left) - width) / 2;
+    const LONG y = work.top + ((work.bottom - work.top) - height) / 2;
+    return POINT{(std::max)(work.left, x), (std::max)(work.top, y)};
+}
+
 }
 
 LRESULT CALLBACK Window::proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
@@ -151,16 +166,22 @@ bool Window::create(int width, int height)
 
     width_ = width;
     height_ = height;
+    POINT origin = centredOrigin(width, height);
     hwnd_ = ::CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP | WS_EX_APPWINDOW, className, L"Warframe",
-                              WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT, width, height, nullptr,
-                              nullptr, wc.hInstance, this);
+                              WS_POPUP, origin.x, origin.y, width, height, nullptr, nullptr,
+                              wc.hInstance, this);
     if (hwnd_ == nullptr)
         return false;
 
     scale_ = static_cast<float>(::GetDpiForWindow(hwnd_)) / 96.f;
     if (scale_ != 1.f)
-        ::SetWindowPos(hwnd_, nullptr, 0, 0, static_cast<int>(width * scale_),
-                       static_cast<int>(height * scale_), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    {
+        const int scaledW = static_cast<int>(width * scale_);
+        const int scaledH = static_cast<int>(height * scale_);
+        origin = centredOrigin(scaledW, scaledH);
+        ::SetWindowPos(hwnd_, nullptr, origin.x, origin.y, scaledW, scaledH,
+                       SWP_NOZORDER | SWP_NOACTIVATE);
+    }
     ::ShowWindow(hwnd_, SW_SHOW);
     return true;
 }
