@@ -1,6 +1,6 @@
 #pragma once
 
 #define RES_FONT 101
-#define RES_HERO 102
+#define RES_WARFRAME_HERO 102
 #define RES_WARFRAME_ICON 103
 #define RES_PUBLISHER_LOGO 104

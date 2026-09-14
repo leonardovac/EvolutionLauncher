@@ -82,7 +82,7 @@ int run(const Options& options)
     ui::rebuildFonts(device.dev(), window.scale());
     buildIcons(device.dev(), window.scale());
 
-    gfx::Image hero;
+    gfx::Image warframeHero;
     gfx::Image publisherLogo;
     gfx::Image warframeIcon;
     const auto loadArt = [&device](int id, gfx::Image& out) {
@@ -92,11 +92,12 @@ int run(const Options& options)
                 out = std::move(*loaded);
         }
     };
-    loadArt(RES_HERO, hero);
+    loadArt(RES_WARFRAME_HERO, warframeHero);
     loadArt(RES_PUBLISHER_LOGO, publisherLogo);
     loadArt(RES_WARFRAME_ICON, warframeIcon);
 
-    const std::array<RailTitle, 1> railTitles{{{"rail.warframe", "WARFRAME", &warframeIcon}}};
+    const std::array<RailTitle, 1> railTitles{
+        {{"rail.warframe", "WARFRAME", &warframeIcon, &warframeHero}}};
     int selectedTitle = 0;
 
     UpdateJob job;
@@ -314,7 +315,8 @@ int run(const Options& options)
                 defragExit == 0 ? "CACHE DEFRAGMENTED" : "THE DEFRAGMENTER REPORTED A FAILURE";
             ui::requestFrame();
         }
-        const HeroFrame heroFrame{hero.valid() ? &hero : nullptr,
+        gfx::Image* const baked = railTitles[static_cast<std::size_t>(selectedTitle)].hero;
+        const HeroFrame heroFrame{baked != nullptr && baked->valid() ? baked : nullptr,
                                   liveHero.valid() ? &liveHero : nullptr, heroFade};
         drawShell(viewport, heroFrame, shell);
         const RailResult rail =
@@ -511,7 +513,7 @@ int run(const Options& options)
     heroArt.stop();
 
     liveHero = gfx::Image{};
-    hero = gfx::Image{};
+    warframeHero = gfx::Image{};
     destroyIcons();
     ui::shutdown();
     renderer.destroy();

@@ -17,6 +17,8 @@ struct RailTitle
     std::string_view id;
     std::string_view label;
     gfx::Image* icon = nullptr;
+    // the baked-in art for this title, drawn until its live key art arrives
+    gfx::Image* hero = nullptr;
 };
 
 struct RailResult

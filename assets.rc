@@ -1,6 +1,6 @@
 #include "src/app/resource.h"
 
 RES_FONT RCDATA "assets\\RobotoCondensed.ttf"
-RES_HERO RCDATA "assets\\hero.jpg"
+RES_WARFRAME_HERO RCDATA "assets\\warframe-hero.jpg"
 RES_WARFRAME_ICON RCDATA "assets\warframe.png"
 RES_PUBLISHER_LOGO RCDATA "assets\publisher.png"
