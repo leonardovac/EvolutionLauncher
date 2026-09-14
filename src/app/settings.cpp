@@ -1,5 +1,7 @@
 #include "app/settings.h"
 
+#include "update/config.h"
+
 #include "core/str.h"
 
 #include <windows.h>
@@ -13,6 +15,8 @@ namespace
 {
 
 constexpr wchar_t launcherKey[] = L"Software\\Digital Extremes\\Warframe\\Launcher";
+// every title whose stock launcher reads its own ForceHTTPS; Soulframe joins this list
+constexpr std::array<std::wstring_view, 1> titleLauncherKeys{launcherKey};
 
 std::optional<std::wstring> readString(const wchar_t* name)
 {
@@ -56,6 +60,18 @@ E clampEnum(DWORD raw, E fallback, DWORD highest)
 
 }
 
+bool writeDwordTo(std::wstring_view path, const wchar_t* name, DWORD value)
+{
+    HKEY key = nullptr;
+    if (::RegCreateKeyExW(HKEY_CURRENT_USER, std::wstring(path).c_str(), 0, nullptr,
+                          REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &key, nullptr) !=
+        ERROR_SUCCESS)
+        return false;
+    const bool ok = writeDword(key, name, value);
+    ::RegCloseKey(key);
+    return ok;
+}
+
 Settings Settings::load()
 {
     Settings out;
@@ -71,15 +87,11 @@ Settings Settings::load()
         out.audioLanguage = *value;
     if (const auto value = readDword(L"EnableShaderCache"))
         out.shaderCache = *value != 0;
-    if (const auto value = readDword(L"EnableBulkDownload"))
-        out.bulkDownload = *value != 0;
-    if (const auto value = readDword(L"EnableAggressiveDownload"))
-        out.aggressiveDownload = *value != 0;
-    if (const auto value = readDword(L"LauncherGPU"))
-        out.launcherGpu = *value != 0;
-    // allowNetworkCaches is the registry's ForceHTTPS, inverted
-    if (const auto value = readDword(L"ForceHTTPS"))
-        out.allowNetworkCaches = *value == 0;
+    // launcher-wide, so it lives in launcher.json; an older install is imported from ForceHTTPS
+    if (const auto stored = wf::LauncherConfig::load().allowNetworkCaches())
+        out.allowNetworkCaches = *stored;
+    else if (const auto legacy = readDword(L"ForceHTTPS"))
+        out.allowNetworkCaches = *legacy == 0;
     if (const auto value = readString(L"LauncherExe"))
         out.launcherExe = *value;
     return out;
@@ -105,16 +117,19 @@ bool Settings::save(const Settings* baseline) const
         ok = writeString(key, L"LanguageVO", audioLanguage) && ok;
     if (!baseline || shaderCache != baseline->shaderCache)
         ok = writeDword(key, L"EnableShaderCache", shaderCache ? 1u : 0u) && ok;
-    if (!baseline || bulkDownload != baseline->bulkDownload)
-        ok = writeDword(key, L"EnableBulkDownload", bulkDownload ? 1u : 0u) && ok;
-    if (!baseline || aggressiveDownload != baseline->aggressiveDownload)
-        ok = writeDword(key, L"EnableAggressiveDownload", aggressiveDownload ? 1u : 0u) && ok;
-    if (!baseline || launcherGpu != baseline->launcherGpu)
-        ok = writeDword(key, L"LauncherGPU", launcherGpu ? 1u : 0u) && ok;
-    if (!baseline || allowNetworkCaches != baseline->allowNetworkCaches)
-        ok = writeDword(key, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u) && ok;
 
     ::RegCloseKey(key);
+
+    // ours to act on, so it is stored launcher-wide; each title's stock launcher still reads
+    // its own ForceHTTPS, so the choice is mirrored into every one of them
+    if (!baseline || allowNetworkCaches != baseline->allowNetworkCaches)
+    {
+        wf::LauncherConfig launcher = wf::LauncherConfig::load();
+        launcher.setAllowNetworkCaches(allowNetworkCaches);
+        ok = launcher.save() && ok;
+        for (const std::wstring_view title : titleLauncherKeys)
+            ok = writeDwordTo(title, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u) && ok;
+    }
     return ok;
 }
 

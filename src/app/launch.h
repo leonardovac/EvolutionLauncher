@@ -29,6 +29,9 @@ std::wstring_view gameExeName(wf::Branch branch);
 std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch,
                                   const std::filesystem::path& root);
 
+// false when the branch root holds no game executable, so there is nothing to launch yet
+bool gameInstalled(const Settings& settings, wf::Branch branch);
+
 std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch branch);
 
 // runs the game's own cache defragmenter; removes a stale Defrag.log first

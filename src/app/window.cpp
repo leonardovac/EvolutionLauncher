@@ -20,10 +20,9 @@ constexpr DWORD idleWaitMs = 100;     // bounded so a repaint with no message st
 // mirrors shell.cpp's closeBox layout so the caption strip doesn't swallow the click
 RECT closeGlyphRect(int width, float scale)
 {
-    const float right = static_cast<float>(width) - shellFrameInset * scale;
-    const float x = right - shellCloseMargin * scale - shellGlyphSize * scale;
-    const float y = shellFrameInset * scale + shellGlyphTopOffset * scale;
     const float size = shellGlyphSize * scale;
+    const float x = static_cast<float>(width) - shellEdgeMargin * scale - size;
+    const float y = (shellHeaderTop + (shellRowHeight - shellGlyphSize) * 0.5f) * scale;
     return RECT{static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x + size),
                 static_cast<LONG>(y + size)};
 }
@@ -43,17 +42,25 @@ RECT languageRowRect(int width, float scale)
     const LONG divider = minimiseBox.left - static_cast<LONG>(shellDividerGap * scale);
     const LONG rowRight = divider - static_cast<LONG>(shellLanguageGap * scale);
     const LONG rowLeft = rowRight - static_cast<LONG>(shellLanguageWidth * scale);
-    const LONG top = minimiseBox.top + static_cast<LONG>(shellLanguageTopOffset * scale);
+    const LONG top = static_cast<LONG>(shellHeaderTop * scale);
     return RECT{rowLeft, top, rowRight, top + static_cast<LONG>(shellRowHeight * scale)};
+}
+
+// mirrors shell.cpp's cogBox, left of the language row
+RECT cogRect(int width, float scale)
+{
+    const RECT language = languageRowRect(width, scale);
+    const LONG size = static_cast<LONG>(shellGlyphSize * scale);
+    const LONG right = language.left - static_cast<LONG>(shellCogGap * scale);
+    return RECT{right - size, language.top, right, language.bottom};
 }
 
 // mirrors shell.cpp's nav row, which sits inside the draggable caption strip
 RECT navRowRect(int width, float scale)
 {
     const RECT language = languageRowRect(width, scale);
-    const LONG left = static_cast<LONG>(
-        (shellFrameInset + railWidth + shellTitleOffsetX + shellTitleWidth + shellNavGap) * scale);
-    const LONG top = static_cast<LONG>((shellFrameInset + shellTitleOffsetY) * scale);
+    const LONG left = static_cast<LONG>((railWidth + shellContentPad) * scale);
+    const LONG top = static_cast<LONG>(shellHeaderTop * scale);
     return RECT{left, top, language.left - static_cast<LONG>(24.f * scale),
                 top + static_cast<LONG>(shellRowHeight * scale)};
 }
@@ -84,7 +91,8 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         if (pt.y >= strip)
             return HTCLIENT;
         const std::array glyphs{closeGlyphRect(width_, scale_), minimiseGlyphRect(width_, scale_),
-                                languageRowRect(width_, scale_), navRowRect(width_, scale_)};
+                                languageRowRect(width_, scale_), cogRect(width_, scale_),
+                                navRowRect(width_, scale_)};
         const bool onGlyph =
             std::ranges::any_of(glyphs, [&pt](const RECT& r) { return ::PtInRect(&r, pt) != 0; });
         return onGlyph ? HTCLIENT : HTCAPTION;

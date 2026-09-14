@@ -265,9 +265,6 @@ int run(int argc, wchar_t** argv)
 		core::info("language {}", core::narrow(settings.language));
 		core::info("audioLanguage {}", core::narrow(settings.audioLanguage));
 		core::info("shaderCache {}", settings.shaderCache);
-		core::info("bulkDownload {}", settings.bulkDownload);
-		core::info("aggressiveDownload {}", settings.aggressiveDownload);
-		core::info("launcherGpu {}", settings.launcherGpu);
 		core::info("allowNetworkCaches {}", settings.allowNetworkCaches);
 		core::info("root {}", settings.installRoot(options.config.branch).string());
 		core::info("steam {} eos {} dx12 {}", settings.steam(), settings.eos(), settings.dx12());

@@ -20,9 +20,9 @@ public:
     Bridge(std::atomic<JobPhase>& phase, std::atomic<std::size_t>& index,
            std::atomic<std::size_t>& count, std::atomic<std::uint64_t>& downloaded,
            std::atomic<std::uint64_t>& total, std::atomic<JobText>& currentFile,
-           std::atomic<std::uint64_t>& hashed)
+           std::atomic<std::uint64_t>& hashed, bool apply)
         : phase_(phase), index_(index), count_(count), downloaded_(downloaded), total_(total),
-          currentFile_(currentFile), hashed_(hashed)
+          currentFile_(currentFile), hashed_(hashed), apply_(apply)
     {
     }
 
@@ -37,7 +37,7 @@ public:
     {
         count_.store(queued, std::memory_order_relaxed);
         total_.store(downloadBytes, std::memory_order_relaxed);
-        if (queued != 0)
+        if (queued != 0 && apply_)
             phase_.store(JobPhase::Updating, std::memory_order_relaxed);
     }
 
@@ -63,6 +63,7 @@ private:
     std::atomic<std::uint64_t>& total_;
     std::atomic<JobText>& currentFile_;
     std::atomic<std::uint64_t>& hashed_;
+    bool apply_ = false;
 };
 
 }
@@ -94,7 +95,7 @@ void UpdateJob::join()
         thread_.join();
 }
 
-void UpdateJob::reset(bool verify, bool stale)
+void UpdateJob::reset(bool verify, bool stale, bool apply)
 {
     cancel();
     join();
@@ -103,6 +104,9 @@ void UpdateJob::reset(bool verify, bool stale)
     thread_ = std::thread();
     verify_.store(verify, std::memory_order_relaxed);
     stale_.store(stale, std::memory_order_relaxed);
+    apply_.store(apply, std::memory_order_relaxed);
+    queuedFiles_.store(0, std::memory_order_relaxed);
+    queuedBytes_.store(0, std::memory_order_relaxed);
     phase_.store(JobPhase::Idle, std::memory_order_relaxed);
     entryIndex_.store(0, std::memory_order_relaxed);
     entryCount_.store(0, std::memory_order_relaxed);
@@ -118,12 +122,17 @@ void UpdateJob::reset(bool verify, bool stale)
 
 void UpdateJob::restart(bool verify)
 {
-    reset(verify, false);
+    reset(verify, false, false);
+}
+
+void UpdateJob::startUpdate()
+{
+    reset(false, false, true);
 }
 
 void UpdateJob::startStaleReport()
 {
-    reset(false, true);
+    reset(false, true, false);
 }
 
 bool UpdateJob::running() const noexcept
@@ -143,13 +152,18 @@ JobSnapshot UpdateJob::snapshot() const
     out.downloaded = downloaded_.load(std::memory_order_relaxed);
     out.downloadTotal = downloadTotal_.load(std::memory_order_relaxed);
     out.hashedBytes = hashedBytes_.load(std::memory_order_relaxed);
+    out.queuedFiles = queuedFiles_.load(std::memory_order_relaxed);
+    out.queuedBytes = queuedBytes_.load(std::memory_order_relaxed);
+    out.verifying = verify_.load(std::memory_order_relaxed);
+    out.scanning = stale_.load(std::memory_order_relaxed);
     return out;
 }
 
 void UpdateJob::work()
 {
+    const bool apply = apply_.load(std::memory_order_relaxed);
     Bridge bridge(phase_, entryIndex_, entryCount_, downloaded_, downloadTotal_, currentFile_,
-                  hashedBytes_);
+                  hashedBytes_, apply);
 
     const Settings settings = Settings::load();
     wf::Options options;
@@ -162,11 +176,13 @@ void UpdateJob::work()
     options.config.launcher = wf::LauncherConfig::load();
     options.config.hashCaches = verify_.load(std::memory_order_relaxed);
     options.staleReport = stale_.load(std::memory_order_relaxed);
+    // a check builds the plan and stops; only an apply writes files
+    options.dryRun = !apply && !options.staleReport;
     options.progress = &bridge;
 
     const auto summary = wf::run(options);
 
-    if (summary && summary->mainExe && !options.staleReport)
+    if (summary && summary->mainExe && apply)
         ensureSideloaded(options.config.launcher, *summary->mainExe, options.config.root);
 
     JobPhase phase = JobPhase::Ready;
@@ -190,11 +206,17 @@ void UpdateJob::work()
         // a stale walk never checked the install, so it cannot claim Ready
         phase = JobPhase::Idle;
     }
+    else if (options.dryRun && summary->queued != 0)
+    {
+        phase = JobPhase::UpdateReady;
+    }
 
     if (summary)
     {
         staleFiles_.store(summary->staleFiles, std::memory_order_relaxed);
         staleBytes_.store(summary->staleBytes, std::memory_order_release);
+        queuedFiles_.store(summary->queued, std::memory_order_relaxed);
+        queuedBytes_.store(summary->downloadBytes, std::memory_order_release);
     }
 
     if (!message.empty())

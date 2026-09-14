@@ -1,5 +1,6 @@
 #include "app/rail.h"
 
+#include "app/icons.h"
 #include "ui/ui.h"
 
 #include <cmath>
@@ -24,7 +25,7 @@ void diamond(const core::Vec2& center, float radius, float thickness, const core
     ui::dl().line(left, top, thickness, col);
 }
 
-void gameGlyph(const core::Vec2& center, float size, const core::Col& col)
+void titleGlyph(const core::Vec2& center, float size, const core::Col& col)
 {
     const float half = size * 0.5f;
     const core::Vec2 apex(center.x, center.y - half);
@@ -50,9 +51,18 @@ void cogGlyph(const core::Vec2& center, float radius, const core::Col& col)
     }
 }
 
+// alpha-only art; kAlphaMask paints it flat in `col` instead of sampling its own pixels
+void drawMark(gfx::Image* art, const core::Vec2& center, float size, const core::Col& col)
+{
+    const core::Rect box(center.x - size * 0.5f, center.y - size * 0.5f, size, size);
+    ui::dl().image(art->srv.get(), box, col, 0.f, core::Rect(0.f, 0.f, 1.f, 1.f),
+                   gfx::DrawList::kAlphaMask);
 }
 
-RailResult drawRail(const core::Rect& viewport, bool inputEnabled)
+}
+
+RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* publisher,
+                    std::span<const RailTitle> titles, int selected)
 {
     RailResult result;
 
@@ -64,26 +74,74 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled)
 
     const float centerX = rail.x + rail.w * 0.5f;
 
-    const core::Vec2 markCenter(centerX, rail.y + ui::px(39.f));
-    diamond(markCenter, ui::px(13.f), ui::px(1.5f), gold.alpha(0.75f));
-    diamond(markCenter, ui::px(5.f), ui::px(1.5f), gold.alpha(0.75f));
+    const core::Vec2 markCenter(centerX, rail.y + ui::px(40.f));
+    if (publisher != nullptr && publisher->valid())
+        drawMark(publisher, markCenter, ui::px(40.f), gold.alpha(0.85f));
+    else
+    {
+        diamond(markCenter, ui::px(13.f), ui::px(1.5f), gold.alpha(0.75f));
+        diamond(markCenter, ui::px(5.f), ui::px(1.5f), gold.alpha(0.75f));
+    }
 
-    const core::Rect band(rail.x, rail.y + ui::px(132.f), rail.w, ui::px(68.f));
-    ui::dl().rect(band, gold.alpha(0.10f), 0.f);
-    ui::dl().rect(core::Rect(rail.x, band.y, ui::px(3.f), band.h), gold, 0.f);
-    gameGlyph(core::Vec2(centerX, band.y + ui::px(22.f)), ui::px(22.f), gold);
-    const core::Rect gameLabel(band.x, band.b() - ui::px(22.f), band.w, ui::px(16.f));
-    ui::text(ui::fonts().caption, gameLabel, "WARFRAME", gold, ui::AlignH::Center,
-             ui::AlignV::Middle, ui::px(1.f));
+    // the rail is too narrow for the name on one line
+    const core::Rect publisherTop(rail.x, rail.y + ui::px(64.f), rail.w, ui::px(13.f));
+    const core::Rect publisherLower(rail.x, rail.y + ui::px(77.f), rail.w, ui::px(13.f));
+    ui::text(ui::fonts().caption, publisherTop, "DIGITAL", ui::theme().subtext, ui::AlignH::Center,
+             ui::AlignV::Middle, ui::px(1.4f));
+    ui::text(ui::fonts().caption, publisherLower, "EXTREMES", ui::theme().subtext,
+             ui::AlignH::Center, ui::AlignV::Middle, ui::px(1.4f));
+
+    const float ruleY = rail.y + ui::px(104.f);
+    ui::dl().line(core::Vec2(rail.x + ui::px(18.f), ruleY),
+                  core::Vec2(rail.r() - ui::px(18.f), ruleY), ui::px(1.f), gold.alpha(0.22f));
+
+    float bandY = rail.y + ui::px(120.f);
+    for (std::size_t i = 0; i < titles.size(); ++i)
+    {
+        const RailTitle& entry = titles[i];
+        const core::Rect band(rail.x, bandY, rail.w, ui::px(68.f));
+        const std::uint32_t widget = ui::id(entry.id);
+        const bool hot = ui::hovered(widget, band);
+        if (ui::clicked(widget, band) && inputEnabled)
+            result.titleClicked = static_cast<int>(i);
+
+        const bool active = static_cast<int>(i) == selected;
+        const float hoverT = ui::anim(widget, 0, hot ? 1.f : 0.f, 14.f);
+        const float wash = active ? 0.10f : 0.06f * hoverT;
+        if (wash > 0.001f)
+            ui::dl().rect(band, gold.alpha(wash), 0.f);
+        const float bar = active ? 1.f : hoverT * 0.5f;
+        if (bar > 0.01f)
+            ui::dl().rect(core::Rect(rail.x, band.y, ui::px(3.f), band.h), gold.alpha(bar), 0.f);
+
+        const core::Col ink = gold.alpha(active ? 1.f : 0.55f + 0.35f * hoverT);
+        const core::Vec2 titleCenter(centerX, band.y + ui::px(22.f));
+        if (entry.icon != nullptr && entry.icon->valid())
+            drawMark(entry.icon, titleCenter, ui::px(36.f), ink);
+        else
+            titleGlyph(titleCenter, ui::px(22.f), ink);
+        const core::Rect titleLabel(band.x, band.b() - ui::px(22.f), band.w, ui::px(16.f));
+        ui::text(ui::fonts().caption, titleLabel, entry.label, ink, ui::AlignH::Center,
+                 ui::AlignV::Middle, ui::px(1.f));
+
+        bandY = band.b() + ui::px(6.f);
+    }
 
     const float cogSize = ui::px(22.f);
     const core::Rect cogBox(centerX - cogSize * 0.5f, rail.b() - ui::px(26.f) - cogSize, cogSize,
                             cogSize);
     const std::uint32_t cogId = ui::id("rail.cog");
     const bool cogHot = ui::hovered(cogId, cogBox);
-    const bool cogHit = ui::clicked(cogId, cogBox);
-    result.cogClicked = cogHit && inputEnabled;
-    cogGlyph(cogBox.center(), cogBox.w * 0.3f, gold.alpha(cogHot ? 1.f : 0.7f));
+    result.cogClicked = ui::clicked(cogId, cogBox) && inputEnabled;
+    const float cogT = ui::anim(cogId, 0, cogHot ? 1.f : 0.f, 16.f);
+    if (cogT > 0.01f)
+        ui::dl().rect(cogBox.expand(ui::px(7.f)), core::Col::hex(0xFFFFFF, 0.08f * cogT),
+                      ui::px(6.f));
+    const core::Col cogCol = gold.alpha(0.7f + 0.3f * cogT);
+    if (iconsReady())
+        drawIcon(IconSize::Rail, icon::cog, cogBox, cogCol);
+    else
+        cogGlyph(cogBox.center(), cogBox.w * 0.3f, cogCol);
 
     return result;
 }

@@ -3,14 +3,14 @@
 #include "app/assets.h"
 #include "app/controls.h"
 #include "app/defragjob.h"
+#include "app/icons.h"
 #include "app/languages.h"
 #include "app/launch.h"
 #include "app/rail.h"
-#include "app/railmenu.h"
+#include "app/panel.h"
 #include "app/rate.h"
 #include "app/resource.h"
 #include "app/settings.h"
-#include "app/settingspanel.h"
 #include "app/shell.h"
 #include "app/updatejob.h"
 #include "app/versions.h"
@@ -32,6 +32,7 @@
 #include <chrono>
 #include <format>
 #include <ranges>
+#include <string_view>
 
 namespace app
 {
@@ -40,6 +41,16 @@ namespace
 
 constexpr int designWidth = 1180;
 constexpr int designHeight = 740;
+
+// a verify and a stale walk both run through JobPhase::Checking, so the label has to say which
+std::string_view checkLabel(const JobSnapshot& snap)
+{
+    if (snap.scanning)
+        return "SCANNING FOR UNLISTED FILES";
+    if (snap.verifying)
+        return "VERIFYING THE INSTALL";
+    return "CHECKING FOR UPDATES";
+}
 
 }
 
@@ -68,13 +79,24 @@ int run(const Options& options)
     if (!ui::init(device.dev(), fontData))
         return 1;
     ui::rebuildFonts(device.dev(), window.scale());
+    buildIcons(device.dev(), window.scale());
 
     gfx::Image hero;
-    if (const auto bytes = resource(RES_HERO); !bytes.empty())
-    {
-        if (auto loaded = gfx::loadImageMemory(device.dev(), bytes))
-            hero = std::move(*loaded);
-    }
+    gfx::Image publisherLogo;
+    gfx::Image warframeIcon;
+    const auto loadArt = [&device](int id, gfx::Image& out) {
+        if (const auto bytes = resource(id); !bytes.empty())
+        {
+            if (auto loaded = gfx::loadImageMemory(device.dev(), bytes))
+                out = std::move(*loaded);
+        }
+    };
+    loadArt(RES_HERO, hero);
+    loadArt(RES_PUBLISHER_LOGO, publisherLogo);
+    loadArt(RES_WARFRAME_ICON, warframeIcon);
+
+    const std::array<RailTitle, 1> railTitles{{{"rail.warframe", "WARFRAME", &warframeIcon}}};
+    int selectedTitle = 0;
 
     UpdateJob job;
     if (!options.wantShot)
@@ -83,20 +105,20 @@ int run(const Options& options)
 
     Settings settings = Settings::load();
     Settings working;
-    bool panelOpen = options.wantPanel;
-    bool saveFailed = false;
+    PanelState panel;
+    const bool startOpen = options.wantPanel || options.wantMenu;
+    bool panelOpen = startOpen;
     std::string launchFailure;
-    float panelSlide = options.wantPanel ? 1.f : 0.f;
-    if (options.wantPanel)
+    float panelSlide = startOpen ? 1.f : 0.f;
+    if (options.wantMenu)
+        panel.tab = PanelTab::Maintenance;
+    if (startOpen)
         working = settings;
 
     DefragJob defrag;
     float defragNotice = 0.f;
     std::uint32_t defragExit = 0;
 
-    MenuState menu;
-    bool menuOpen = options.wantMenu;
-    float menuSlide = options.wantMenu ? 1.f : 0.f;
 
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
@@ -110,7 +132,6 @@ int run(const Options& options)
         elapsed += dt;
 
         panelSlide = core::clamp01(panelSlide + (panelOpen ? 1.f : -1.f) * dt * 6.f);
-        menuSlide = core::clamp01(menuSlide + (menuOpen ? 1.f : -1.f) * dt * 6.f);
 
         const JobSnapshot snap = job.snapshot();
         if (snap.phase == JobPhase::Updating)
@@ -119,7 +140,10 @@ int run(const Options& options)
         if (window.takeResized())
             device.resize(window.width(), window.height());
         if (window.takeScaleChanged())
+        {
             ui::rebuildFonts(device.dev(), window.scale());
+            buildIcons(device.dev(), window.scale());
+        }
 
         device.waitForFrame();
         device.beginFrame();
@@ -139,19 +163,25 @@ int run(const Options& options)
             ui::requestFrame();
         ShellState shell;
         shell.phase = snap.phase;
-        shell.startEnabled = snap.phase == JobPhase::Ready;
-        shell.panelVisible = panelSlide > 0.f || menuSlide > 0.f;
+        constexpr std::array actionablePhases{JobPhase::Ready, JobPhase::UpdateReady};
+        shell.startEnabled = std::ranges::contains(actionablePhases, snap.phase);
+        shell.panelVisible = panelSlide > 0.f;
+        const bool updatePending = snap.phase == JobPhase::UpdateReady;
+        shell.startLabel = updatePending ? "UPDATE" : "PLAY";
+        // nothing to fall back to on a machine that has never installed the game
+        shell.secondaryVisible = updatePending && gameInstalled(settings, wf::Branch::Public);
         std::string statusBuffer;
         std::string detailBuffer;
+        std::string readyBuffer;
         shell.languageIndex = languageIndexFromCode(settings.language);
         switch (snap.phase)
         {
         case JobPhase::Idle:
-            shell.statusLine = "CHECKING FOR UPDATES";
+            shell.statusLine = checkLabel(snap);
             break;
         case JobPhase::Checking:
         {
-            shell.statusLine = "CHECKING FOR UPDATES";
+            shell.statusLine = checkLabel(snap);
             if (snap.entryCount != 0)
             {
                 shell.progress = core::clamp01(static_cast<float>(
@@ -190,8 +220,21 @@ int run(const Options& options)
             shell.detailLine = detailBuffer;
             break;
         }
+        case JobPhase::UpdateReady:
+            readyBuffer = std::format("UPDATE AVAILABLE  {} FILES  •  {}", snap.queuedFiles,
+                                      core::formatBytes(snap.queuedBytes));
+            shell.buildLabel = readyBuffer;
+            break;
         case JobPhase::Ready:
-            shell.buildLabel = launchFailure.empty() ? "READY" : std::string_view(launchFailure);
+            if (launchFailure.empty())
+            {
+                readyBuffer = std::format("{} IS UP TO DATE", railTitles[selectedTitle].label);
+                shell.buildLabel = readyBuffer;
+            }
+            else
+            {
+                shell.buildLabel = launchFailure;
+            }
             break;
         case JobPhase::Failed:
             shell.statusLine = snap.message ? std::string_view(*snap.message) : "UPDATE FAILED";
@@ -247,14 +290,8 @@ int run(const Options& options)
             ui::requestFrame();
         }
         drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
-        const RailResult rail = drawRail(viewport, !shell.panelVisible);
-        if (shellCloseClicked())
-        {
-            job.cancel();
-            break;
-        }
-        if (shellMinimiseClicked())
-            window.minimise();
+        const RailResult rail =
+            drawRail(viewport, !shell.panelVisible, &publisherLogo, railTitles, selectedTitle);
         if (const std::string_view url = shellNavClicked(); !url.empty())
             ::ShellExecuteW(nullptr, L"open", core::widen(url).c_str(), nullptr, nullptr,
                             SW_SHOWNORMAL);
@@ -280,7 +317,15 @@ int run(const Options& options)
             }
             ui::requestFrame();
         }
-        if (shellStartClicked())
+        const bool launchRequested =
+            shellSecondaryClicked() || (shellStartClicked() && !updatePending);
+        if (shellStartClicked() && updatePending)
+        {
+            meter.reset();
+            job.startUpdate();
+            ui::requestFrame();
+        }
+        else if (launchRequested)
         {
             if (const auto launched = launchGame(settings, wf::Branch::Public); launched)
             {
@@ -293,57 +338,33 @@ int run(const Options& options)
                 core::error("{}", launchFailure);
             }
         }
-        if (rail.cogClicked)
+        if (rail.titleClicked >= 0)
+            selectedTitle = rail.titleClicked;
+        // the rail is launcher scope, the header is the selected title's: each opens its own tab
+        if (shellCogClicked() || rail.cogClicked)
         {
-            menuOpen = !menuOpen;
-            if (menuOpen)
-                menu.view = MenuView::Rows;
+            const PanelTab wanted = rail.cogClicked ? PanelTab::Launcher : PanelTab::Settings;
+            panelOpen = !panelOpen || panel.tab != wanted;
+            if (panelOpen)
+            {
+                panel.tab = wanted;
+                panel.saveFailed = false;
+                working = settings;
+                panel.launcherLine =
+                    std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
+                const auto engine = engineVersion(settings, wf::Branch::Public);
+                panel.engineLine =
+                    engine ? std::format("ENGINE   {}", core::narrow(*engine)) : std::string();
+            }
             closeDropdown();
             ui::requestFrame();
         }
-        if (panelSlide > 0.f)
+        // outside the slide test: the walk must be reaped even if the panel is gone
+        if (panel.staleRunning && !job.running())
         {
-            const PanelResult panelResult =
-                drawSettingsPanel(viewport, panelSlide, working, saveFailed);
-            constexpr std::array closingResults{PanelResult::Cancelled, PanelResult::Accepted};
-            if (std::ranges::contains(closingResults, panelResult))
-            {
-                if (panelResult == PanelResult::Accepted)
-                {
-                    const bool needsRecheck = working.language != settings.language
-                        || working.graphicsApi != settings.graphicsApi;
-                    if (working.save(&settings))
-                    {
-                        settings = working;
-                        saveFailed = false;
-                        panelOpen = false;
-                        closeDropdown();
-                        if (needsRecheck && !options.wantShot)
-                        {
-                            meter.reset();
-                            job.restart();
-                        }
-                    }
-                    else
-                    {
-                        core::error("could not write the launcher settings");
-                        saveFailed = true;
-                    }
-                }
-                else
-                {
-                    panelOpen = false;
-                    closeDropdown();
-                }
-                ui::requestFrame();
-            }
-        }
-        // outside the menu's slide test: the walk must be reaped even if the panel is gone
-        if (menu.optimizeRunning && !job.running())
-        {
-            menu.optimizeRunning = false;
-            menu.optimizeLine = std::format("{} UNLISTED FILES, {}", job.staleFiles(),
-                                            core::formatBytes(job.staleBytes()));
+            panel.staleRunning = false;
+            panel.staleLine = std::format("{} UNLISTED FILES, {}", job.staleFiles(),
+                                          core::formatBytes(job.staleBytes()));
             // a stale walk leaves the job idle, not ready; a real check finds out which
             if (!options.wantShot)
             {
@@ -352,20 +373,49 @@ int run(const Options& options)
             }
             ui::requestFrame();
         }
-        if (menuSlide > 0.f)
+        if (panelSlide > 0.f)
         {
-            switch (drawRailMenu(viewport, menuSlide, menu))
+            const PanelTab beforeTab = panel.tab;
+            const PanelAction panelAction =
+                drawPanel(viewport, panelSlide, panel, working);
+            if (panel.tab != beforeTab)
             {
-            case MenuAction::Settings:
-                menuOpen = false;
-                panelOpen = true;
-                working = settings;
-                saveFailed = false;
+                closeDropdown();
+                ui::requestFrame();
+            }
+            switch (panelAction)
+            {
+            case PanelAction::Accept:
+            {
+                const bool needsRecheck = working.language != settings.language
+                    || working.graphicsApi != settings.graphicsApi;
+                if (working.save(&settings))
+                {
+                    settings = working;
+                    panel.saveFailed = false;
+                    panelOpen = false;
+                    closeDropdown();
+                    if (needsRecheck && !options.wantShot)
+                    {
+                        meter.reset();
+                        job.restart();
+                    }
+                }
+                else
+                {
+                    core::error("could not write the launcher settings");
+                    panel.saveFailed = true;
+                }
+                ui::requestFrame();
+                break;
+            }
+            case PanelAction::Dismiss:
+                panelOpen = false;
                 closeDropdown();
                 ui::requestFrame();
                 break;
-            case MenuAction::Verify:
-                menuOpen = false;
+            case PanelAction::Verify:
+                panelOpen = false;
                 if (!options.wantShot)
                 {
                     meter.reset();
@@ -373,37 +423,16 @@ int run(const Options& options)
                 }
                 ui::requestFrame();
                 break;
-            case MenuAction::Versions:
-            {
-                menu.view = MenuView::Versions;
-                menu.launcherLine =
-                    std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
-                const auto engine = engineVersion(settings, wf::Branch::Public);
-                menu.engineLine = engine ? std::format("ENGINE   {}", core::narrow(*engine))
-                                         : std::string();
-                ui::requestFrame();
-                break;
-            }
-            case MenuAction::Optimize:
-                menu.view = MenuView::Optimize;
-                menu.optimizeLine.clear();
-                menu.defragLine.clear();
+            case PanelAction::StaleReport:
+                panel.staleLine.clear();
                 if (!options.wantShot)
                 {
-                    menu.optimizeRunning = true;
+                    panel.staleRunning = true;
                     job.startStaleReport();
                 }
                 ui::requestFrame();
                 break;
-            case MenuAction::Back:
-                menu.view = MenuView::Rows;
-                ui::requestFrame();
-                break;
-            case MenuAction::Dismiss:
-                menuOpen = false;
-                ui::requestFrame();
-                break;
-            case MenuAction::Defragment:
+            case PanelAction::Defragment:
                 if (!options.wantShot)
                 {
                     // the applet wants the disk to itself
@@ -411,21 +440,29 @@ int run(const Options& options)
                     job.join();
                     if (const auto started = defrag.start(settings, wf::Branch::Public); started)
                     {
-                        menuOpen = false;
-                        menu.defragLine.clear();
+                        panelOpen = false;
+                        panel.defragLine.clear();
                     }
                     else
                     {
-                        menu.defragLine = core::narrow(describe(started.error()));
-                        core::error("{}", menu.defragLine);
+                        panel.defragLine = core::narrow(describe(started.error()));
+                        core::error("{}", panel.defragLine);
                     }
                 }
                 ui::requestFrame();
                 break;
-            case MenuAction::None:
+            case PanelAction::None:
                 break;
             }
         }
+        drawWindowControls(viewport);
+        if (shellCloseClicked())
+        {
+            job.cancel();
+            break;
+        }
+        if (shellMinimiseClicked())
+            window.minimise();
         ui::endFrame();
         window.clearMouseEdge();
         renderer.render(device.ctx(), ui::dl(), device.width(), device.height());
@@ -446,6 +483,7 @@ int run(const Options& options)
     job.join();
 
     hero = gfx::Image{};
+    destroyIcons();
     ui::shutdown();
     renderer.destroy();
     device.destroy();

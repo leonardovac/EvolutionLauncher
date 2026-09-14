@@ -120,6 +120,15 @@ std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch,
     return line;
 }
 
+bool gameInstalled(const Settings& settings, wf::Branch branch)
+{
+    const std::filesystem::path root = settings.installRoot(branch);
+    if (root.empty())
+        return false;
+    std::error_code ec;
+    return std::filesystem::exists(root / gameExeName(branch), ec);
+}
+
 std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch branch)
 {
     const std::filesystem::path root = settings.installRoot(branch);

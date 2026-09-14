@@ -37,9 +37,7 @@ struct Settings
     std::wstring language = L"en";
     std::wstring audioLanguage;
     bool shaderCache = true;
-    bool bulkDownload = true;
-    bool aggressiveDownload = true;
-    bool launcherGpu = true;
+    // launcher-wide: stored in launcher.json, mirrored into each title's ForceHTTPS
     bool allowNetworkCaches = true;
     std::filesystem::path launcherExe;
 

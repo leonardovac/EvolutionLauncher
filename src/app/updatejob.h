@@ -24,6 +24,10 @@ struct JobSnapshot
     std::uint64_t hashedBytes = 0;
     JobText currentFile;
     JobText message;
+    std::size_t queuedFiles = 0;
+    std::uint64_t queuedBytes = 0;
+    bool verifying = false;
+    bool scanning = false;
 };
 
 class UpdateJob
@@ -34,7 +38,9 @@ public:
     void start();
     void cancel();
     void join();
+    // builds the plan and stops; nothing is fetched until startUpdate
     void restart(bool verify = false);
+    void startUpdate();
     void startStaleReport();
     [[nodiscard]] bool running() const noexcept;
     [[nodiscard]] JobSnapshot snapshot() const;
@@ -43,7 +49,7 @@ public:
 
 private:
     void work();
-    void reset(bool verify, bool stale);
+    void reset(bool verify, bool stale, bool apply);
 
     std::thread thread_;
     std::atomic<bool> running_{false};
@@ -57,6 +63,9 @@ private:
     std::atomic<JobText> message_;
     std::atomic<bool> verify_{false};
     std::atomic<bool> stale_{false};
+    std::atomic<bool> apply_{false};
+    std::atomic<std::size_t> queuedFiles_{0};
+    std::atomic<std::uint64_t> queuedBytes_{0};
     std::atomic<std::size_t> staleFiles_{0};
     std::atomic<std::uint64_t> staleBytes_{0};
 };
