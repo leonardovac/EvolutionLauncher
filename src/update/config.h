@@ -3,6 +3,7 @@
 #include "update/md5.h"
 
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -32,10 +33,15 @@ public:
 
 	std::span<const std::wstring> excludedPaths() const { return exclude_; }
 
+	// launcher-wide, not per-title; empty until the file names it or a save writes one
+	std::optional<bool> allowNetworkCaches() const { return allowNetworkCaches_; }
+	void setAllowNetworkCaches(bool value) { allowNetworkCaches_ = value; }
+
 private:
 	std::vector<std::wstring> exclude_;
 	std::vector<std::wstring> protect_;
 	std::unordered_map<std::wstring, PatchRecord> patched_;
+	std::optional<bool> allowNetworkCaches_;
 };
 
 }

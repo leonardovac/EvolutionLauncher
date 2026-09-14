@@ -137,6 +137,21 @@ struct Scanner
 		}
 		return std::nullopt;
 	}
+	std::optional<bool> boolean()
+	{
+		skipWs();
+		if (text.compare(pos, 4, "true") == 0)
+		{
+			pos += 4;
+			return true;
+		}
+		if (text.compare(pos, 5, "false") == 0)
+		{
+			pos += 5;
+			return false;
+		}
+		return std::nullopt;
+	}
 	// skips one value we do not care about: object, array, string, literal or number
 	void skipValue()
 	{
@@ -297,6 +312,16 @@ LauncherConfig LauncherConfig::load()
 				scan.skipValue();
 			}
 		}
+		else if (key == "allowNetworkCaches")
+		{
+			if (const auto value = scan.boolean())
+				config.allowNetworkCaches_ = *value;
+			else
+			{
+				core::warn("launcher.json: \"allowNetworkCaches\" is not a boolean; ignoring");
+				scan.skipValue();
+			}
+		}
 		else if (key == "patched")
 		{
 			if (scan.consume('{'))
@@ -362,6 +387,40 @@ LauncherConfig LauncherConfig::load()
 	core::info("config: {} exclude, {} protect, {} patched", config.exclude_.size(),
 	           config.protect_.size(), config.patched_.size());
 	return config;
+}
+
+namespace
+{
+
+// the worker saves this file to record a patch and never owns the setting, so a save that
+// carries no opinion must not erase the one on disk
+std::optional<bool> storedAllowNetworkCaches()
+{
+	const std::filesystem::path file = beside(L"launcher.json");
+	if (file.empty())
+		return std::nullopt;
+	std::ifstream input(file, std::ios::binary);
+	if (!input)
+		return std::nullopt;
+	const std::string bytes((std::istreambuf_iterator<char>(input)),
+	                        std::istreambuf_iterator<char>());
+	Scanner scan{bytes};
+	if (!scan.consume('{'))
+		return std::nullopt;
+	while (!scan.peek('}'))
+	{
+		const auto key = scan.string();
+		if (!key || !scan.consume(':'))
+			break;
+		if (*key == "allowNetworkCaches")
+			return scan.boolean();
+		scan.skipValue();
+		if (!scan.consume(','))
+			break;
+	}
+	return std::nullopt;
+}
+
 }
 
 bool LauncherConfig::save() const
