@@ -65,19 +65,33 @@ RECT navRowRect(int width, float scale)
                 top + static_cast<LONG>(shellRowHeight * scale)};
 }
 
-// the window is a WS_POPUP, so CW_USEDEFAULT would place it at 0,0
-POINT centredOrigin(int width, int height)
+// the taskbar's screen, the one the user is working on
+RECT workArea()
 {
     POINT cursor{};
     ::GetCursorPos(&cursor);
     HMONITOR monitor = ::MonitorFromPoint(cursor, MONITOR_DEFAULTTOPRIMARY);
     MONITORINFO info{sizeof(info)};
     if (::GetMonitorInfoW(monitor, &info) == 0)
-        return POINT{0, 0};
-    const RECT& work = info.rcWork;
+        return RECT{0, 0, 0, 0};
+    return info.rcWork;
+}
+
+// the window is a WS_POPUP, so CW_USEDEFAULT would place it at 0,0
+POINT centredOrigin(const RECT& work, int width, int height)
+{
     const LONG x = work.left + ((work.right - work.left) - width) / 2;
     const LONG y = work.top + ((work.bottom - work.top) - height) / 2;
     return POINT{(std::max)(work.left, x), (std::max)(work.top, y)};
+}
+
+// a small screen or a high DPI would otherwise put the foot of the window past the taskbar
+float fittedScale(const RECT& work, int width, int height, float dpiScale)
+{
+    const float room = 0.94f;
+    const float byWidth = static_cast<float>(work.right - work.left) * room / width;
+    const float byHeight = static_cast<float>(work.bottom - work.top) * room / height;
+    return (std::min)(dpiScale, (std::min)(byWidth, byHeight));
 }
 
 }
@@ -166,22 +180,21 @@ bool Window::create(int width, int height)
 
     width_ = width;
     height_ = height;
-    POINT origin = centredOrigin(width, height);
+    const RECT work = workArea();
+    POINT origin = centredOrigin(work, width, height);
     hwnd_ = ::CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP | WS_EX_APPWINDOW, className, L"Warframe",
                               WS_POPUP, origin.x, origin.y, width, height, nullptr, nullptr,
                               wc.hInstance, this);
     if (hwnd_ == nullptr)
         return false;
 
-    scale_ = static_cast<float>(::GetDpiForWindow(hwnd_)) / 96.f;
-    if (scale_ != 1.f)
-    {
-        const int scaledW = static_cast<int>(width * scale_);
-        const int scaledH = static_cast<int>(height * scale_);
-        origin = centredOrigin(scaledW, scaledH);
-        ::SetWindowPos(hwnd_, nullptr, origin.x, origin.y, scaledW, scaledH,
-                       SWP_NOZORDER | SWP_NOACTIVATE);
-    }
+    scale_ = fittedScale(work, width, height,
+                         static_cast<float>(::GetDpiForWindow(hwnd_)) / 96.f);
+    const int scaledW = static_cast<int>(width * scale_);
+    const int scaledH = static_cast<int>(height * scale_);
+    origin = centredOrigin(work, scaledW, scaledH);
+    ::SetWindowPos(hwnd_, nullptr, origin.x, origin.y, scaledW, scaledH,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
     ::ShowWindow(hwnd_, SW_SHOW);
     return true;
 }

@@ -40,8 +40,9 @@ namespace app
 namespace
 {
 
+// 16:9, so the key art fills the window edge to edge with nothing cropped
 constexpr int designWidth = 1180;
-constexpr int designHeight = 740;
+constexpr int designHeight = 664;
 
 // a verify and a stale walk both run through JobPhase::Checking, so the label has to say which
 std::string_view checkLabel(const JobSnapshot& snap)
