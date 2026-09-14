@@ -3,6 +3,7 @@
 #include "app/assets.h"
 #include "app/controls.h"
 #include "app/defragjob.h"
+#include "app/heroart.h"
 #include "app/icons.h"
 #include "app/languages.h"
 #include "app/launch.h"
@@ -119,6 +120,13 @@ int run(const Options& options)
     float defragNotice = 0.f;
     std::uint32_t defragExit = 0;
 
+    HeroArt heroArt;
+    gfx::Image liveHero;
+    float heroFade = 0.f;
+    // a screenshot has to be reproducible, so it keeps the baked-in art
+    if (!options.wantShot)
+        heroArt.start();
+
 
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
@@ -132,6 +140,23 @@ int run(const Options& options)
         elapsed += dt;
 
         panelSlide = core::clamp01(panelSlide + (panelOpen ? 1.f : -1.f) * dt * 6.f);
+
+        if (!liveHero.valid())
+        {
+            if (const auto art = heroArt.take(); !art.empty())
+            {
+                if (auto loaded = gfx::loadImageMemory(device.dev(), art))
+                {
+                    liveHero = std::move(*loaded);
+                    ui::requestFrame();
+                }
+            }
+        }
+        else if (heroFade < 1.f)
+        {
+            heroFade = core::clamp01(heroFade + dt * 1.6f);
+            ui::requestFrame();
+        }
 
         const JobSnapshot snap = job.snapshot();
         if (snap.phase == JobPhase::Updating)
@@ -289,7 +314,9 @@ int run(const Options& options)
                 defragExit == 0 ? "CACHE DEFRAGMENTED" : "THE DEFRAGMENTER REPORTED A FAILURE";
             ui::requestFrame();
         }
-        drawShell(viewport, hero.valid() ? &hero : nullptr, shell);
+        const HeroFrame heroFrame{hero.valid() ? &hero : nullptr,
+                                  liveHero.valid() ? &liveHero : nullptr, heroFade};
+        drawShell(viewport, heroFrame, shell);
         const RailResult rail =
             drawRail(viewport, !shell.panelVisible, &publisherLogo, railTitles, selectedTitle);
         if (const std::string_view url = shellNavClicked(); !url.empty())
@@ -481,7 +508,9 @@ int run(const Options& options)
 
     job.cancel();
     job.join();
+    heroArt.stop();
 
+    liveHero = gfx::Image{};
     hero = gfx::Image{};
     destroyIcons();
     ui::shutdown();

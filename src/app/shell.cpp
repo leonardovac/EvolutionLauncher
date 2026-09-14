@@ -101,7 +101,7 @@ void hexFrame(const core::Rect& box, float thickness, const core::Col& col)
 
 }
 
-void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& state)
+void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellState& state)
 {
     using core::Col;
     using core::Rect;
@@ -110,7 +110,9 @@ void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& s
     const Col gold = Col::hex(0xD9C07A, 1.f);
 
     ui::dl().rect(viewport, ui::theme().body);
-    ui::heroCard(viewport, hero, ui::theme().focus, 0.f, 1.f);
+    ui::heroCard(viewport, hero.base, ui::theme().focus, 0.f, 1.f);
+    if (hero.live != nullptr && hero.live->valid())
+        ui::heroCard(viewport, hero.live, ui::theme().focus, 0.f, hero.fade);
     ui::heroOverlay(viewport, 0.f, 0.35f);
 
     const Rect content(viewport.x + ui::px(railWidth), viewport.y,

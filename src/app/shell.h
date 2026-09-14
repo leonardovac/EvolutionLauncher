@@ -25,7 +25,15 @@ struct ShellState
     bool panelVisible = false;
 };
 
-void drawShell(const core::Rect& viewport, gfx::Image* hero, const ShellState& state);
+// `live` is the fetched key art fading in over the baked-in `base`
+struct HeroFrame
+{
+    gfx::Image* base = nullptr;
+    gfx::Image* live = nullptr;
+    float fade = 0.f;
+};
+
+void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellState& state);
 
 // window chrome, not content: drawn after the panel so it never ghosts through and stays usable
 void drawWindowControls(const core::Rect& viewport);
