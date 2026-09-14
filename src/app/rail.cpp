@@ -76,7 +76,7 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
 
     const core::Vec2 markCenter(centerX, rail.y + ui::px(40.f));
     if (publisher != nullptr && publisher->valid())
-        drawMark(publisher, markCenter, ui::px(40.f), gold.alpha(0.85f));
+        drawMark(publisher, markCenter, ui::px(40.f), ui::theme().text.alpha(0.9f));
     else
     {
         diamond(markCenter, ui::px(13.f), ui::px(1.5f), gold.alpha(0.75f));
