@@ -15,11 +15,13 @@ struct Language
     std::wstring_view code;
     std::string_view name;
     std::string_view shortLabel;
+    // the game ships voice over for these only; every other locale plays the English audio
+    bool voiceOver = false;
 };
 
-constexpr std::array<Language, 15> languages{{{L"zh", "Chinese (Simplified)", "ZH"},
+constexpr std::array<Language, 15> languages{{{L"zh", "Chinese (Simplified)", "ZH", true},
                                               {L"tc", "Chinese (Traditional)", "TC"},
-                                              {L"en", "English", "EN"},
+                                              {L"en", "English", "EN", true},
                                               {L"fr", "French", "FR"},
                                               {L"de", "German", "DE"},
                                               {L"it", "Italian", "IT"},
@@ -41,17 +43,41 @@ std::array<std::string_view, 15> makeNames()
     return names;
 }
 
-std::array<std::string_view, 16> makeAudioNames()
+constexpr std::size_t voiceOverCount()
 {
-    std::array<std::string_view, 16> names{};
-    names[0] = "Default";
+    std::size_t count = 0;
+    for (const Language& language : languages)
+        if (language.voiceOver)
+            ++count;
+    return count;
+}
+
+constexpr std::size_t audioCount = voiceOverCount() + 1;
+
+// indices into `languages`, so a code round-trips through the shorter audio list
+std::array<std::size_t, audioCount - 1> makeVoiceOver()
+{
+    std::array<std::size_t, audioCount - 1> out{};
+    std::size_t slot = 0;
     for (std::size_t i = 0; i < languages.size(); ++i)
-        names[i + 1] = languages[i].name;
+        if (languages[i].voiceOver)
+            out[slot++] = i;
+    return out;
+}
+
+const std::array<std::size_t, audioCount - 1> voiceOver = makeVoiceOver();
+
+std::array<std::string_view, audioCount> makeAudioNames()
+{
+    std::array<std::string_view, audioCount> names{};
+    names[0] = "Default";
+    for (std::size_t i = 0; i < voiceOver.size(); ++i)
+        names[i + 1] = languages[voiceOver[i]].name;
     return names;
 }
 
 const std::array<std::string_view, 15> names = makeNames();
-const std::array<std::string_view, 16> audioNames = makeAudioNames();
+const std::array<std::string_view, audioCount> audioNames = makeAudioNames();
 
 }
 
@@ -85,17 +111,17 @@ int audioLanguageIndexFromCode(std::wstring_view code)
 {
     if (code.empty())
         return 0;
-    const auto it = std::ranges::find(languages, code, &Language::code);
-    if (it == languages.end())
-        return 0;
-    return static_cast<int>(std::distance(languages.begin(), it)) + 1;
+    for (std::size_t i = 0; i < voiceOver.size(); ++i)
+        if (languages[voiceOver[i]].code == code)
+            return static_cast<int>(i) + 1;
+    return 0;
 }
 
 std::wstring_view audioLanguageCodeFromIndex(int index)
 {
-    if (index <= 0 || index > static_cast<int>(languages.size()))
+    if (index <= 0 || index > static_cast<int>(voiceOver.size()))
         return L"";
-    return languages[static_cast<std::size_t>(index - 1)].code;
+    return languages[voiceOver[static_cast<std::size_t>(index - 1)]].code;
 }
 
 std::string_view languageShortLabel(int index)
