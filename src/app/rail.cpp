@@ -62,7 +62,7 @@ void drawMark(gfx::Image* art, const core::Vec2& center, float size, const core:
 }
 
 RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* publisher,
-                    std::span<const RailTitle> titles, int selected)
+                    std::span<const RailTitle> titles, int selected, float cogAxis)
 {
     RailResult result;
 
@@ -128,8 +128,7 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
     }
 
     const float cogSize = ui::px(22.f);
-    const core::Rect cogBox(centerX - cogSize * 0.5f, rail.b() - ui::px(26.f) - cogSize, cogSize,
-                            cogSize);
+    const core::Rect cogBox(centerX - cogSize * 0.5f, cogAxis - cogSize * 0.5f, cogSize, cogSize);
     const std::uint32_t cogId = ui::id("rail.cog");
     const bool cogHot = ui::hovered(cogId, cogBox);
     result.cogClicked = ui::clicked(cogId, cogBox) && inputEnabled;

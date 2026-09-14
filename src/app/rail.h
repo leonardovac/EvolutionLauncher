@@ -28,7 +28,8 @@ struct RailResult
     bool cogClicked = false;
 };
 
+// `cogAxis` is the shell's footer axis, so the cog lines up with the status line and PLAY
 RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* publisher,
-                    std::span<const RailTitle> titles, int selected);
+                    std::span<const RailTitle> titles, int selected, float cogAxis);
 
 }
