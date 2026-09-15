@@ -24,7 +24,7 @@ BEGIN
             VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "Launcher"
             VALUE "OriginalFilename", "Launcher.exe"
-            VALUE "ProductName", "WF-Launcher"
+            VALUE "ProductName", "Relay"
             VALUE "ProductVersion", "1.0.0.0"
         END
     END
