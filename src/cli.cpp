@@ -230,7 +230,8 @@ int run(int argc, wchar_t** argv)
 		}
 	}
 
-	const app::Settings settings = app::Settings::load();
+	wf::LauncherConfig launcher = wf::LauncherConfig::load();
+	const app::Settings settings = app::Settings::load(launcher);
 
 	if (wantSettingsWrite)
 	{
@@ -249,13 +250,7 @@ int run(int argc, wchar_t** argv)
 	options.config.eosSdk = eos.value_or(settings.eos());
 	options.config.dx12 = dx12.value_or(settings.dx12());
 	options.config.forceHttps = !settings.allowNetworkCaches;
-	options.config.launcher = wf::LauncherConfig::load();
-	options.config.root = root.empty() ? settings.installRoot(options.config.branch) : root;
-	if (options.config.root.empty())
-	{
-		core::error("could not resolve an install root, pass --root");
-		return 2;
-	}
+	options.config.launcher = std::move(launcher);
 
 	if (wantSettings)
 	{
@@ -269,6 +264,22 @@ int run(int argc, wchar_t** argv)
 		core::info("root {}", settings.installRoot(options.config.branch).string());
 		core::info("steam {} eos {} dx12 {}", settings.steam(), settings.eos(), settings.dx12());
 		return 0;
+	}
+
+	// neither needs an install root, so both answer on a machine with no game present
+	if (wantVersions)
+	{
+		core::info("launcher {}", core::narrow(app::launcherVersion()));
+		const auto build = app::gameBuildVersion(settings, options.config.branch);
+		core::info("game build {}", build ? core::narrow(*build) : "unknown");
+		return 0;
+	}
+
+	options.config.root = root.empty() ? settings.installRoot(options.config.branch) : root;
+	if (options.config.root.empty())
+	{
+		core::error("could not resolve an install root, pass --root");
+		return 2;
 	}
 
 	if (wantLaunchPrint)
@@ -293,14 +304,6 @@ int run(int argc, wchar_t** argv)
 		}
 		line += L" -applet:/EE/Types/Framework/CacheDefraggerIOCP /Tools/CachePlan.txt";
 		core::info("{}", core::narrow(line));
-		return 0;
-	}
-
-	if (wantVersions)
-	{
-		core::info("launcher {}", core::narrow(app::launcherVersion()));
-		const auto build = app::gameBuildVersion(settings, options.config.branch);
-		core::info("game build {}", build ? core::narrow(*build) : "unknown");
 		return 0;
 	}
 
