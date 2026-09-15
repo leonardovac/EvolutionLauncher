@@ -20,7 +20,7 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "FileDescription", "Content updater for Warframe"
+            VALUE "FileDescription", "Custom launcher/updater for Digital Extremes games"
             VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "Launcher"
             VALUE "OriginalFilename", "Launcher.exe"
