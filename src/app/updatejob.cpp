@@ -165,15 +165,15 @@ void UpdateJob::work()
     Bridge bridge(phase_, entryIndex_, entryCount_, downloaded_, downloadTotal_, currentFile_,
                   hashedBytes_, apply);
 
-    const Settings settings = Settings::load();
     wf::Options options;
+    options.config.launcher = wf::LauncherConfig::load();
+    const Settings settings = Settings::load(options.config.launcher);
     options.config.root = settings.installRoot(options.config.branch);
     options.config.language = settings.language;
     options.config.steam = settings.steam();
     options.config.eosSdk = settings.eos();
     options.config.dx12 = settings.dx12();
     options.config.forceHttps = !settings.allowNetworkCaches;
-    options.config.launcher = wf::LauncherConfig::load();
     options.config.hashCaches = verify_.load(std::memory_order_relaxed);
     options.staleReport = stale_.load(std::memory_order_relaxed);
     // a check builds the plan and stops; only an apply writes files

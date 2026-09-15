@@ -41,7 +41,8 @@ struct Settings
     bool allowNetworkCaches = true;
     std::filesystem::path launcherExe;
 
-    static Settings load();
+    // the caller owns the one launcher.json read; loading it here would parse the file twice
+    static Settings load(const wf::LauncherConfig& launcher);
     bool save(const Settings* baseline = nullptr) const;
 
     [[nodiscard]] std::filesystem::path installRoot(wf::Branch branch) const;

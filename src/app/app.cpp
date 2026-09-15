@@ -106,7 +106,7 @@ int run(const Options& options)
         job.start();
     RateMeter meter;
 
-    Settings settings = Settings::load();
+    Settings settings = Settings::load(wf::LauncherConfig::load());
     Settings working;
     PanelState panel;
     const bool startOpen = options.wantPanel || options.wantMenu;

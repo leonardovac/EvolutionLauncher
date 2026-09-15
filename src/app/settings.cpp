@@ -72,7 +72,7 @@ bool writeDwordTo(std::wstring_view path, const wchar_t* name, DWORD value)
     return ok;
 }
 
-Settings Settings::load()
+Settings Settings::load(const wf::LauncherConfig& launcher)
 {
     Settings out;
     if (const auto value = readDword(L"GraphicsAPI"))
@@ -88,7 +88,7 @@ Settings Settings::load()
     if (const auto value = readDword(L"EnableShaderCache"))
         out.shaderCache = *value != 0;
     // launcher-wide, so it lives in launcher.json; an older install is imported from ForceHTTPS
-    if (const auto stored = wf::LauncherConfig::load().allowNetworkCaches())
+    if (const auto stored = launcher.allowNetworkCaches())
         out.allowNetworkCaches = *stored;
     else if (const auto legacy = readDword(L"ForceHTTPS"))
         out.allowNetworkCaches = *legacy == 0;
