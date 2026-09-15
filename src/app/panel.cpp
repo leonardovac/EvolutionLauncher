@@ -95,12 +95,9 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
     const float noteGap = ui::px(12.f);
     const float noteH = ui::px(14.f);
 
-    const core::Rect title(panel.x + inset, panel.y + inset, rowW, ui::px(28.f));
-    ui::text(ui::fonts().title, title, "Launcher", ui::theme().text, ui::AlignH::Left,
-             ui::AlignV::Middle, ui::px(2.f));
-
     const float tabTracking = ui::px(2.f);
-    const float stripY = title.b() + ui::px(14.f);
+    // clears the window controls, which share the panel's top edge
+    const float stripY = panel.y + ui::px(56.f);
     const float ruleY = stripY + ui::px(26.f);
     ui::dl().line(core::Vec2(panel.x + inset, ruleY), core::Vec2(panel.r() - inset, ruleY),
                   ui::px(1.f), gold.alpha(0.22f));
