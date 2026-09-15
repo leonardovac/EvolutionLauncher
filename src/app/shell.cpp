@@ -59,6 +59,14 @@ core::Rect captionGlyphBox(const core::Rect& viewport, int slot)
                       size);
 }
 
+// every control in the caption row wears the same hover height, whatever its own box is
+core::Rect captionHoverBox(const core::Rect& box)
+{
+    const float height = ui::px(shellGlyphSize + 8.f);
+    const float width = (std::max)(box.w + ui::px(8.f), height);
+    return core::Rect(box.center().x - width * 0.5f, box.center().y - height * 0.5f, width, height);
+}
+
 float navWidth(std::string_view label, float tracking)
 {
     return ui::fonts().caption.measure(label) +
@@ -191,8 +199,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         cogClicked = ui::clicked(cogId, cogBox);
         const float cogT = ui::anim(cogId, 0, cogHot ? 1.f : 0.f, 16.f);
         if (cogT > 0.01f)
-            ui::dl().rect(cogBox.expand(ui::px(3.f)), Col::hex(0xFFFFFF, 0.09f * cogT),
-                          ui::px(2.f));
+            ui::dl().rect(captionHoverBox(cogBox), Col::hex(0xFFFFFF, 0.09f * cogT), ui::px(2.f));
         const Col cogCol = gold.alpha(0.7f + 0.3f * cogT);
         if (iconsReady())
             drawIcon(IconSize::Caption, icon::cog, cogBox.offset(0.f, -ui::px(1.f)), cogCol);
@@ -311,7 +318,7 @@ void drawWindowControls(const core::Rect& viewport)
     closeClicked = ui::clicked(closeId, closeBox);
     const float closeT = ui::anim(closeId, 0, closeHot ? 1.f : 0.f, 16.f);
     if (closeT > 0.01f)
-        ui::dl().rect(closeBox.expand(ui::px(4.f)), Col::hex(0xFFFFFF, 0.10f * closeT),
+        ui::dl().rect(captionHoverBox(closeBox), Col::hex(0xFFFFFF, 0.10f * closeT),
                       ui::px(2.f));
     if (iconsReady())
         drawIcon(IconSize::Caption, icon::close, closeBox, gold.alpha(0.7f + 0.3f * closeT));
@@ -324,7 +331,7 @@ void drawWindowControls(const core::Rect& viewport)
     minimiseClicked = ui::clicked(minimiseId, minimiseBox);
     const float minimiseT = ui::anim(minimiseId, 0, minimiseHot ? 1.f : 0.f, 16.f);
     if (minimiseT > 0.01f)
-        ui::dl().rect(minimiseBox.expand(ui::px(4.f)), Col::hex(0xFFFFFF, 0.10f * minimiseT),
+        ui::dl().rect(captionHoverBox(minimiseBox), Col::hex(0xFFFFFF, 0.10f * minimiseT),
                       ui::px(2.f));
     const Col minimiseCol = gold.alpha(0.7f + 0.3f * minimiseT);
     if (iconsReady())

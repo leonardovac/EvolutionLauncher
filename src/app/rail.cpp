@@ -128,25 +128,21 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
     }
 
     const float cogSize = ui::px(22.f);
-    const float cogBandHeight = ui::px(36.f);
-    // the same band a title wears, so the rail has one hover idiom rather than two
-    const core::Rect cogBand(rail.x, cogAxis - cogBandHeight * 0.5f, rail.w, cogBandHeight);
-    const core::Rect cogBox(centerX - cogSize * 0.5f, cogAxis - cogSize * 0.5f, cogSize, cogSize);
+    const float cogHit = ui::px(36.f);
+    // an action, not a title, so it skips the band's full width and its selected-item bar
+    const core::Rect cogBox(centerX - cogHit * 0.5f, cogAxis - cogHit * 0.5f, cogHit, cogHit);
+    const core::Rect cogIcon(centerX - cogSize * 0.5f, cogAxis - cogSize * 0.5f, cogSize, cogSize);
     const std::uint32_t cogId = ui::id("rail.cog");
-    const bool cogHot = ui::hovered(cogId, cogBand);
-    result.cogClicked = ui::clicked(cogId, cogBand) && inputEnabled;
+    const bool cogHot = ui::hovered(cogId, cogBox);
+    result.cogClicked = ui::clicked(cogId, cogBox) && inputEnabled;
     const float cogT = ui::anim(cogId, 0, cogHot ? 1.f : 0.f, 16.f);
     if (cogT > 0.01f)
-    {
-        ui::dl().rect(cogBand, gold.alpha(0.06f * cogT), 0.f);
-        ui::dl().rect(core::Rect(rail.x, cogBand.y, ui::px(3.f), cogBand.h),
-                      gold.alpha(0.5f * cogT), 0.f);
-    }
+        ui::dl().rect(cogBox, gold.alpha(0.10f * cogT), 0.f);
     const core::Col cogCol = gold.alpha(0.7f + 0.3f * cogT);
     if (iconsReady())
-        drawIcon(IconSize::Rail, icon::cog, cogBox, cogCol);
+        drawIcon(IconSize::Rail, icon::cog, cogIcon, cogCol);
     else
-        cogGlyph(cogBox.center(), cogBox.w * 0.3f, cogCol);
+        cogGlyph(cogIcon.center(), cogIcon.w * 0.3f, cogCol);
 
     return result;
 }

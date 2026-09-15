@@ -1,5 +1,6 @@
 #include "app/controls.h"
 
+#include "app/shelllayout.h"
 #include "ui/ui.h"
 
 #include <algorithm>
@@ -93,8 +94,11 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
 
     if (bare)
     {
+        // the caption row's hover height, so the chip does not read as smaller than the glyphs
+        const float hoverH = ui::px(shellGlyphSize + 8.f);
+        const core::Rect hoverBox(field.x, field.center().y - hoverH * 0.5f, field.w, hoverH);
         if (hoverT > 0.01f)
-            ui::dl().rect(field, core::Col::hex(0xFFFFFF, 0.09f * hoverT), ui::px(2.f));
+            ui::dl().rect(hoverBox, core::Col::hex(0xFFFFFF, 0.09f * hoverT), ui::px(2.f));
     }
     else
     {
