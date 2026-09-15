@@ -30,7 +30,7 @@ struct PanelState
     PanelTab tab = PanelTab::Settings;
     bool saveFailed = false;
     std::string launcherLine;
-    std::string engineLine;
+    std::string gameBuildLine;
     std::string staleLine;
     bool staleRunning = false;
     std::string defragLine;

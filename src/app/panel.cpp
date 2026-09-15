@@ -240,9 +240,9 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
     // versions are reference, not a destination; they sit in view instead of behind a tab
     const core::Rect launcherLine(panel.x + inset, lastBox.y, rowW, noteH);
     note(launcherLine, state.launcherLine);
-    if (!state.engineLine.empty())
+    if (!state.gameBuildLine.empty())
         note(core::Rect(panel.x + inset, lastBox.y + noteH + ui::px(2.f), rowW, noteH),
-             state.engineLine);
+             state.gameBuildLine);
 
     constexpr std::array editingTabs{PanelTab::Settings, PanelTab::Launcher};
     if (std::ranges::contains(editingTabs, state.tab))

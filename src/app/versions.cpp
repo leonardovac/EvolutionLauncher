@@ -41,7 +41,7 @@ std::wstring launcherVersion()
     return version.value_or(L"unknown");
 }
 
-std::optional<std::wstring> engineVersion(const Settings& settings, wf::Branch branch)
+std::optional<std::wstring> gameBuildVersion(const Settings& settings, wf::Branch branch)
 {
     const std::filesystem::path root = settings.installRoot(branch);
     if (root.empty())

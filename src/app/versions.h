@@ -14,6 +14,6 @@ std::optional<std::wstring> fileVersion(const std::filesystem::path& file);
 
 std::wstring launcherVersion();
 
-std::optional<std::wstring> engineVersion(const Settings& settings, wf::Branch branch);
+std::optional<std::wstring> gameBuildVersion(const Settings& settings, wf::Branch branch);
 
 }

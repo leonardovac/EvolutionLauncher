@@ -383,9 +383,9 @@ int run(const Options& options)
                 working = settings;
                 panel.launcherLine =
                     std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
-                const auto engine = engineVersion(settings, wf::Branch::Public);
-                panel.engineLine =
-                    engine ? std::format("ENGINE   {}", core::narrow(*engine)) : std::string();
+                const auto build = gameBuildVersion(settings, wf::Branch::Public);
+                panel.gameBuildLine =
+                    build ? std::format("GAME BUILD   {}", core::narrow(*build)) : std::string();
             }
             closeDropdown();
             ui::requestFrame();

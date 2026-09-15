@@ -299,8 +299,8 @@ int run(int argc, wchar_t** argv)
 	if (wantVersions)
 	{
 		core::info("launcher {}", core::narrow(app::launcherVersion()));
-		const auto engine = app::engineVersion(settings, options.config.branch);
-		core::info("engine {}", engine ? core::narrow(*engine) : "unknown");
+		const auto build = app::gameBuildVersion(settings, options.config.branch);
+		core::info("game build {}", build ? core::narrow(*build) : "unknown");
 		return 0;
 	}
 
