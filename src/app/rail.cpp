@@ -132,9 +132,12 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
     // an action, not a title, so it skips the band's full width and its selected-item bar
     const core::Rect cogBox(centerX - cogHit * 0.5f, cogAxis - cogHit * 0.5f, cogHit, cogHit);
     const core::Rect cogIcon(centerX - cogSize * 0.5f, cogAxis - cogSize * 0.5f, cogSize, cogSize);
+    // names the tab it opens, which is what tells it apart from the header's title-scoped cog
+    const core::Rect cogLabel(rail.x, cogBox.b() + ui::px(4.f), rail.w, ui::px(13.f));
+    const core::Rect cogTarget(rail.x, cogBox.y, rail.w, cogLabel.b() - cogBox.y);
     const std::uint32_t cogId = ui::id("rail.cog");
-    const bool cogHot = ui::hovered(cogId, cogBox);
-    result.cogClicked = ui::clicked(cogId, cogBox) && inputEnabled;
+    const bool cogHot = ui::hovered(cogId, cogTarget);
+    result.cogClicked = ui::clicked(cogId, cogTarget) && inputEnabled;
     const float cogT = ui::anim(cogId, 0, cogHot ? 1.f : 0.f, 16.f);
     if (cogT > 0.01f)
         ui::dl().rect(cogBox, gold.alpha(0.10f * cogT), 0.f);
@@ -143,6 +146,8 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
         drawIcon(IconSize::Rail, icon::cog, cogIcon, cogCol);
     else
         cogGlyph(cogIcon.center(), cogIcon.w * 0.3f, cogCol);
+    ui::text(ui::fonts().caption, cogLabel, "LAUNCHER", gold.alpha(0.55f + 0.35f * cogT),
+             ui::AlignH::Center, ui::AlignV::Middle, ui::px(1.f));
 
     return result;
 }
