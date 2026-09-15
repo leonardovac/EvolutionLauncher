@@ -192,7 +192,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         const float cogT = ui::anim(cogId, 0, cogHot ? 1.f : 0.f, 16.f);
         if (cogT > 0.01f)
             ui::dl().rect(cogBox.expand(ui::px(3.f)), Col::hex(0xFFFFFF, 0.09f * cogT),
-                          cogBox.h * 0.5f);
+                          ui::px(2.f));
         const Col cogCol = gold.alpha(0.7f + 0.3f * cogT);
         if (iconsReady())
             drawIcon(IconSize::Caption, icon::cog, cogBox.offset(0.f, -ui::px(1.f)), cogCol);
@@ -312,7 +312,7 @@ void drawWindowControls(const core::Rect& viewport)
     const float closeT = ui::anim(closeId, 0, closeHot ? 1.f : 0.f, 16.f);
     if (closeT > 0.01f)
         ui::dl().rect(closeBox.expand(ui::px(4.f)), Col::hex(0xFFFFFF, 0.10f * closeT),
-                      closeBox.w * 0.5f);
+                      ui::px(2.f));
     if (iconsReady())
         drawIcon(IconSize::Caption, icon::close, closeBox, gold.alpha(0.7f + 0.3f * closeT));
     else
@@ -325,7 +325,7 @@ void drawWindowControls(const core::Rect& viewport)
     const float minimiseT = ui::anim(minimiseId, 0, minimiseHot ? 1.f : 0.f, 16.f);
     if (minimiseT > 0.01f)
         ui::dl().rect(minimiseBox.expand(ui::px(4.f)), Col::hex(0xFFFFFF, 0.10f * minimiseT),
-                      minimiseBox.w * 0.5f);
+                      ui::px(2.f));
     const Col minimiseCol = gold.alpha(0.7f + 0.3f * minimiseT);
     if (iconsReady())
     {

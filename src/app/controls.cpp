@@ -94,7 +94,7 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
     if (bare)
     {
         if (hoverT > 0.01f)
-            ui::dl().rect(field, core::Col::hex(0xFFFFFF, 0.09f * hoverT), field.h * 0.5f);
+            ui::dl().rect(field, core::Col::hex(0xFFFFFF, 0.09f * hoverT), ui::px(2.f));
     }
     else
     {
