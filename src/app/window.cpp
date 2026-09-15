@@ -13,7 +13,7 @@ namespace app
 namespace
 {
 
-constexpr wchar_t className[] = L"RelayWindow";
+constexpr wchar_t className[] = L"EvolutionLauncherWindow";
 constexpr int dragStripHeight = 64;   // design-space; the hero top edge is draggable
 constexpr DWORD idleWaitMs = 100;     // bounded so a repaint with no message still lands promptly
 

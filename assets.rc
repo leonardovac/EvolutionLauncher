@@ -24,7 +24,7 @@ BEGIN
             VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "Launcher"
             VALUE "OriginalFilename", "Launcher.exe"
-            VALUE "ProductName", "Relay"
+            VALUE "ProductName", "Evolution Launcher"
             VALUE "ProductVersion", "1.0.0.0"
         END
     END
