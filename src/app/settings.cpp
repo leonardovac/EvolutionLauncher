@@ -1,6 +1,7 @@
 #include "app/settings.h"
 
 #include "app/launch.h"
+#include "app/titles.h"
 #include "update/config.h"
 
 #include "core/str.h"
@@ -9,31 +10,33 @@
 
 #include <array>
 #include <optional>
+#include <string>
 
 namespace app
 {
 namespace
 {
 
-constexpr wchar_t launcherKey[] = L"Software\\Digital Extremes\\Warframe\\Launcher";
-// every title whose stock launcher reads its own ForceHTTPS; Soulframe joins this list
-constexpr std::array<std::wstring_view, 1> titleLauncherKeys{launcherKey};
+std::wstring keyFor(wf::Title title)
+{
+    return std::wstring(profile(title).registrySubkey);
+}
 
-std::optional<std::wstring> readString(const wchar_t* name)
+std::optional<std::wstring> readString(const std::wstring& key, const wchar_t* name)
 {
     std::array<wchar_t, 1024> buffer{};
     DWORD size = static_cast<DWORD>(buffer.size() * sizeof(wchar_t));
-    if (::RegGetValueW(HKEY_CURRENT_USER, launcherKey, name, RRF_RT_REG_SZ, nullptr, buffer.data(),
+    if (::RegGetValueW(HKEY_CURRENT_USER, key.c_str(), name, RRF_RT_REG_SZ, nullptr, buffer.data(),
                        &size) != ERROR_SUCCESS)
         return std::nullopt;
     return std::wstring(buffer.data());
 }
 
-std::optional<DWORD> readDword(const wchar_t* name)
+std::optional<DWORD> readDword(const std::wstring& key, const wchar_t* name)
 {
     DWORD value = 0;
     DWORD size = sizeof(value);
-    if (::RegGetValueW(HKEY_CURRENT_USER, launcherKey, name, RRF_RT_REG_DWORD, nullptr, &value,
+    if (::RegGetValueW(HKEY_CURRENT_USER, key.c_str(), name, RRF_RT_REG_DWORD, nullptr, &value,
                        &size) != ERROR_SUCCESS)
         return std::nullopt;
     return value;
@@ -73,27 +76,29 @@ bool writeDwordTo(std::wstring_view path, const wchar_t* name, DWORD value)
     return ok;
 }
 
-Settings Settings::load(const wf::LauncherConfig& launcher)
+Settings Settings::load(wf::Title title, const wf::LauncherConfig& launcher)
 {
     Settings out;
-    if (const auto value = readDword(L"GraphicsAPI"))
+    out.title = title;
+    const std::wstring key = keyFor(title);
+    if (const auto value = readDword(key, L"GraphicsAPI"))
         out.graphicsApi = clampEnum(*value, GraphicsApi::Dx11, 1u);
-    if (const auto value = readDword(L"GPUPreference"))
+    if (const auto value = readDword(key, L"GPUPreference"))
         out.gpuPreference = clampEnum(*value, GpuPreference::LetWindowsDecide, 2u);
-    if (const auto value = readDword(L"WindowMode"))
+    if (const auto value = readDword(key, L"WindowMode"))
         out.windowMode = clampEnum(*value, WindowMode::Windowed, 2u);
-    if (const auto value = readString(L"Language"); value && value->size() == 2)
+    if (const auto value = readString(key, L"Language"); value && value->size() == 2)
         out.language = *value;
-    if (const auto value = readString(L"LanguageVO"); value && value->size() == 2)
+    if (const auto value = readString(key, L"LanguageVO"); value && value->size() == 2)
         out.audioLanguage = *value;
-    if (const auto value = readDword(L"EnableShaderCache"))
+    if (const auto value = readDword(key, L"EnableShaderCache"))
         out.shaderCache = *value != 0;
     // launcher-wide, so it lives in launcher.json; an older install is imported from ForceHTTPS
     if (const auto stored = launcher.allowNetworkCaches())
         out.allowNetworkCaches = *stored;
-    else if (const auto legacy = readDword(L"ForceHTTPS"))
+    else if (const auto legacy = readDword(key, L"ForceHTTPS"))
         out.allowNetworkCaches = *legacy == 0;
-    if (const auto value = readString(L"LauncherExe"))
+    if (const auto value = readString(key, L"LauncherExe"))
         out.launcherExe = *value;
     return out;
 }
@@ -101,8 +106,9 @@ Settings Settings::load(const wf::LauncherConfig& launcher)
 bool Settings::save(const Settings* baseline) const
 {
     HKEY key = nullptr;
-    if (::RegCreateKeyExW(HKEY_CURRENT_USER, launcherKey, 0, nullptr, REG_OPTION_NON_VOLATILE,
-                          KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+    if (::RegCreateKeyExW(HKEY_CURRENT_USER, keyFor(title).c_str(), 0, nullptr,
+                          REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &key,
+                          nullptr) != ERROR_SUCCESS)
         return false;
 
     bool ok = true;
@@ -128,8 +134,9 @@ bool Settings::save(const Settings* baseline) const
         wf::LauncherConfig launcher = wf::LauncherConfig::load();
         launcher.setAllowNetworkCaches(allowNetworkCaches);
         ok = launcher.save() && ok;
-        for (const std::wstring_view title : titleLauncherKeys)
-            ok = writeDwordTo(title, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u) && ok;
+        for (const TitleProfile& entry : titleProfiles())
+            ok = writeDwordTo(entry.registrySubkey, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u)
+                && ok;
     }
     return ok;
 }
@@ -142,8 +149,9 @@ bool Settings::adoptInstallRoot(wf::Branch branch, const std::filesystem::path& 
     // the key names the stock launcher, and installRoot() reads the root back off its path
     const std::filesystem::path exe = folder / L"Tools" / L"Launcher.exe";
     HKEY key = nullptr;
-    if (::RegCreateKeyExW(HKEY_CURRENT_USER, launcherKey, 0, nullptr, REG_OPTION_NON_VOLATILE,
-                          KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+    if (::RegCreateKeyExW(HKEY_CURRENT_USER, keyFor(title).c_str(), 0, nullptr,
+                          REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &key,
+                          nullptr) != ERROR_SUCCESS)
         return false;
     const bool ok = writeString(key, L"LauncherExe", exe.wstring());
     ::RegCloseKey(key);
@@ -167,7 +175,7 @@ std::filesystem::path Settings::installRoot(wf::Branch branch) const
         ::GetEnvironmentVariableW(L"LOCALAPPDATA", local.data(), static_cast<DWORD>(local.size()));
     if (written == 0 || written >= local.size())
         return {};
-    return std::filesystem::path(local.data()) / L"Warframe" / L"Downloaded"
+    return std::filesystem::path(local.data()) / profile(title).localFolder / L"Downloaded"
            / wf::branchName(branch);
 }
 

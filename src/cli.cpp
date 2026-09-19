@@ -26,10 +26,11 @@ namespace
 
 void usage()
 {
-	std::puts("Launcher - Warframe content updater\n"
+	std::puts("Launcher - Digital Extremes content updater\n"
 	          "\n"
 	          "  --root <dir>      install root (default: LauncherExe's grandparent, else\n"
-	          "                    %LOCALAPPDATA%\\Warframe\\Downloaded\\<branch>)\n"
+	          "                    %LOCALAPPDATA%\\<title>\\Downloaded\\<branch>)\n"
+	          "  --title <name>    warframe | soulframe           (default warframe)\n"
 	          "  --branch <name>   public | test | dev            (default public)\n"
 	          "  --lang <code>     two-letter language (default: registry Language, else en)\n"
 	          "  --only <text>     restrict to paths containing <text>\n"
@@ -67,6 +68,15 @@ std::optional<wf::Branch> parseBranch(std::wstring_view text)
 		return wf::Branch::Test;
 	if (core::equalsNoCase(text, L"dev"))
 		return wf::Branch::Dev;
+	return std::nullopt;
+}
+
+std::optional<wf::Title> parseTitle(std::wstring_view text)
+{
+	if (core::equalsNoCase(text, L"warframe"))
+		return wf::Title::Warframe;
+	if (core::equalsNoCase(text, L"soulframe"))
+		return wf::Title::Soulframe;
 	return std::nullopt;
 }
 
@@ -197,6 +207,17 @@ int run(int argc, wchar_t** argv)
 			}
 			options.config.branch = *branch;
 		}
+		else if (flag == L"--title")
+		{
+			const auto given = value(i);
+			const auto title = given ? parseTitle(*given) : std::nullopt;
+			if (!title)
+			{
+				core::error("--title needs warframe or soulframe");
+				return 2;
+			}
+			options.config.title = *title;
+		}
 		else if (flag == L"--lang")
 		{
 			const auto given = value(i);
@@ -231,7 +252,7 @@ int run(int argc, wchar_t** argv)
 	}
 
 	wf::LauncherConfig launcher = wf::LauncherConfig::load();
-	const app::Settings settings = app::Settings::load(launcher);
+	const app::Settings settings = app::Settings::load(options.config.title, launcher);
 
 	if (wantSettingsWrite)
 	{

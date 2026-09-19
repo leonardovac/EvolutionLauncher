@@ -167,7 +167,7 @@ void UpdateJob::work()
 
     wf::Options options;
     options.config.launcher = wf::LauncherConfig::load();
-    const Settings settings = Settings::load(options.config.launcher);
+    const Settings settings = Settings::load(options.config.title, options.config.launcher);
     options.config.root = settings.installRoot(options.config.branch);
     options.config.language = settings.language;
     options.config.steam = settings.steam();

@@ -31,6 +31,7 @@ enum class WindowMode : std::uint32_t
 
 struct Settings
 {
+    wf::Title title = wf::Title::Warframe;
     GraphicsApi graphicsApi = GraphicsApi::Dx11;
     GpuPreference gpuPreference = GpuPreference::LetWindowsDecide;
     WindowMode windowMode = WindowMode::Windowed;
@@ -42,7 +43,7 @@ struct Settings
     std::filesystem::path launcherExe;
 
     // the caller owns the one launcher.json read; loading it here would parse the file twice
-    static Settings load(const wf::LauncherConfig& launcher);
+    static Settings load(wf::Title title, const wf::LauncherConfig& launcher);
     bool save(const Settings* baseline = nullptr) const;
 
     // takes the folder only when the branch's game exe is in it; corrects a failed detection
