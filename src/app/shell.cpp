@@ -244,6 +244,8 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
             ui::dl().rect(rule, accent().alpha(0.14f * startT), 0.f);
         ui::dl().line(Vec2(rule.x, rule.y), Vec2(rule.r(), rule.y), ui::px(1.f), edge);
         ui::dl().line(Vec2(rule.x, rule.b()), Vec2(rule.r(), rule.b()), ui::px(1.f), edge);
+        ui::dl().line(Vec2(rule.x, rule.y), Vec2(rule.x, rule.b()), ui::px(1.f), edge);
+        ui::dl().line(Vec2(rule.r(), rule.y), Vec2(rule.r(), rule.b()), ui::px(1.f), edge);
         ornament(state.endCap, Rect(start.x, capY, capW, capH), false);
         ornament(state.endCap, Rect(start.r() - capW, capY, capW, capH), true);
     }
