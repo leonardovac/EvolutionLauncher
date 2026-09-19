@@ -35,7 +35,7 @@ std::string_view hintText;
 
 // the pointer is drawn by the compositor and the frame is a vsync behind it, so a hint that
 // tracked the cursor would always trail; it waits for the pointer to rest, then holds still
-constexpr float hintDelay = 0.35f;
+constexpr float hintDelay = 0.18f;
 const char* hintPending = nullptr;
 const char* hintShown = nullptr;
 core::Vec2 hintAt;
