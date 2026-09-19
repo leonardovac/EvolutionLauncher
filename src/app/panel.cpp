@@ -209,7 +209,7 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         const core::Rect sideloadRow(panel.x + inset, y, rowW, rowH);
         checkbox("launcher.sideload", sideloadRow, sideloadLabel, working.sideload);
         warnMark(sideloadRow, sideloadLabel);
-        tooltip(sideloadRow, "EDITS THE GAME EXE. CHANGING THIS RE-DOWNLOADS IT.");
+        tooltip(sideloadRow, "PATCHES THE GAME EXE. CHANGING THIS RE-DOWNLOADS IT.");
     }
     else
     {
