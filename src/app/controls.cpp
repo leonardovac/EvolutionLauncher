@@ -5,6 +5,7 @@
 #include "ui/ui.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace app
 {
@@ -31,6 +32,15 @@ float openSlide = 0.f;
 
 // set by tooltip(), consumed by tooltipOverlay() in the same frame
 std::string_view hintText;
+
+// the pointer is drawn by the compositor and the frame is a vsync behind it, so a hint that
+// tracked the cursor would always trail; it waits for the pointer to rest, then holds still
+constexpr float hintDelay = 0.35f;
+const char* hintPending = nullptr;
+const char* hintShown = nullptr;
+core::Vec2 hintAt;
+core::Vec2 hintLastMouse;
+float hintDwell = 0.f;
 
 }
 
@@ -234,29 +244,47 @@ void tooltipOverlay(const core::Rect& bounds)
 {
     const std::string_view text = hintText;
     hintText = {};
+    const core::Vec2 mouse = ui::g().input.mouse;
+    const float moved =
+        std::fabs(mouse.x - hintLastMouse.x) + std::fabs(mouse.y - hintLastMouse.y);
+    hintLastMouse = mouse;
     if (text.empty())
+    {
+        hintPending = nullptr;
+        hintShown = nullptr;
+        hintDwell = 0.f;
         return;
+    }
+    if (text.data() != hintPending)
+    {
+        hintPending = text.data();
+        hintShown = nullptr;
+        hintDwell = 0.f;
+    }
+    if (hintShown == nullptr)
+    {
+        // the idle gate would park the loop long before the dwell elapsed
+        ui::requestFrame();
+        hintDwell = moved > ui::px(2.f) ? 0.f : hintDwell + ui::g().dt;
+        if (hintDwell < hintDelay)
+            return;
+        hintShown = hintPending;
+        hintAt = mouse;
+    }
 
     const float tracking = ui::px(1.f);
     const float pad = ui::px(10.f);
-    // measure() is untracked, so the gaps between glyphs have to be added back
-    int glyphs = 0;
-    for (std::size_t i = 0; i < text.size();)
-    {
-        gfx::Font::decode(text, i);
-        ++glyphs;
-    }
-    const float gaps = static_cast<float>(glyphs > 1 ? glyphs - 1 : 0);
-    const float width = ui::fonts().caption.measure(text) + tracking * gaps + pad * 2.f;
+    const float width = trackedWidth(ui::fonts().caption, text, tracking) + pad * 2.f;
     const float height = ui::px(24.f);
-    const core::Vec2 mouse = ui::g().input.mouse;
-    float x = mouse.x + ui::px(14.f);
-    // flip rather than run off the edge, on either axis
+    // flip away from the far edge, then clamp so a long hint stays inside its host
+    float x = hintAt.x + ui::px(14.f);
     if (x + width > bounds.r())
-        x = mouse.x - ui::px(14.f) - width;
-    float y = mouse.y + ui::px(18.f);
+        x = hintAt.x - ui::px(14.f) - width;
+    x = std::clamp(x, bounds.x, std::max(bounds.x, bounds.r() - width));
+    float y = hintAt.y + ui::px(18.f);
     if (y + height > bounds.b())
-        y = mouse.y - ui::px(10.f) - height;
+        y = hintAt.y - ui::px(10.f) - height;
+    y = std::clamp(y, bounds.y, std::max(bounds.y, bounds.b() - height));
 
     const core::Rect box(x, y, width, height);
     ui::dl().shadow(box, core::Col::hex(0x000000, 0.55f), ui::px(14.f), ui::px(2.f));
