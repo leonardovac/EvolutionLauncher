@@ -5,7 +5,8 @@ deliberately close to the C++ so a disagreement between the two is a real bug in
 them. Run it after any change to line parsing, category classification, or the
 applicability filter.
 
-    py tools/check_index.py                 public branch, english
+    py tools/check_index.py                 warframe, public branch, english
+    py tools/check_index.py --title soulframe
     py tools/check_index.py --lang de --dx12
     py tools/check_index.py --save index.txt
 """
@@ -21,9 +22,17 @@ import struct
 import sys
 import urllib.request
 
-ORIGIN = {"public": "https://origin.warframe.com",
-          "test": "https://origin-test.warframe.com",
-          "dev": "https://origin-dev.warframe.com"}
+# mirrors originHosts in src/update/plan.cpp
+ORIGIN = {
+    "warframe": {"public": "https://origin.warframe.com",
+                 "test": "https://origin-test.warframe.com",
+                 "dev": "https://origin-dev.warframe.com"},
+    "soulframe": {"public": "https://origin.soulframe.com",
+                  "test": "https://origin-test.soulframe.com",
+                  "dev": "https://origin-dev.soulframe.com"},
+}
+
+BRANCHES = ["public", "test", "dev"]
 
 TOOL_PREFIXES = ["/Tools/Launcher.exe", "/Tools/RemoteCrashSender.exe",
                  "/Tools/Windows/x64/dbghelp.dll", "/Tools/Windows/x64/symsrv.dll",
@@ -67,8 +76,8 @@ def load_skip(path):
     return skips
 
 
-def fetch_index(branch):
-    url = "%s/origin/%08X/index.txt.lzma" % (ORIGIN[branch], random.getrandbits(32))
+def fetch_index(title, branch):
+    url = "%s/origin/%08X/index.txt.lzma" % (ORIGIN[title][branch], random.getrandbits(32))
     with urllib.request.urlopen(url, timeout=60) as response:
         blob = response.read()
     props, dict_size, raw_size = blob[0], struct.unpack("<I", blob[1:5])[0], struct.unpack("<Q", blob[5:13])[0]
@@ -145,7 +154,8 @@ def applies(entry, args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--branch", choices=sorted(ORIGIN), default="public")
+    parser.add_argument("--title", choices=sorted(ORIGIN), default="warframe")
+    parser.add_argument("--branch", choices=BRANCHES, default="public")
     parser.add_argument("--lang", default="en")
     parser.add_argument("--steam", action="store_true")
     parser.add_argument("--eos", action="store_true")
@@ -154,7 +164,7 @@ def main():
     parser.add_argument("--skip-file", default="skip.txt")
     args = parser.parse_args()
 
-    body, meta = fetch_index(args.branch)
+    body, meta = fetch_index(args.title, args.branch)
     if args.save:
         open(args.save, "wb").write(body)
     print("%s\n  %d compressed, %d decompressed (declared %d), lc=%d lp=%d pb=%d dict=%d"
