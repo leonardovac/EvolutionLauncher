@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <string>
 
 namespace app
 {
@@ -212,6 +213,12 @@ void Window::minimise() const noexcept
 {
     if (hwnd_ != nullptr)
         ::ShowWindow(hwnd_, SW_MINIMIZE);
+}
+
+void Window::setTitle(std::wstring_view text) const
+{
+    if (hwnd_ != nullptr)
+        ::SetWindowTextW(hwnd_, std::wstring(text).c_str());
 }
 
 bool Window::pump()

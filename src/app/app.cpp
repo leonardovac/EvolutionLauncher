@@ -14,6 +14,7 @@
 #include "app/resource.h"
 #include "app/settings.h"
 #include "app/shell.h"
+#include "app/titles.h"
 #include "app/updatejob.h"
 #include "app/versions.h"
 #include "app/window.h"
@@ -84,9 +85,9 @@ int run(const Options& options)
     ui::rebuildFonts(device.dev(), window.scale());
     buildIcons(device.dev(), window.scale());
 
-    gfx::Image warframeHero;
     gfx::Image publisherLogo;
-    gfx::Image warframeIcon;
+    std::array<gfx::Image, 2> heroes;
+    std::array<gfx::Image, 2> icons;
     const auto loadArt = [&device](int id, gfx::Image& out) {
         if (const auto bytes = resource(id); !bytes.empty())
         {
@@ -94,20 +95,29 @@ int run(const Options& options)
                 out = std::move(*loaded);
         }
     };
-    loadArt(RES_WARFRAME_HERO, warframeHero);
     loadArt(RES_PUBLISHER_LOGO, publisherLogo);
-    loadArt(RES_WARFRAME_ICON, warframeIcon);
 
-    const std::array<RailTitle, 1> railTitles{
-        {{"rail.warframe", "WARFRAME", &warframeIcon, &warframeHero}}};
+    std::array<RailTitle, 2> railTitles{};
+    for (std::size_t i = 0; i < railTitles.size(); ++i)
+    {
+        const TitleProfile& entry = titleProfiles()[i];
+        loadArt(entry.heroResource, heroes[i]);
+        loadArt(entry.iconResource, icons[i]);
+        railTitles[i] = RailTitle{entry.railId, entry.label, &icons[i], &heroes[i]};
+    }
     int selectedTitle = 0;
 
+    const auto currentTitle = [&selectedTitle]() {
+        return titleProfiles()[static_cast<std::size_t>(selectedTitle)].title;
+    };
+
     UpdateJob job;
+    job.setTitle(currentTitle());
     if (!options.wantShot)
         job.start();
     RateMeter meter;
 
-    Settings settings = Settings::load(wf::Title::Warframe, wf::LauncherConfig::load());
+    Settings settings = Settings::load(currentTitle(), wf::LauncherConfig::load());
     Settings working;
     PanelState panel;
     const bool startOpen = options.wantPanel || options.wantMenu;
@@ -126,10 +136,12 @@ int run(const Options& options)
     HeroArt heroArt;
     gfx::Image liveHero;
     float heroFade = 0.f;
-    // a screenshot has to be reproducible, so it keeps the baked-in art
-    if (!options.wantShot)
+    // the scrape is warframe.com only, and a screenshot keeps the baked art to stay reproducible
+    if (!options.wantShot && currentTitle() == wf::Title::Warframe)
         heroArt.start();
 
+
+    window.setTitle(core::widen(railTitles[static_cast<std::size_t>(selectedTitle)].label));
 
     auto previous = std::chrono::steady_clock::now();
     float elapsed = 0.f;
@@ -194,6 +206,7 @@ int run(const Options& options)
         constexpr std::array actionablePhases{JobPhase::Ready, JobPhase::UpdateReady};
         shell.startEnabled = std::ranges::contains(actionablePhases, snap.phase);
         shell.panelVisible = panelSlide > 0.f;
+        shell.nav = titleProfiles()[static_cast<std::size_t>(selectedTitle)].nav;
         const bool updatePending = snap.phase == JobPhase::UpdateReady;
         const bool installed = gameInstalled(settings, wf::Branch::Public);
         shell.startLabel = updatePending ? (installed ? "UPDATE" : "INSTALL") : "PLAY";
@@ -390,8 +403,31 @@ int run(const Options& options)
                 core::error("{}", launchFailure);
             }
         }
-        if (rail.titleClicked >= 0)
+        // a switch re-points everything: the job, the settings, the art and the caption
+        if (rail.titleClicked >= 0 && rail.titleClicked != selectedTitle
+            && !defrag.snapshot().running)
+        {
+            job.cancel();
+            job.join();
             selectedTitle = rail.titleClicked;
+            settings = Settings::load(currentTitle(), wf::LauncherConfig::load());
+            launchFailure.clear();
+            meter.reset();
+            liveHero = gfx::Image{};
+            heroFade = 0.f;
+            heroArt.stop();
+            panelOpen = false;
+            closeDropdown();
+            window.setTitle(core::widen(railTitles[static_cast<std::size_t>(selectedTitle)].label));
+            job.setTitle(currentTitle());
+            if (!options.wantShot)
+            {
+                job.restart();
+                if (currentTitle() == wf::Title::Warframe)
+                    heroArt.start();
+            }
+            ui::requestFrame();
+        }
         // the rail is launcher scope, the header is the selected title's: each opens its own tab
         if (shellCogClicked() || rail.cogClicked)
         {
@@ -536,7 +572,10 @@ int run(const Options& options)
     heroArt.stop();
 
     liveHero = gfx::Image{};
-    warframeHero = gfx::Image{};
+    for (gfx::Image& image : heroes)
+        image = gfx::Image{};
+    for (gfx::Image& image : icons)
+        image = gfx::Image{};
     destroyIcons();
     ui::shutdown();
     renderer.destroy();

@@ -1,9 +1,11 @@
 #pragma once
 
 #include "app/jobphase.h"
+#include "app/titles.h"
 #include "core/types.h"
 #include "gfx/image.h"
 
+#include <span>
 #include <string_view>
 
 namespace app
@@ -16,6 +18,7 @@ struct ShellState
     std::string_view buildLabel;
     std::string_view statusLine;
     std::string_view detailLine;
+    std::span<const NavEntry> nav;
     int languageIndex = 0;
     float progress = 0.f;
     std::string_view startLabel = "PLAY";

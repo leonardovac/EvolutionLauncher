@@ -29,18 +29,6 @@ bool cogClicked = false;
 float footerAxis = 0.f;
 std::string_view navClicked;
 
-struct NavEntry
-{
-    std::string_view id;
-    std::string_view label;
-    std::string_view url;
-};
-
-constexpr std::array<NavEntry, 3> navEntries{
-    {{"shell.nav.news", "NEWS", "https://www.warframe.com/news"},
-     {"shell.nav.notes", "PATCH NOTES", "https://www.warframe.com/patch-notes"},
-     {"shell.nav.prime", "PRIME ACCESS", "https://www.warframe.com/prime-access"}}};
-
 void globeGlyph(const core::Vec2& center, float radius, const core::Col& col)
 {
     ui::dl().arc(center, radius, ui::px(1.f), 0.f, core::kPi * 2.f, col);
@@ -136,7 +124,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     navClicked = {};
     const float navTracking = ui::px(2.f);
     float navX = contentLeft;
-    for (const NavEntry& entry : navEntries)
+    for (const NavEntry& entry : state.nav)
     {
         const float entryW = navWidth(entry.label, navTracking) + ui::px(shellNavPad) * 2.f;
         const Rect box(navX, headerY, entryW, ui::px(shellRowHeight));
