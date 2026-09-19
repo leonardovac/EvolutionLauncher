@@ -179,8 +179,15 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         checkbox("settings.shaderCache", shaderCacheRow, "Shader Cache", working.shaderCache);
         y = shaderCacheRow.b() + gap;
 
+        constexpr std::string_view sideloadLabel = "Allow Sideloading DLLs";
+        const core::Rect sideloadRow(panel.x + inset, y, rowW, rowH);
+        checkbox("settings.sideload", sideloadRow, sideloadLabel, working.sideload);
+        warnMark(sideloadRow, sideloadLabel);
+        tooltip(sideloadRow, "PATCHES THE GAME EXE. CHANGING THIS RE-DOWNLOADS IT.");
+        y = sideloadRow.b() + gap;
+
         // one quiet footnote instead of the same warning repeated against each row
-        const core::Rect recheck(panel.x + inset, shaderCacheRow.b() + ui::px(18.f), rowW, noteH);
+        const core::Rect recheck(panel.x + inset, sideloadRow.b() + ui::px(18.f), rowW, noteH);
         ui::text(ui::fonts().caption, recheck, "SOME SETTINGS RE-CHECK THE INSTALL",
                  ui::theme().subtext.alpha(0.7f), ui::AlignH::Left, ui::AlignV::Middle,
                  ui::px(1.f));
@@ -203,13 +210,6 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         checkbox("launcher.allowNetworkCaches", allowNetworkCachesRow, "Allow Network Caches",
                  working.allowNetworkCaches);
         tooltip(allowNetworkCachesRow, "SHARED BY BOTH GAMES");
-
-        y = allowNetworkCachesRow.b() + gap;
-        constexpr std::string_view sideloadLabel = "Allow Sideloading DLLs";
-        const core::Rect sideloadRow(panel.x + inset, y, rowW, rowH);
-        checkbox("launcher.sideload", sideloadRow, sideloadLabel, working.sideload);
-        warnMark(sideloadRow, sideloadLabel);
-        tooltip(sideloadRow, "PATCHES THE GAME EXE. CHANGING THIS RE-DOWNLOADS IT.");
     }
     else
     {
