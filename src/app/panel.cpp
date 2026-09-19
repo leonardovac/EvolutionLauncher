@@ -190,29 +190,26 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         const core::Rect allowNetworkCachesRow(panel.x + inset, y, rowW, rowH);
         checkbox("launcher.allowNetworkCaches", allowNetworkCachesRow, "Allow Network Caches",
                  working.allowNetworkCaches);
-        note(core::Rect(allowNetworkCachesRow.x, allowNetworkCachesRow.b() + ui::px(2.f), rowW,
-                        noteH),
-             "SHARED ACROSS EVERY GAME");
+        tooltip(allowNetworkCachesRow, "SHARED BY BOTH GAMES");
 
-        y = allowNetworkCachesRow.b() + ui::px(2.f) + noteH + ui::px(18.f);
+        y = allowNetworkCachesRow.b() + gap;
         const core::Rect sideloadRow(panel.x + inset, y, rowW, rowH);
-        checkbox("launcher.sideload", sideloadRow, "Allow Sideloaded DLLs", working.sideload);
-        note(core::Rect(sideloadRow.x, sideloadRow.b() + ui::px(2.f), rowW, noteH),
-             "PATCHES THE GAME EXECUTABLE; TURNING IT OFF REFETCHES IT");
+        checkbox("launcher.sideload", sideloadRow, "Load DLLs From The Game Folder",
+                 working.sideload);
+        tooltip(sideloadRow, "LETS MODS AND RESHADE LOAD. CHANGING IT RE-DOWNLOADS THE EXE.");
     }
     else
     {
         const core::Rect verifyBox(panel.x + inset, y, rowW, rowH);
         if (button("panel.verify", verifyBox, "VERIFY THE INSTALL", ui::AlignH::Left))
             action = PanelAction::Verify;
-        note(core::Rect(verifyBox.x, verifyBox.b() + noteGap, rowW, noteH),
-             "HASHES EVERY FILE, INCLUDING THE CACHE");
-        y = verifyBox.b() + noteGap + noteH + ui::px(18.f);
+        tooltip(verifyBox, "READS EVERY FILE, CACHE INCLUDED. SLOW.");
+        y = verifyBox.b() + gap;
 
         const core::Rect staleBox(panel.x + inset, y, rowW, rowH);
         if (state.staleRunning)
         {
-            ui::text(ui::fonts().caption, staleBox, "WALKING THE INSTALL...", ui::theme().text,
+            ui::text(ui::fonts().caption, staleBox, "SCANNING...", ui::theme().text,
                      ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
             ui::requestFrame();
         }
@@ -220,16 +217,21 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         {
             action = PanelAction::StaleReport;
         }
-        const core::Rect staleNote(staleBox.x, staleBox.b() + noteGap, rowW, noteH);
-        note(staleNote, state.staleLine.empty() ? "NOTHING IS REMOVED" : state.staleLine);
-        y = staleNote.b() + ui::px(18.f);
+        tooltip(staleBox, "NOTHING IS REMOVED");
+        y = staleBox.b() + gap;
+        // the scan writes its result here, so this line stays put rather than hiding on hover
+        if (!state.staleLine.empty())
+        {
+            const core::Rect staleNote(staleBox.x, staleBox.b() + noteGap, rowW, noteH);
+            note(staleNote, state.staleLine);
+            y = staleNote.b() + ui::px(18.f);
+        }
 
         const core::Rect defragBox(panel.x + inset, y, rowW, rowH);
         if (button("panel.defrag", defragBox, "DEFRAGMENT THE CACHE", ui::AlignH::Left))
             action = PanelAction::Defragment;
-        note(core::Rect(defragBox.x, defragBox.b() + noteGap, rowW, noteH),
-             "RUNS THE GAME'S OWN DEFRAGMENTER");
-        y = defragBox.b() + noteGap + noteH + gap;
+        tooltip(defragBox, "RUNS THE GAME'S OWN DEFRAGMENTER");
+        y = defragBox.b() + gap;
 
         if (!state.defragLine.empty())
         {
@@ -274,6 +276,10 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
 
     if (slide >= 1.f && ui::g().input.pressed && !panel.contains(ui::g().input.mouse))
         action = PanelAction::Dismiss;
+
+    // last, so the hint sits above every row and above an open dropdown
+    if (slide >= 1.f)
+        tooltipOverlay(viewport);
 
     return action;
 }
