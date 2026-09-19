@@ -83,6 +83,11 @@ void UpdateJob::start()
     thread_ = std::thread(&UpdateJob::work, this);
 }
 
+void UpdateJob::setTitle(wf::Title title)
+{
+    title_.store(title, std::memory_order_relaxed);
+}
+
 void UpdateJob::cancel()
 {
     if (running_.load(std::memory_order_acquire))
@@ -166,6 +171,7 @@ void UpdateJob::work()
                   hashedBytes_, apply);
 
     wf::Options options;
+    options.config.title = title_.load(std::memory_order_relaxed);
     options.config.launcher = wf::LauncherConfig::load();
     const Settings settings = Settings::load(options.config.title, options.config.launcher);
     options.config.root = settings.installRoot(options.config.branch);

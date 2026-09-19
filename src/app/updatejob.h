@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/jobphase.h"
+#include "update/plan.h"
 
 #include <atomic>
 #include <cstdint>
@@ -36,6 +37,8 @@ public:
     ~UpdateJob();
 
     void start();
+    // must not be called while the job is running; restart() picks it up
+    void setTitle(wf::Title title);
     void cancel();
     void join();
     // builds the plan and stops; nothing is fetched until startUpdate
@@ -53,6 +56,7 @@ private:
 
     std::thread thread_;
     std::atomic<bool> running_{false};
+    std::atomic<wf::Title> title_{wf::Title::Warframe};
     std::atomic<JobPhase> phase_{JobPhase::Idle};
     std::atomic<std::size_t> entryIndex_{0};
     std::atomic<std::size_t> entryCount_{0};
