@@ -235,7 +235,8 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         const float capW = ui::px(shellEndCapWidth);
         const float capH = capW * 220.f / 184.f;
         const float capY = start.center().y - capH * 0.5f;
-        const Rect rule(start.x + capW, start.y, start.w - capW * 2.f, start.h);
+        // the caps straddle the frame's ends so they terminate it instead of floating beside it
+        const Rect rule(start.x + capW * 0.5f, start.y, start.w - capW, start.h);
         const Col edge = startCol.alpha(0.8f + 0.2f * startT);
         if (startT > 0.01f)
             ui::dl().rect(rule, accent().alpha(0.14f * startT), 0.f);
