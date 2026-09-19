@@ -42,6 +42,9 @@ int* openIndex = nullptr;
 float openListWidth = 0.f;
 float openSlide = 0.f;
 
+// set by tooltip(), consumed by tooltipOverlay() in the same frame
+std::string_view hintText;
+
 }
 
 bool checkbox(std::string_view id, const core::Rect& row, std::string_view label, bool& value)
@@ -219,6 +222,50 @@ void closeDropdown()
 {
     openWidget = 0;
     openIndex = nullptr;
+}
+
+
+void tooltip(const core::Rect& row, std::string_view text)
+{
+    // a plain containment test, so the row keeps its own hover state to itself
+    if (!text.empty() && row.contains(ui::g().input.mouse))
+        hintText = text;
+}
+
+void tooltipOverlay(const core::Rect& bounds)
+{
+    const std::string_view text = hintText;
+    hintText = {};
+    if (text.empty())
+        return;
+
+    const float tracking = ui::px(1.f);
+    const float pad = ui::px(10.f);
+    // measure() is untracked, so the gaps between glyphs have to be added back
+    int glyphs = 0;
+    for (std::size_t i = 0; i < text.size();)
+    {
+        gfx::Font::decode(text, i);
+        ++glyphs;
+    }
+    const float gaps = static_cast<float>(glyphs > 1 ? glyphs - 1 : 0);
+    const float width = ui::fonts().caption.measure(text) + tracking * gaps + pad * 2.f;
+    const float height = ui::px(24.f);
+    const core::Vec2 mouse = ui::g().input.mouse;
+    float x = mouse.x + ui::px(14.f);
+    // flip rather than run off the edge, on either axis
+    if (x + width > bounds.r())
+        x = mouse.x - ui::px(14.f) - width;
+    float y = mouse.y + ui::px(18.f);
+    if (y + height > bounds.b())
+        y = mouse.y - ui::px(10.f) - height;
+
+    const core::Rect box(x, y, width, height);
+    ui::dl().shadow(box, core::Col::hex(0x000000, 0.55f), ui::px(14.f), ui::px(2.f));
+    ui::dl().rect(box, core::Col::hex(0x0B0A0A, 0.97f), ui::px(2.f));
+    ui::dl().border(box, accent().alpha(0.35f), ui::px(1.f), ui::px(2.f));
+    ui::text(ui::fonts().caption, box, text, ui::theme().subtext, ui::AlignH::Center,
+             ui::AlignV::Middle, tracking);
 }
 
 }
