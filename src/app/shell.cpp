@@ -71,6 +71,16 @@ float languageListWidth()
     return widest + ui::px(36.f);
 }
 
+// two-tone art, so it is drawn full-colour; a negative uv width mirrors it
+void ornament(gfx::Image* art, const core::Rect& box, bool mirrored)
+{
+    if (art == nullptr || !art->valid())
+        return;
+    const core::Rect uv = mirrored ? core::Rect(1.f, 0.f, -1.f, 1.f)
+                                   : core::Rect(0.f, 0.f, 1.f, 1.f);
+    ui::dl().image(art->srv.get(), box, core::Col(1.f, 1.f, 1.f, 1.f), 0.f, uv);
+}
+
 void hexFill(const core::Rect& box, const core::Col& col)
 {
     const float chamfer = std::min(box.h * 0.45f, box.w * 0.5f);
@@ -123,7 +133,15 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
 
     navClicked = {};
     const float navTracking = ui::px(2.f);
+    const float leafW = ui::px(shellLeafWidth);
+    const float leafH = leafW * 195.f / 232.f;
+    const float leafY = headerY + (ui::px(shellRowHeight) - leafH) * 0.5f;
     float navX = contentLeft;
+    if (state.leaf != nullptr)
+    {
+        ornament(state.leaf, Rect(navX, leafY, leafW, leafH), false);
+        navX += leafW + ui::px(shellLeafGap);
+    }
     for (const NavEntry& entry : state.nav)
     {
         const float entryW = navWidth(entry.label, navTracking) + ui::px(shellNavPad) * 2.f;
@@ -148,6 +166,10 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         }
         navX = box.r() + ui::px(shellNavGap);
     }
+    if (state.leaf != nullptr)
+        ornament(state.leaf,
+                 Rect(navX - ui::px(shellNavGap) + ui::px(shellLeafGap), leafY, leafW, leafH),
+                 true);
 
     const Rect minimiseBox = captionGlyphBox(viewport, 1);
     const float dividerX = minimiseBox.x - ui::px(shellDividerGap);
@@ -279,7 +301,13 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     else
     {
         const Col line = state.phase == JobPhase::Failed ? ui::theme().fail : ui::theme().subtext;
-        const Rect label(bottom.x, axis - ui::px(8.f), textW, ui::px(16.f));
+        float labelX = bottom.x;
+        if (state.leaf != nullptr)
+        {
+            ornament(state.leaf, Rect(labelX, axis - leafH * 0.5f, leafW, leafH), false);
+            labelX += leafW + ui::px(shellLeafGap);
+        }
+        const Rect label(labelX, axis - ui::px(8.f), textW - (labelX - bottom.x), ui::px(16.f));
         constexpr std::array labelPhases{JobPhase::Ready, JobPhase::UpdateReady};
         const std::string_view text = std::ranges::contains(labelPhases, state.phase)
             ? state.buildLabel
