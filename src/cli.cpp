@@ -1,6 +1,7 @@
 #include "app/launch.h"
 #include "app/settings.h"
 #include "app/sideload.h"
+#include "app/titles.h"
 #include "app/versions.h"
 #include "core/cancel.h"
 #include "core/log.h"
@@ -68,15 +69,6 @@ std::optional<wf::Branch> parseBranch(std::wstring_view text)
 		return wf::Branch::Test;
 	if (core::equalsNoCase(text, L"dev"))
 		return wf::Branch::Dev;
-	return std::nullopt;
-}
-
-std::optional<wf::Title> parseTitle(std::wstring_view text)
-{
-	if (core::equalsNoCase(text, L"warframe"))
-		return wf::Title::Warframe;
-	if (core::equalsNoCase(text, L"soulframe"))
-		return wf::Title::Soulframe;
 	return std::nullopt;
 }
 
@@ -210,7 +202,7 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--title")
 		{
 			const auto given = value(i);
-			const auto title = given ? parseTitle(*given) : std::nullopt;
+			const auto title = given ? app::parseTitleName(*given) : std::nullopt;
 			if (!title)
 			{
 				core::error("--title needs warframe or soulframe");

@@ -2,6 +2,7 @@
 
 #include "update/plan.h"
 
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -32,5 +33,6 @@ struct TitleProfile
 
 const TitleProfile& profile(wf::Title title);
 std::span<const TitleProfile> titleProfiles();
+std::optional<wf::Title> parseTitleName(std::wstring_view text);
 
 }

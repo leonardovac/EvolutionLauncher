@@ -1,6 +1,7 @@
 #include "app/titles.h"
 
 #include "app/resource.h"
+#include "core/str.h"
 
 #include <array>
 
@@ -45,6 +46,16 @@ const TitleProfile& profile(wf::Title title)
 std::span<const TitleProfile> titleProfiles()
 {
     return profiles;
+}
+
+std::optional<wf::Title> parseTitleName(std::wstring_view text)
+{
+    for (const TitleProfile& entry : profiles)
+    {
+        if (core::equalsNoCase(text, entry.localFolder))
+            return entry.title;
+    }
+    return std::nullopt;
 }
 
 }

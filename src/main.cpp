@@ -1,4 +1,5 @@
 #include "app/app.h"
+#include "app/titles.h"
 #include "cli.h"
 
 #include <windows.h>
@@ -72,6 +73,11 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 			options.shotTime = static_cast<float>(::_wtof(value.c_str()));
 		options.wantPanel = argPresent(argc, argv, L"-panel");
 		options.wantMenu = argPresent(argc, argv, L"-menu");
+		if (argAfter(argc, argv, L"-title", value))
+		{
+			if (const auto title = app::parseTitleName(value))
+				options.shotTitle = *title;
+		}
 	}
 
 	// Steam and Epic start the launcher with -registry:<tag>; that is not a CLI invocation

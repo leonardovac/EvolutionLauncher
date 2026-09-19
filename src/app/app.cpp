@@ -106,6 +106,14 @@ int run(const Options& options)
         railTitles[i] = RailTitle{entry.railId, entry.label, &icons[i], &heroes[i]};
     }
     int selectedTitle = 0;
+    if (options.shotTitle)
+    {
+        for (std::size_t i = 0; i < titleProfiles().size(); ++i)
+        {
+            if (titleProfiles()[i].title == *options.shotTitle)
+                selectedTitle = static_cast<int>(i);
+        }
+    }
 
     const auto currentTitle = [&selectedTitle]() {
         return titleProfiles()[static_cast<std::size_t>(selectedTitle)].title;
