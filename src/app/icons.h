@@ -16,6 +16,7 @@ inline constexpr std::string_view globe = "\uE774";
 inline constexpr std::string_view cog = "\uE713";
 inline constexpr std::string_view minimise = "\uE921";
 inline constexpr std::string_view close = "\uE8BB";
+inline constexpr std::string_view warning = "\uE7BA";
 }
 
 enum class IconSize

@@ -1,6 +1,7 @@
 #include "app/panel.h"
 
 #include "app/controls.h"
+#include "app/icons.h"
 #include "app/languages.h"
 #include "app/theme.h"
 #include "ui/ui.h"
@@ -53,6 +54,28 @@ void note(const core::Rect& box, std::string_view text)
 {
     ui::text(ui::fonts().caption, box, text, ui::theme().subtext, ui::AlignH::Left,
              ui::AlignV::Middle, ui::px(1.f));
+}
+
+// sits after a checkbox label to mark a setting that rewrites a game file
+void warnMark(const core::Rect& row, std::string_view label)
+{
+    const float x = row.x + ui::px(26.f) + trackedWidth(ui::fonts().caption, label, ui::px(1.f))
+                  + ui::px(10.f);
+    const core::Rect box(x, row.y, ui::px(16.f), row.h);
+    const core::Col col = ui::theme().warn;
+    if (iconsReady())
+    {
+        drawIcon(IconSize::Caption, icon::warning, box, col);
+        return;
+    }
+    const core::Vec2 c = box.center();
+    const float half = ui::px(6.f);
+    ui::dl().line(core::Vec2(c.x, c.y - half), core::Vec2(c.x - half, c.y + half), ui::px(1.2f),
+                  col);
+    ui::dl().line(core::Vec2(c.x, c.y - half), core::Vec2(c.x + half, c.y + half), ui::px(1.2f),
+                  col);
+    ui::dl().line(core::Vec2(c.x - half, c.y + half), core::Vec2(c.x + half, c.y + half),
+                  ui::px(1.2f), col);
 }
 
 }
@@ -182,10 +205,11 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         tooltip(allowNetworkCachesRow, "SHARED BY BOTH GAMES");
 
         y = allowNetworkCachesRow.b() + gap;
+        constexpr std::string_view sideloadLabel = "Allow Sideloading DLLs";
         const core::Rect sideloadRow(panel.x + inset, y, rowW, rowH);
-        checkbox("launcher.sideload", sideloadRow, "Load DLLs From The Game Folder",
-                 working.sideload);
-        tooltip(sideloadRow, "LETS MODS AND RESHADE LOAD. CHANGING IT RE-DOWNLOADS THE EXE.");
+        checkbox("launcher.sideload", sideloadRow, sideloadLabel, working.sideload);
+        warnMark(sideloadRow, sideloadLabel);
+        tooltip(sideloadRow, "EDITS THE GAME EXE. CHANGING THIS RE-DOWNLOADS IT.");
     }
     else
     {
@@ -268,7 +292,7 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
 
     // last, so the hint sits above every row and above an open dropdown
     if (slide >= 1.f)
-        tooltipOverlay(viewport);
+        tooltipOverlay(panel);
 
     return action;
 }
