@@ -77,9 +77,36 @@ std::optional<wf::Branch> parseBranch(std::wstring_view text)
 class ConsoleProgress final : public wf::Progress
 {
 public:
+	void onIndex(std::size_t entries, std::size_t rejected) override
+	{
+		core::info("index: {} entries, {} rejected", entries, rejected);
+	}
+	void onPlan(std::size_t queued, std::uint64_t downloadBytes, std::size_t filtered,
+	            std::size_t skipped, std::size_t upToDate, std::size_t bulkSkipped) override
+	{
+		core::info("{} filtered, {} skipped, {} up to date, {} queued ({} to download)", filtered,
+		           skipped, upToDate, queued, core::formatBytes(downloadBytes));
+		if (bulkSkipped != 0)
+			core::info("{} cache files skipped: bulk download is off", bulkSkipped);
+	}
+	void onEntryStart(std::size_t index, std::size_t count, std::wstring_view installPath,
+	                  std::uint64_t wireSize) override
+	{
+		core::info("[{}/{}] {} ({})", index, count, core::narrow(installPath),
+		           core::formatBytes(wireSize));
+	}
+	void onEntryFailed(std::wstring_view installPath, std::wstring_view reason) override
+	{
+		core::error("{}: {}", core::narrow(installPath), core::narrow(reason));
+	}
 	void onStale(std::wstring_view installPath, std::uint64_t bytes) override
 	{
 		core::debug("  unlisted {} ({})", core::narrow(installPath), core::formatBytes(bytes));
+	}
+	// the console is the narrowing boundary the module no longer has to be
+	void onLog(core::Level level, std::wstring_view message) override
+	{
+		core::write(level, core::narrow(message));
 	}
 };
 
@@ -254,7 +281,8 @@ int run(int argc, wchar_t** argv)
 		}
 	}
 
-	wf::LauncherConfig launcher = wf::LauncherConfig::load();
+	ConsoleProgress progress;
+	wf::LauncherConfig launcher = wf::LauncherConfig::load(wf::RunContext{&progress});
 	const app::Settings settings = app::Settings::load(options.config.title, launcher);
 
 	if (wantSettingsWrite)
@@ -334,10 +362,11 @@ int run(int argc, wchar_t** argv)
 		return 0;
 	}
 
-	core::installCancelHandler();
+	static core::CancelToken cancel;  // the console handler needs it to outlive this scope
+	core::installCancelHandler(cancel);
 
-	ConsoleProgress progress;
-	options.progress = &progress;
+	options.ctx.progress = &progress;
+	options.ctx.cancel = &cancel;
 
 	const auto summary = wf::run(options);
 	if (!summary)

@@ -30,7 +30,7 @@ struct Options
 	bool staleReport = false;
 	bool purgePrint = false;
 	std::wstring only;
-	Progress* progress = nullptr;
+	RunContext ctx;
 };
 
 struct Summary

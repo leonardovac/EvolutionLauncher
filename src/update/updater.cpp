@@ -38,18 +38,18 @@ std::wstring indexPath()
 }
 
 std::expected<Connection, UpdateError> openConnection(const Session& session,
-                                                    std::wstring_view url)
+                                                    std::wstring_view url, const RunContext& ctx)
 {
 	if (auto direct = Connection::open(session, url))
 		return std::move(*direct);
 	const std::wstring alternate = flipScheme(url);
-	core::warn("connect to {} failed, trying {}", core::narrow(url), core::narrow(alternate));
+	ctx.log(core::Level::Warn, std::format(L"connect to {} failed, trying {}", url, alternate));
 	if (auto fallback = Connection::open(session, alternate))
 		return std::move(*fallback);
 	return std::unexpected(UpdateError::Connect);
 }
 
-std::expected<Index, UpdateError> fetchIndex(const Connection& origin)
+std::expected<Index, UpdateError> fetchIndex(const Connection& origin, const RunContext& ctx)
 {
 	std::string decoded;
 	LzmaDecoder lzma;
@@ -73,7 +73,7 @@ std::expected<Index, UpdateError> fetchIndex(const Connection& origin)
 	};
 
 	const std::wstring path = indexPath();
-	core::debug("index {}", core::narrow(path));
+	ctx.log(core::Level::Debug, std::format(L"index {}", path));
 	if (!origin.fetch(path, 0, sink))
 		return std::unexpected(decodeFailed ? UpdateError::IndexDecode : UpdateError::IndexFetch);
 	if (!lzma.complete())
@@ -92,18 +92,18 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	if (options.config.root.empty())
 		return std::unexpected(UpdateError::NoRoot);
 
-	Progress* progress = options.progress;
+	const RunContext& ctx = options.ctx;
 
 	const auto session = Session::open();
 	if (!session)
 		return std::unexpected(UpdateError::Session);
 
 	const auto origin =
-		openConnection(*session, originHost(options.config.title, options.config.branch));
+		openConnection(*session, originHost(options.config.title, options.config.branch), ctx);
 	if (!origin)
 		return std::unexpected(origin.error());
 
-	const auto index = fetchIndex(*origin);
+	const auto index = fetchIndex(*origin, ctx);
 	if (!index)
 		return std::unexpected(index.error());
 
@@ -111,10 +111,8 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	summary.entries = index->entries.size();
 	summary.rejected = index->rejected.size();
 	for (const std::wstring& line : index->rejected)
-		core::debug("rejected line: {}", core::narrow(line));
-	core::info("index: {} entries, {} rejected", summary.entries, summary.rejected);
-	if (progress != nullptr)
-		progress->onIndex(summary.entries, summary.rejected);
+		ctx.log(core::Level::Debug, std::format(L"rejected line: {}", line));
+	ctx.progress->onIndex(summary.entries, summary.rejected);
 
 	std::vector<Entry> entries = index->entries;
 	if (!options.only.empty())
@@ -122,7 +120,8 @@ std::expected<Summary, UpdateError> run(const Options& options)
 		const std::size_t before = entries.size();
 		std::erase_if(entries, [&options](const Entry& entry)
 		              { return !core::containsNoCase(entry.urlPath, options.only); });
-		core::info("--only kept {} of {} entries", entries.size(), before);
+		ctx.log(core::Level::Info, std::format(L"--only kept {} of {} entries", entries.size(),
+		                               before));
 	}
 
 	if (const auto mainExeIt = std::ranges::find(entries, Category::MainExe, &Entry::category);
@@ -131,7 +130,7 @@ std::expected<Summary, UpdateError> run(const Options& options)
 
 	if (options.purgePrint)
 	{
-		const PurgeReport preview = runPurge(index->entries, options.config, /*dryRun*/ true, progress);
+		const PurgeReport preview = runPurge(index->entries, options.config, /*dryRun*/ true, ctx);
 		summary.purgeFiles = preview.wouldRemove.size();
 		summary.purgeBytes = preview.bytes;
 		summary.purgeFailed = preview.failures;
@@ -141,12 +140,12 @@ std::expected<Summary, UpdateError> run(const Options& options)
 
 	if (!options.staleReport)
 	{
-		const PurgeReport purge = runPurge(index->entries, options.config, /*dryRun*/ false, progress);
+		const PurgeReport purge = runPurge(index->entries, options.config, /*dryRun*/ false, ctx);
 		summary.purgeFiles = purge.removed.size();
 		summary.purgeBytes = purge.bytes;
 		summary.purgeFailed = purge.failures;
-		core::info("{} unlisted files removed, {}", purge.removed.size(),
-		           core::formatBytes(purge.bytes));
+		ctx.log(core::Level::Info, std::format(L"{} unlisted files removed, {}", purge.removed.size(),
+		                               core::widen(core::formatBytes(purge.bytes))));
 		if (purge.cancelled)
 		{
 			summary.cancelled = true;
@@ -154,14 +153,14 @@ std::expected<Summary, UpdateError> run(const Options& options)
 		}
 	}
 
-	core::info("checking {} against {}", core::narrow(branchName(options.config.branch)),
-	           options.config.root.string());
+	ctx.log(core::Level::Info, std::format(L"checking {} against {}", branchName(options.config.branch),
+	                               options.config.root.wstring()));
 	// the resolved gates, so a run lines up with tools/check_index.py by eye
-	core::info("lang={} steam={} eos={} dx12={} bulk={}",
-	           core::narrow(options.config.language), options.config.steam ? 1 : 0,
-	           options.config.eosSdk ? 1 : 0, options.config.dx12 ? 1 : 0,
-	           options.config.bulkDownload ? 1 : 0);
-	const Plan plan = buildPlan(entries, options.config, progress);
+	ctx.log(core::Level::Info, std::format(L"lang={} steam={} eos={} dx12={} bulk={}",
+	                               options.config.language, options.config.steam ? 1 : 0,
+	                               options.config.eosSdk ? 1 : 0, options.config.dx12 ? 1 : 0,
+	                               options.config.bulkDownload ? 1 : 0));
+	const Plan plan = buildPlan(entries, options.config, ctx);
 	summary.filtered = plan.filtered;
 	summary.skipped = plan.skipped;
 	summary.upToDate = plan.upToDate;
@@ -170,14 +169,10 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	summary.queued = plan.jobs.size();
 	summary.downloadBytes = plan.downloadBytes;
 
-	core::info("{} filtered, {} skipped, {} up to date, {} queued ({} to download)", plan.filtered,
-	           plan.skipped, plan.upToDate, plan.jobs.size(), core::formatBytes(plan.downloadBytes));
-	if (plan.bulkSkipped != 0)
-		core::info("{} cache files skipped: bulk download is off", plan.bulkSkipped);
-	if (progress != nullptr)
-		progress->onPlan(plan.jobs.size(), plan.downloadBytes);
+	ctx.progress->onPlan(plan.jobs.size(), plan.downloadBytes, plan.filtered, plan.skipped,
+	                     plan.upToDate, plan.bulkSkipped);
 
-	if (core::cancelled())
+	if (ctx.cancelled())
 	{
 		summary.cancelled = true;
 		return summary;
@@ -185,7 +180,7 @@ std::expected<Summary, UpdateError> run(const Options& options)
 
 	if (options.staleReport)
 	{
-		const StaleReport stale = findStale(entries, options.config, progress);
+		const StaleReport stale = findStale(entries, options.config, ctx);
 		summary.staleFiles = stale.files.size();
 		summary.staleBytes = stale.bytes;
 		summary.cancelled = summary.cancelled || stale.cancelled;
@@ -195,34 +190,31 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	if (options.dryRun)
 	{
 		for (const Job& job : plan.jobs)
-			core::info("  {} {} [{}] {}", core::narrow(describe(job.reason)),
-			           core::narrow(job.entry->installPath),
-			           core::narrow(describe(job.entry->category)),
-			           core::formatBytes(job.entry->wireSize));
+			ctx.log(core::Level::Info, std::format(L"  {} {} [{}] {}", describe(job.reason),
+			                               job.entry->installPath, describe(job.entry->category),
+			                               core::widen(core::formatBytes(job.entry->wireSize))));
 		return summary;
 	}
 
-	const auto content = openConnection(*session, contentHost(options.config.title,
-	                                                          options.config.branch,
-	                                                          options.config.forceHttps));
+	const auto content = openConnection(*session,
+	                                    contentHost(options.config.title, options.config.branch,
+	                                                options.config.forceHttps),
+	                                    ctx);
 	if (!content)
 		return std::unexpected(content.error());
 
 	std::size_t position = 0;
 	for (const Job& job : plan.jobs)
 	{
-		if (core::cancelled())
+		if (ctx.cancelled())
 		{
 			summary.cancelled = true;
 			break;
 		}
 		++position;
-		core::info("[{}/{}] {} ({})", position, plan.jobs.size(),
-		           core::narrow(job.entry->installPath), core::formatBytes(job.entry->wireSize));
-		if (progress != nullptr)
-			progress->onEntryStart(position, plan.jobs.size(), job.entry->installPath,
-			                       job.entry->wireSize);
-		const auto applied = applyEntry(*content, *job.entry, options.config, progress);
+		ctx.progress->onEntryStart(position, plan.jobs.size(), job.entry->installPath,
+		                           job.entry->wireSize);
+		const auto applied = applyEntry(*content, *job.entry, options.config, ctx);
 		if (!applied)
 		{
 			if (applied.error() == ApplyError::Cancelled)
@@ -231,10 +223,7 @@ std::expected<Summary, UpdateError> run(const Options& options)
 				break;
 			}
 			++summary.failed;
-			core::error("{}: {}", core::narrow(job.entry->installPath),
-			            core::narrow(describe(applied.error())));
-			if (progress != nullptr)
-				progress->onEntryFailed(job.entry->installPath, describe(applied.error()));
+			ctx.progress->onEntryFailed(job.entry->installPath, describe(applied.error()));
 			continue;
 		}
 		++summary.updated;

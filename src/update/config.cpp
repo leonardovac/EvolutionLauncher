@@ -3,6 +3,7 @@
 #include "core/log.h"
 #include "core/str.h"
 
+#include <format>
 #include <windows.h>
 
 #include <algorithm>
@@ -232,7 +233,7 @@ void LauncherConfig::setSideload(std::wstring_view title, bool value)
 	sideload_[core::lower(title)] = value;
 }
 
-LauncherConfig LauncherConfig::load()
+LauncherConfig LauncherConfig::load(const RunContext& ctx)
 {
 	LauncherConfig config;
 	for (const std::wstring_view path : excludeDefaults)
@@ -275,15 +276,16 @@ LauncherConfig LauncherConfig::load()
 			}
 			config.save();
 		}
-		core::info("config: {} exclude, {} protect, {} patched", config.exclude_.size(),
-		           config.protect_.size(), config.patched_.size());
+		ctx.log(core::Level::Info, std::format(L"config: {} exclude, {} protect, {} patched",
+		                               config.exclude_.size(), config.protect_.size(),
+		                               config.patched_.size()));
 		return config;
 	}
 
 	Scanner scan{bytes};
 	if (!scan.consume('{'))
 	{
-		core::warn("launcher.json: expected an object; using defaults");
+		ctx.log(core::Level::Warn, L"launcher.json: expected an object; using defaults");
 		return config;
 	}
 	while (!scan.peek('}'))
@@ -319,7 +321,8 @@ LauncherConfig LauncherConfig::load()
 			}
 			else
 			{
-				core::warn("launcher.json: \"{}\" is not an array; ignoring", key);
+				ctx.log(core::Level::Warn, std::format(L"launcher.json: \"{}\" is not an array; ignoring",
+			                               core::widen(key)));
 				scan.skipValue();
 			}
 		}
@@ -329,7 +332,8 @@ LauncherConfig LauncherConfig::load()
 				config.allowNetworkCaches_ = *value;
 			else
 			{
-				core::warn("launcher.json: \"allowNetworkCaches\" is not a boolean; ignoring");
+				ctx.log(core::Level::Warn,
+			        L"launcher.json: \"allowNetworkCaches\" is not a boolean; ignoring");
 				scan.skipValue();
 			}
 		}
@@ -339,7 +343,7 @@ LauncherConfig LauncherConfig::load()
 				config.lastTitle_ = core::widen(*value);
 			else
 			{
-				core::warn("launcher.json: \"lastTitle\" is not a string; ignoring");
+				ctx.log(core::Level::Warn, L"launcher.json: \"lastTitle\" is not a string; ignoring");
 				scan.skipValue();
 			}
 		}
@@ -363,7 +367,7 @@ LauncherConfig LauncherConfig::load()
 			}
 			else
 			{
-				core::warn("launcher.json: \"sideload\" is not an object; ignoring");
+				ctx.log(core::Level::Warn, L"launcher.json: \"sideload\" is not an object; ignoring");
 				scan.skipValue();
 			}
 		}
@@ -409,7 +413,10 @@ LauncherConfig LauncherConfig::load()
 						config.patched_[normalise(core::widen(*pathOpt))] =
 							PatchRecord{source, result};
 					else
-						core::warn("launcher.json: patched entry for \"{}\" missing source or result", *pathOpt);
+						ctx.log(core::Level::Warn,
+				        std::format(L"launcher.json: patched entry for \"{}\" missing source or "
+				                    L"result",
+				                    core::widen(*pathOpt)));
 					if (!scan.consume(','))
 						break;
 				}
@@ -417,7 +424,7 @@ LauncherConfig LauncherConfig::load()
 			}
 			else
 			{
-				core::warn("launcher.json: \"patched\" is not an object; ignoring");
+				ctx.log(core::Level::Warn, L"launcher.json: \"patched\" is not an object; ignoring");
 				scan.skipValue();
 			}
 		}
@@ -429,8 +436,9 @@ LauncherConfig LauncherConfig::load()
 			break;
 	}
 
-	core::info("config: {} exclude, {} protect, {} patched", config.exclude_.size(),
-	           config.protect_.size(), config.patched_.size());
+	ctx.log(core::Level::Info, std::format(L"config: {} exclude, {} protect, {} patched",
+	                               config.exclude_.size(), config.protect_.size(),
+	                               config.patched_.size()));
 	return config;
 }
 

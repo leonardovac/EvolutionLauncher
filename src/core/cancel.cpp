@@ -4,25 +4,26 @@
 
 #include <windows.h>
 
-#include <atomic>
-
 namespace core
 {
 namespace
 {
 
-std::atomic<bool> stopping{false};
+CancelToken* installed = nullptr;
 
 BOOL WINAPI onConsoleEvent(DWORD type)
 {
 	constexpr DWORD handled[] = {CTRL_C_EVENT, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT};
 	for (const DWORD event : handled)
 	{
-		if (event != type)
+		if (event != type || installed == nullptr)
 			continue;
 		// returning TRUE keeps the process alive so the current entry can unwind
-		if (!stopping.exchange(true))
+		if (!installed->requested())
+		{
+			installed->request();
 			write(Level::Warn, "cancelling, finishing the current file");
+		}
 		return TRUE;
 	}
 	return FALSE;
@@ -30,24 +31,10 @@ BOOL WINAPI onConsoleEvent(DWORD type)
 
 }
 
-void installCancelHandler()
+void installCancelHandler(CancelToken& token)
 {
+	installed = &token;
 	::SetConsoleCtrlHandler(onConsoleEvent, TRUE);
-}
-
-bool cancelled() noexcept
-{
-	return stopping.load(std::memory_order_relaxed);
-}
-
-void requestCancel() noexcept
-{
-	stopping.store(true, std::memory_order_relaxed);
-}
-
-void resetCancel() noexcept
-{
-	stopping.store(false, std::memory_order_relaxed);
 }
 
 }

@@ -23,6 +23,6 @@ struct PurgeReport
 
 // deletes unlisted files only inside index-populated non-root dirs, never a kept path
 PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool dryRun,
-                     Progress* progress = nullptr);
+                     const RunContext& ctx);
 
 }

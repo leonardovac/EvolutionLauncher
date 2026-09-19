@@ -4,6 +4,7 @@
 #include "core/log.h"
 #include "core/str.h"
 
+#include <format>
 #include <algorithm>
 #include <string>
 #include <system_error>
@@ -25,7 +26,7 @@ std::wstring normalise(std::wstring_view path)
 
 }
 
-StaleReport findStale(std::span<const Entry> entries, const Config& config, Progress* progress)
+StaleReport findStale(std::span<const Entry> entries, const Config& config, const RunContext& ctx)
 {
 	StaleReport report;
 	if (config.root.empty())
@@ -41,7 +42,8 @@ StaleReport findStale(std::span<const Entry> entries, const Config& config, Prog
 		config.root, std::filesystem::directory_options::skip_permission_denied, ec);
 	if (ec)
 	{
-		core::warn("could not walk {}: {}", config.root.string(), ec.message());
+		ctx.log(core::Level::Warn, std::format(L"could not walk {}: {}", config.root.wstring(),
+		                              core::widen(ec.message())));
 		return report;
 	}
 
@@ -50,11 +52,11 @@ StaleReport findStale(std::span<const Entry> entries, const Config& config, Prog
 	{
 		if (ec)
 		{
-			core::warn("walk error: {}", ec.message());
+			ctx.log(core::Level::Warn, std::format(L"walk error: {}", core::widen(ec.message())));
 			ec.clear();
 			continue;
 		}
-		if (core::cancelled())
+		if (ctx.cancelled())
 		{
 			report.cancelled = true;
 			break;
@@ -75,8 +77,7 @@ StaleReport findStale(std::span<const Entry> entries, const Config& config, Prog
 		ec.clear();
 		report.files.push_back(relative);
 		report.bytes += bytes;
-		if (progress != nullptr)
-			progress->onStale(relative.wstring(), bytes);
+		ctx.progress->onStale(relative.wstring(), bytes);
 	}
 	return report;
 }

@@ -7,6 +7,7 @@
 #include "update/lzma.h"
 #include "update/md5.h"
 
+#include <format>
 #include <windows.h>
 
 #include <optional>
@@ -22,7 +23,7 @@ constexpr int attempts = 3;
 }
 
 std::expected<ApplyResult, ApplyError> applyEntry(const Connection& content, const Entry& entry,
-                                                  const Config& config, Progress* progress)
+                                                  const Config& config, const RunContext& ctx)
 {
 	const std::filesystem::path destination = config.root / entry.installPath;
 	std::error_code ec;
@@ -59,11 +60,10 @@ std::expected<ApplyResult, ApplyError> applyEntry(const Connection& content, con
 
 	const auto sink = [&](std::span<const std::uint8_t> bytes)
 	{
-		if (core::cancelled())
+		if (ctx.cancelled())
 			return false;
 		received += bytes.size();
-		if (progress != nullptr)
-			progress->onBytes(bytes.size());
+		ctx.progress->onBytes(bytes.size());
 		if (entry.compression == Compression::Bulk)
 			return emit(bytes);
 		const auto pushed = lzma.push(bytes, emit);
@@ -89,7 +89,7 @@ std::expected<ApplyResult, ApplyError> applyEntry(const Connection& content, con
 		const auto fetched = content.fetch(entry.urlPath, received, sink);
 		if (fetched)
 			break;
-		if (core::cancelled())
+		if (ctx.cancelled())
 			return fail(ApplyError::Cancelled);
 		if (lzmaFailure)
 			return fail(ApplyError::Lzma);
@@ -97,8 +97,8 @@ std::expected<ApplyResult, ApplyError> applyEntry(const Connection& content, con
 			return fail(ApplyError::Write);
 		if (permanent(fetched.error()) || attempt + 1 >= attempts)
 			return fail(ApplyError::Http);
-		core::debug("retrying {} at {} ({})", core::narrow(entry.installPath), received,
-		            core::narrow(describe(fetched.error())));
+		ctx.log(core::Level::Debug, std::format(L"retrying {} at {} ({})", entry.installPath, received,
+		                               describe(fetched.error())));
 	}
 
 	if (received != entry.wireSize)

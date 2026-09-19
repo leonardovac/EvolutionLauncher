@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/cancel.h"
+
 #include "app/jobphase.h"
 #include "update/plan.h"
 
@@ -55,6 +57,7 @@ private:
     void reset(bool verify, bool stale, bool apply);
 
     std::thread thread_;
+    core::CancelToken cancel_;
     std::atomic<bool> running_{false};
     std::atomic<wf::Title> title_{wf::Title::Warframe};
     std::atomic<JobPhase> phase_{JobPhase::Idle};

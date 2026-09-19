@@ -1,5 +1,7 @@
 #pragma once
 
+#include "update/progress.h"
+
 #include "update/md5.h"
 
 #include <filesystem>
@@ -23,7 +25,7 @@ struct PatchRecord
 class LauncherConfig
 {
 public:
-	static LauncherConfig load();
+	static LauncherConfig load(const RunContext& ctx = {});
 	bool save() const;
 
 	bool isExcluded(std::wstring_view installPath) const;

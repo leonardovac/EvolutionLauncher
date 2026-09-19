@@ -74,7 +74,7 @@ struct Plan
 	std::size_t bulkSkipped = 0;   // part of filtered, not beside it
 };
 
-Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* progress = nullptr);
+Plan buildPlan(std::span<const Entry> entries, const Config& config, const RunContext& ctx);
 
 std::wstring_view describe(Reason reason);
 

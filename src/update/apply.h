@@ -31,7 +31,7 @@ struct ApplyResult
 };
 
 std::expected<ApplyResult, ApplyError> applyEntry(const Connection& content, const Entry& entry,
-                                                  const Config& config, Progress* progress = nullptr);
+                                                  const Config& config, const RunContext& ctx);
 
 std::wstring_view describe(ApplyError error);
 

@@ -33,7 +33,8 @@ public:
         hashed_.store(hashedBytes, std::memory_order_relaxed);
     }
 
-    void onPlan(std::size_t queued, std::uint64_t downloadBytes) override
+    void onPlan(std::size_t queued, std::uint64_t downloadBytes, std::size_t, std::size_t,
+                std::size_t, std::size_t) override
     {
         count_.store(queued, std::memory_order_relaxed);
         total_.store(downloadBytes, std::memory_order_relaxed);
@@ -53,6 +54,13 @@ public:
     void onBytes(std::uint64_t bytes) override
     {
         downloaded_.fetch_add(bytes, std::memory_order_relaxed);
+    }
+
+    // the window has nowhere to show a running log, so only the levels worth a trace survive
+    void onLog(core::Level level, std::wstring_view message) override
+    {
+        if (level != core::Level::Debug)
+            core::write(level, core::narrow(message));
     }
 
 private:
@@ -91,7 +99,7 @@ void UpdateJob::setTitle(wf::Title title)
 void UpdateJob::cancel()
 {
     if (running_.load(std::memory_order_acquire))
-        core::requestCancel();
+        cancel_.request();
 }
 
 void UpdateJob::join()
@@ -105,7 +113,7 @@ void UpdateJob::reset(bool verify, bool stale, bool apply)
     cancel();
     join();
     // must follow join, or a worker still unwinding sees the flag clear and runs on
-    core::resetCancel();
+    cancel_.reset();
     thread_ = std::thread();
     verify_.store(verify, std::memory_order_relaxed);
     stale_.store(stale, std::memory_order_relaxed);
@@ -186,7 +194,8 @@ void UpdateJob::work()
     options.staleReport = stale_.load(std::memory_order_relaxed);
     // a check builds the plan and stops; only an apply writes files
     options.dryRun = !apply && !options.staleReport;
-    options.progress = &bridge;
+    options.ctx.progress = &bridge;
+    options.ctx.cancel = &cancel_;
 
     const auto summary = wf::run(options);
 

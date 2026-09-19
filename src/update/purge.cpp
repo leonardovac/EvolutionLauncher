@@ -4,6 +4,7 @@
 #include "core/log.h"
 #include "core/str.h"
 
+#include <format>
 #include <algorithm>
 #include <array>
 #include <string>
@@ -53,7 +54,7 @@ bool purgeable(std::wstring_view key)
 }
 
 PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool dryRun,
-                     Progress* progress)
+                     const RunContext& ctx)
 {
 	PurgeReport report;
 	if (config.root.empty())
@@ -77,7 +78,8 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 		config.root, std::filesystem::directory_options::skip_permission_denied, ec);
 	if (ec)
 	{
-		core::warn("could not walk {}: {}", config.root.string(), ec.message());
+		ctx.log(core::Level::Warn, std::format(L"could not walk {}: {}", config.root.wstring(),
+		                              core::widen(ec.message())));
 		return report;
 	}
 
@@ -86,11 +88,11 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 	{
 		if (ec)
 		{
-			core::warn("walk error: {}", ec.message());
+			ctx.log(core::Level::Warn, std::format(L"walk error: {}", core::widen(ec.message())));
 			ec.clear();
 			continue;
 		}
-		if (core::cancelled())
+		if (ctx.cancelled())
 		{
 			report.cancelled = true;
 			break;
@@ -120,30 +122,29 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 		{
 			report.wouldRemove.push_back(relative);
 			report.bytes += bytes;
-			if (progress != nullptr)
-				progress->onStale(relative.wstring(), bytes);
+			ctx.progress->onStale(relative.wstring(), bytes);
 			continue;
 		}
 
 		std::filesystem::remove(it->path(), ec);
 		if (ec)
 		{
-			core::warn("could not remove {}: {}", core::narrow(key), ec.message());
+			ctx.log(core::Level::Warn, std::format(L"could not remove {}: {}", key,
+		                              core::widen(ec.message())));
 			++report.failures;
 			ec.clear();
 			continue;
 		}
-		core::info("removed unlisted {}", core::narrow(key));
+		ctx.log(core::Level::Info, std::format(L"removed unlisted {}", key));
 		report.removed.push_back(relative);
 		report.bytes += bytes;
-		if (progress != nullptr)
-			progress->onStale(relative.wstring(), bytes);
+		ctx.progress->onStale(relative.wstring(), bytes);
 	}
 
 	// a skipped path is one the user does not want fetched, so it does not stay here either
 	for (const std::wstring& skip : config.launcher.excludedPaths())
 	{
-		if (core::cancelled())
+		if (ctx.cancelled())
 		{
 			report.cancelled = true;
 			break;
@@ -167,24 +168,23 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 		{
 			report.wouldRemove.push_back(skip);
 			report.bytes += bytes;
-			if (progress != nullptr)
-				progress->onStale(skip, bytes);
+			ctx.progress->onStale(skip, bytes);
 			continue;
 		}
 
 		std::filesystem::remove(target, ec);
 		if (ec)
 		{
-			core::warn("could not remove {}: {}", core::narrow(skip), ec.message());
+			ctx.log(core::Level::Warn, std::format(L"could not remove {}: {}", skip,
+		                              core::widen(ec.message())));
 			++report.failures;
 			ec.clear();
 			continue;
 		}
-		core::info("removed excluded {}", core::narrow(skip));
+		ctx.log(core::Level::Info, std::format(L"removed excluded {}", skip));
 		report.removed.push_back(skip);
 		report.bytes += bytes;
-		if (progress != nullptr)
-			progress->onStale(skip, bytes);
+		ctx.progress->onStale(skip, bytes);
 	}
 	return report;
 }

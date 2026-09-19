@@ -5,6 +5,7 @@
 #include "core/str.h"
 #include "update/md5.h"
 
+#include <format>
 #include <algorithm>
 #include <array>
 #include <ranges>
@@ -138,7 +139,7 @@ bool appliesToClient(const Entry& entry, const Config& config)
 	return appliesIgnoringBulk(entry, config);
 }
 
-Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* progress)
+Plan buildPlan(std::span<const Entry> entries, const Config& config, const RunContext& ctx)
 {
 	Plan plan;
 	std::unordered_map<std::wstring, const Entry*> byPath;
@@ -161,7 +162,7 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 		if (config.launcher.isExcluded(entry.installPath))
 		{
 			++plan.skipped;
-			core::debug("skipping {}", core::narrow(entry.installPath));
+			ctx.log(core::Level::Debug, std::format(L"skipping {}", entry.installPath));
 			continue;
 		}
 		applicable.push_back(&entry);
@@ -173,11 +174,10 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 	std::size_t checked = 0;
 	for (const Entry* entry : applicable)
 	{
-		if (core::cancelled())
+		if (ctx.cancelled())
 			break;
 		++checked;
-		if (progress != nullptr)
-			progress->onChecking(checked, applicable.size(), hashedBytes);
+		ctx.progress->onChecking(checked, applicable.size(), hashedBytes);
 
 		const std::filesystem::path destination = config.root / entry->installPath;
 		std::error_code ec;
@@ -200,8 +200,9 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 		if (hashedBytes - reported >= progressStride)
 		{
 			reported = hashedBytes;
-			core::info("checked {}/{}, hashed {}", checked, applicable.size(),
-			           core::formatBytes(hashedBytes));
+			ctx.log(core::Level::Info, std::format(L"checked {}/{}, hashed {}", checked,
+			                              applicable.size(),
+			                              core::widen(core::formatBytes(hashedBytes))));
 		}
 
 		if (digest && *digest == entry->hash)
@@ -218,8 +219,8 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			continue;
 		}
 		if (!digest)
-			core::warn("could not read {} (0x{:08X})", core::narrow(entry->installPath),
-			           digest.error());
+			ctx.log(core::Level::Warn, std::format(L"could not read {} (0x{:08X})", entry->installPath,
+			                              digest.error()));
 		plan.jobs.push_back({entry, Reason::HashMismatch});
 		queued.insert(key(entry->installPath));
 	}
@@ -235,9 +236,11 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 		const auto count = static_cast<std::size_t>(std::ranges::distance(dropped));
 		if (count != 0)
 		{
-			core::warn("{} cache files differ from the index: that is what defragmenting does, "
-			           "and re-fetching them would only undo it, so they are left alone",
-			           count);
+			ctx.log(core::Level::Warn,
+			        std::format(L"{} cache files differ from the index: that is what "
+			                    L"defragmenting does, and re-fetching them would only undo it, "
+			                    L"so they are left alone",
+			                    count));
 			plan.cacheDiffers = count;
 			for (const Job& job : dropped)
 				queued.erase(key(job.entry->installPath));

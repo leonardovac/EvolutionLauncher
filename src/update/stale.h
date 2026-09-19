@@ -21,6 +21,6 @@ struct StaleReport
 
 // files under the branch root that the index does not name; nothing is ever removed
 StaleReport findStale(std::span<const Entry> entries, const Config& config,
-                      Progress* progress = nullptr);
+                      const RunContext& ctx);
 
 }
