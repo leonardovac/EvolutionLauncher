@@ -24,7 +24,7 @@ enum class LaunchError
 // -registry:<tag> as this process was started with it; the game takes it as -clienttype
 std::optional<std::wstring> registryTag();
 
-std::wstring_view gameExeName(wf::Branch branch);
+std::wstring_view gameExeName(wf::Title title);
 
 std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch,
                                   const std::filesystem::path& root);

@@ -358,7 +358,7 @@ int run(const Options& options)
         {
             if (const auto folder = pickFolder(window.handle()))
             {
-                if (settings.adoptInstallRoot(wf::Branch::Public, *folder))
+                if (settings.adoptInstallRoot(*folder))
                 {
                     launchFailure.clear();
                     job.restart();

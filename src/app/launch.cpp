@@ -1,5 +1,6 @@
 #include "app/launch.h"
 
+#include "app/titles.h"
 #include "core/log.h"
 #include "core/str.h"
 #include "core/win.h"
@@ -66,16 +67,9 @@ std::expected<void, LaunchError> spawn(std::wstring& line)
 
 }
 
-std::wstring_view gameExeName(wf::Branch branch)
+std::wstring_view gameExeName(wf::Title title)
 {
-    switch (branch)
-    {
-    case wf::Branch::Public:
-    case wf::Branch::Test:
-    case wf::Branch::Dev:
-        break;
-    }
-    return L"Warframe.x64.exe";
+    return profile(title).exeName;
 }
 
 std::optional<std::wstring> registryTag()
@@ -102,7 +96,7 @@ std::wstring buildGameCommandLine(const Settings& settings, wf::Branch branch,
     if (root.empty())
         return {};
 
-    const std::filesystem::path exe = root / gameExeName(branch);
+    const std::filesystem::path exe = root / gameExeName(settings.title);
 
     std::wstring line = std::format(
         L"\"{}\" -windowMode:{} -shaderCache:{} -graphicsDriver:{} -gpuPreference:{}",
@@ -126,7 +120,7 @@ bool gameInstalled(const Settings& settings, wf::Branch branch)
     if (root.empty())
         return false;
     std::error_code ec;
-    return std::filesystem::exists(root / gameExeName(branch), ec);
+    return std::filesystem::exists(root / gameExeName(settings.title), ec);
 }
 
 std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch branch)
@@ -136,7 +130,7 @@ std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch
     if (line.empty())
         return std::unexpected(LaunchError::NoRoot);
 
-    const std::filesystem::path exe = root / gameExeName(branch);
+    const std::filesystem::path exe = root / gameExeName(settings.title);
     std::error_code ec;
     if (!std::filesystem::exists(exe, ec))
         return std::unexpected(LaunchError::NoExecutable);
@@ -161,7 +155,7 @@ std::expected<std::wstring, LaunchError> buildDefragCommandLine(const Settings& 
         return std::unexpected(LaunchError::NoRoot);
 
     std::error_code ec;
-    if (!std::filesystem::exists(root / gameExeName(branch), ec))
+    if (!std::filesystem::exists(root / gameExeName(settings.title), ec))
         return std::unexpected(LaunchError::NoExecutable);
 
     std::error_code planEc;

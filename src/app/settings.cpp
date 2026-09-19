@@ -141,10 +141,10 @@ bool Settings::save(const Settings* baseline) const
     return ok;
 }
 
-bool Settings::adoptInstallRoot(wf::Branch branch, const std::filesystem::path& folder)
+bool Settings::adoptInstallRoot(const std::filesystem::path& folder)
 {
     std::error_code ec;
-    if (folder.empty() || !std::filesystem::exists(folder / gameExeName(branch), ec))
+    if (folder.empty() || !std::filesystem::exists(folder / gameExeName(title), ec))
         return false;
     // the key names the stock launcher, and installRoot() reads the root back off its path
     const std::filesystem::path exe = folder / L"Tools" / L"Launcher.exe";

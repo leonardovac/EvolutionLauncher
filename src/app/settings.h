@@ -46,8 +46,8 @@ struct Settings
     static Settings load(wf::Title title, const wf::LauncherConfig& launcher);
     bool save(const Settings* baseline = nullptr) const;
 
-    // takes the folder only when the branch's game exe is in it; corrects a failed detection
-    bool adoptInstallRoot(wf::Branch branch, const std::filesystem::path& folder);
+    // takes the folder only when the title's game exe is in it; corrects a failed detection
+    bool adoptInstallRoot(const std::filesystem::path& folder);
 
     [[nodiscard]] std::filesystem::path installRoot(wf::Branch branch) const;
     [[nodiscard]] bool steam() const;

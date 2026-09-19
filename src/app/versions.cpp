@@ -81,7 +81,7 @@ std::optional<std::wstring> gameBuildVersion(const Settings& settings, wf::Branc
     const std::filesystem::path root = settings.installRoot(branch);
     if (root.empty())
         return std::nullopt;
-    return fileVersion(root / gameExeName(branch));
+    return fileVersion(root / gameExeName(settings.title));
 }
 
 }
