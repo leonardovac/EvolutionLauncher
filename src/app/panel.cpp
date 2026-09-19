@@ -33,18 +33,6 @@ constexpr std::array<TabEntry, 3> tabEntries{
      {PanelTab::Maintenance, "panel.tab.maintenance", "MAINTENANCE"},
      {PanelTab::Launcher, "panel.tab.launcher", "LAUNCHER"}}};
 
-float trackedWidth(std::string_view str, float tracking)
-{
-    const float width = ui::fonts().caption.measure(str);
-    int count = 0;
-    for (std::size_t i = 0; i < str.size();)
-    {
-        gfx::Font::decode(str, i);
-        ++count;
-    }
-    return count > 1 ? width + tracking * static_cast<float>(count - 1) : width;
-}
-
 bool button(std::string_view id, const core::Rect& box, std::string_view label, ui::AlignH align)
 {
     const std::uint32_t widget = ui::id(id);
@@ -105,7 +93,8 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
     float tabX = panel.x + inset;
     for (const TabEntry& entry : tabEntries)
     {
-        const float tabW = trackedWidth(entry.label, tabTracking) + ui::px(14.f) * 2.f;
+        const float tabW =
+            trackedWidth(ui::fonts().caption, entry.label, tabTracking) + ui::px(14.f) * 2.f;
         const core::Rect box(tabX, stripY, tabW, ui::px(26.f));
         const std::uint32_t widget = ui::id(entry.id);
         const bool hot = ui::hovered(widget, box);

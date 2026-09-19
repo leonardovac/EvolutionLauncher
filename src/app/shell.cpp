@@ -55,12 +55,6 @@ core::Rect captionHoverBox(const core::Rect& box)
     return core::Rect(box.center().x - width * 0.5f, box.center().y - height * 0.5f, width, height);
 }
 
-float navWidth(std::string_view label, float tracking)
-{
-    return ui::fonts().caption.measure(label) +
-           tracking * static_cast<float>(label.size() > 0 ? label.size() - 1 : 0);
-}
-
 // wide enough for "Chinese (Traditional)", the longest entry, at the caption font
 float languageListWidth()
 {
@@ -143,7 +137,8 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     }
     for (const NavEntry& entry : state.nav)
     {
-        const float entryW = navWidth(entry.label, navTracking) + ui::px(shellNavPad) * 2.f;
+        const float entryW = trackedWidth(ui::fonts().caption, entry.label, navTracking)
+                           + ui::px(shellNavPad) * 2.f;
         const Rect box(navX, headerY, entryW, ui::px(shellRowHeight));
         const std::uint32_t navId = ui::id(entry.id);
         const bool navHot = ui::hovered(navId, box);
@@ -261,7 +256,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     {
         const std::string_view secondaryText = state.secondaryLabel;
         const float secondaryTracking = ui::px(1.f);
-        const float textW = navWidth(secondaryText, secondaryTracking);
+        const float textW = trackedWidth(ui::fonts().caption, secondaryText, secondaryTracking);
         // the hit box hugs the text: a button-wide one lights the underline with nothing under it
         const Rect secondary(start.center().x - textW * 0.5f - ui::px(8.f),
                              start.b() + ui::px(6.f), textW + ui::px(16.f), ui::px(16.f));

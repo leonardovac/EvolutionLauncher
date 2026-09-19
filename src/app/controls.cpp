@@ -11,19 +11,6 @@ namespace app
 namespace
 {
 
-// ui::text applies tracking between glyphs but Font::measure does not
-float trackedWidth(std::string_view str, float tracking)
-{
-    float width = ui::fonts().caption.measure(str);
-    int count = 0;
-    for (std::size_t i = 0; i < str.size();)
-    {
-        gfx::Font::decode(str, i);
-        ++count;
-    }
-    return count > 1 ? width + tracking * static_cast<float>(count - 1) : width;
-}
-
 // ui::chevron points right; a field needs one that points at the list it opens
 void fieldChevron(const core::Vec2& center, float half, float openT, const core::Col& col)
 {
@@ -45,6 +32,17 @@ float openSlide = 0.f;
 // set by tooltip(), consumed by tooltipOverlay() in the same frame
 std::string_view hintText;
 
+}
+
+float trackedWidth(gfx::Font& font, std::string_view text, float tracking)
+{
+    int glyphs = 0;
+    for (std::size_t i = 0; i < text.size();)
+    {
+        gfx::Font::decode(text, i);
+        ++glyphs;
+    }
+    return font.measure(text) + tracking * static_cast<float>(glyphs > 1 ? glyphs - 1 : 0);
 }
 
 bool checkbox(std::string_view id, const core::Rect& row, std::string_view label, bool& value)
@@ -125,7 +123,7 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
         const float lead = ui::px(13.f);
         const float gap = ui::px(7.f);
         const float chevW = ui::px(9.f);
-        const float textW = trackedWidth(valueText, tracking);
+        const float textW = trackedWidth(ui::fonts().caption, valueText, tracking);
         const float groupX = field.x + (field.w - (lead + gap + textW + gap + chevW)) * 0.5f;
         if (outLead != nullptr)
             *outLead = core::Rect(groupX, field.y, lead, field.h);

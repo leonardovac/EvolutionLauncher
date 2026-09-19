@@ -1,12 +1,16 @@
 #pragma once
 
 #include "core/types.h"
+#include "gfx/font.h"
 
 #include <span>
 #include <string_view>
 
 namespace app
 {
+
+// Font::measure is untracked, so the gaps between glyphs have to be added back
+float trackedWidth(gfx::Font& font, std::string_view text, float tracking);
 
 enum class DropdownGroup
 {
