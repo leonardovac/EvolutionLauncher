@@ -281,16 +281,21 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         }
     }
 
-    const float textW = start.x - bottom.x - ui::px(24.f);
+    // the leaf is a fixture of the status area, so it holds its place across every phase
+    const float statusX = state.leaf != nullptr ? bottom.x + leafW + ui::px(shellLeafGap)
+                                                : bottom.x;
+    const float textW = start.x - statusX - ui::px(24.f);
     // the track itself sits on the PLAY button's axis; the label and detail flank it
     const float axis = start.center().y;
+    if (state.leaf != nullptr)
+        ornament(state.leaf, Rect(bottom.x, axis - leafH * 0.5f, leafW, leafH), false);
     constexpr std::array sweepPhases{JobPhase::Idle, JobPhase::Checking};
     constexpr std::array barPhases{JobPhase::Idle, JobPhase::Checking, JobPhase::Updating};
     const bool showBar = std::ranges::contains(barPhases, state.phase);
     if (showBar)
     {
-        const Rect track(bottom.x, axis - ui::px(1.5f), textW, ui::px(3.f));
-        const Rect label(bottom.x, track.y - ui::px(24.f), textW, ui::px(16.f));
+        const Rect track(statusX, axis - ui::px(1.5f), textW, ui::px(3.f));
+        const Rect label(statusX, track.y - ui::px(24.f), textW, ui::px(16.f));
         ui::text(ui::fonts().body, label, state.statusLine, ui::theme().text, ui::AlignH::Left,
                  ui::AlignV::Middle, ui::px(1.2f));
         ui::dl().rect(track, Col::hex(0x000000, 0.45f), track.h * 0.5f);
@@ -309,7 +314,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         }
         if (!state.detailLine.empty())
         {
-            const Rect detail(bottom.x, track.b() + ui::px(8.f), textW, ui::px(14.f));
+            const Rect detail(statusX, track.b() + ui::px(8.f), textW, ui::px(14.f));
             ui::text(ui::fonts().caption, detail, state.detailLine, ui::theme().subtext,
                      ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
         }
@@ -317,13 +322,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     else
     {
         const Col line = state.phase == JobPhase::Failed ? ui::theme().fail : ui::theme().subtext;
-        float labelX = bottom.x;
-        if (state.leaf != nullptr)
-        {
-            ornament(state.leaf, Rect(labelX, axis - leafH * 0.5f, leafW, leafH), false);
-            labelX += leafW + ui::px(shellLeafGap);
-        }
-        const Rect label(labelX, axis - ui::px(8.f), textW - (labelX - bottom.x), ui::px(16.f));
+        const Rect label(statusX, axis - ui::px(8.f), textW, ui::px(16.f));
         constexpr std::array labelPhases{JobPhase::Ready, JobPhase::UpdateReady};
         const std::string_view text = std::ranges::contains(labelPhases, state.phase)
             ? state.buildLabel
