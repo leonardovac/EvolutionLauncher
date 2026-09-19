@@ -11,6 +11,7 @@ inline constexpr float shellNavPad = 16.f;
 inline constexpr float shellNavGap = 8.f;
 inline constexpr float shellLeafWidth = 29.f;
 inline constexpr float shellLeafGap = 10.f;
+inline constexpr float shellEndCapWidth = 23.f;
 inline constexpr float shellRowHeight = 26.f;
 inline constexpr float shellGlyphSize = 22.f;
 inline constexpr float shellMinimiseGap = 30.f;

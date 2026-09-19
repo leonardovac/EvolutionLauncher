@@ -21,6 +21,7 @@ struct ShellState
     std::span<const NavEntry> nav;
     // null when the selected title has no ornament
     gfx::Image* leaf = nullptr;
+    gfx::Image* endCap = nullptr;
     int languageIndex = 0;
     float progress = 0.f;
     std::string_view startLabel = "PLAY";

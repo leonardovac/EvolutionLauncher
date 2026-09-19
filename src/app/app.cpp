@@ -90,6 +90,7 @@ int run(const Options& options)
     std::array<gfx::Image, 2> heroes;
     std::array<gfx::Image, 2> icons;
     std::array<gfx::Image, 2> leaves;
+    std::array<gfx::Image, 2> endCaps;
     const auto loadArt = [&device](int id, gfx::Image& out) {
         if (const auto bytes = resource(id); !bytes.empty())
         {
@@ -107,6 +108,8 @@ int run(const Options& options)
         loadArt(entry.iconResource, icons[i]);
         if (entry.leafResource != 0)
             loadArt(entry.leafResource, leaves[i]);
+        if (entry.endCapResource != 0)
+            loadArt(entry.endCapResource, endCaps[i]);
         railTitles[i] = RailTitle{entry.railId, entry.label, &icons[i], &heroes[i]};
     }
     int selectedTitle = 0;
@@ -222,6 +225,8 @@ int run(const Options& options)
         shell.nav = titleProfiles()[static_cast<std::size_t>(selectedTitle)].nav;
         gfx::Image& leafArt = leaves[static_cast<std::size_t>(selectedTitle)];
         shell.leaf = leafArt.valid() ? &leafArt : nullptr;
+        gfx::Image& capArt = endCaps[static_cast<std::size_t>(selectedTitle)];
+        shell.endCap = capArt.valid() ? &capArt : nullptr;
         const bool updatePending = snap.phase == JobPhase::UpdateReady;
         const bool installed = gameInstalled(settings, wf::Branch::Public);
         shell.startLabel = updatePending
@@ -595,6 +600,8 @@ int run(const Options& options)
     for (gfx::Image& image : icons)
         image = gfx::Image{};
     for (gfx::Image& image : leaves)
+        image = gfx::Image{};
+    for (gfx::Image& image : endCaps)
         image = gfx::Image{};
     destroyIcons();
     ui::shutdown();

@@ -233,9 +233,26 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     startClicked = state.startEnabled && startHit && !state.panelVisible;
     const bool hot = state.startEnabled && ui::hovered(startId, start);
     const float startT = ui::anim(startId, 0, hot ? 1.f : 0.f, 14.f);
-    if (startT > 0.01f)
-        hexFill(start, accent().alpha(0.14f * startT));
-    hexFrame(start, ui::px(1.f), startCol.alpha(0.8f + 0.2f * startT));
+    if (state.endCap != nullptr)
+    {
+        const float capW = ui::px(shellEndCapWidth);
+        const float capH = capW * 220.f / 184.f;
+        const float capY = start.center().y - capH * 0.5f;
+        const Rect rule(start.x + capW, start.y, start.w - capW * 2.f, start.h);
+        const Col edge = startCol.alpha(0.8f + 0.2f * startT);
+        if (startT > 0.01f)
+            ui::dl().rect(rule, accent().alpha(0.14f * startT), 0.f);
+        ui::dl().line(Vec2(rule.x, rule.y), Vec2(rule.r(), rule.y), ui::px(1.f), edge);
+        ui::dl().line(Vec2(rule.x, rule.b()), Vec2(rule.r(), rule.b()), ui::px(1.f), edge);
+        ornament(state.endCap, Rect(start.x, capY, capW, capH), false);
+        ornament(state.endCap, Rect(start.r() - capW, capY, capW, capH), true);
+    }
+    else
+    {
+        if (startT > 0.01f)
+            hexFill(start, accent().alpha(0.14f * startT));
+        hexFrame(start, ui::px(1.f), startCol.alpha(0.8f + 0.2f * startT));
+    }
     ui::text(ui::fonts().title, start, state.startLabel, startCol, ui::AlignH::Center,
              ui::AlignV::Middle, ui::px(6.f));
 
