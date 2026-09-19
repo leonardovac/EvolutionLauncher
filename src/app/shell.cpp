@@ -217,9 +217,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
             ui::dl().arc(cogBox.center(), ui::px(6.f), ui::px(1.5f), 0.f, core::kPi * 2.f, cogCol);
     }
 
-    // the secondary line hangs below the button, so the whole block lifts to keep its margin
-    const float lift = state.secondaryVisible ? ui::px(12.f) : 0.f;
-    const Rect bottom(contentLeft, content.b() - ui::px(shellBottomInset + shellBottomHeight) - lift,
+    const Rect bottom(contentLeft, content.b() - ui::px(shellBottomInset + shellBottomHeight),
                       edgeRight - contentLeft, ui::px(shellBottomHeight));
     ui::dl().line(Vec2(bottom.x, bottom.y - ui::px(14.f)), Vec2(edgeRight, bottom.y - ui::px(14.f)),
                   ui::px(1.f), accent().alpha(0.20f));
