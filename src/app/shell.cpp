@@ -71,13 +71,13 @@ float languageListWidth()
 }
 
 // two-tone art, so it is drawn full-colour; a negative uv width mirrors it
-void ornament(gfx::Image* art, const core::Rect& box, bool mirrored)
+void ornament(gfx::Image* art, const core::Rect& box, bool mirrored, float alpha = 1.f)
 {
     if (art == nullptr || !art->valid())
         return;
     const core::Rect uv = mirrored ? core::Rect(1.f, 0.f, -1.f, 1.f)
                                    : core::Rect(0.f, 0.f, 1.f, 1.f);
-    ui::dl().image(art->srv.get(), box, core::Col(1.f, 1.f, 1.f, 1.f), 0.f, uv);
+    ui::dl().image(art->srv.get(), box, core::Col(1.f, 1.f, 1.f, alpha), 0.f, uv);
 }
 
 void hexFill(const core::Rect& box, const core::Col& col)
@@ -244,8 +244,8 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         ui::dl().line(Vec2(rule.x, rule.b()), Vec2(rule.r(), rule.b()), ui::px(1.f), edge);
         ui::dl().line(Vec2(rule.x, rule.y), Vec2(rule.x, rule.b()), ui::px(1.f), edge);
         ui::dl().line(Vec2(rule.r(), rule.y), Vec2(rule.r(), rule.b()), ui::px(1.f), edge);
-        ornament(state.endCap, Rect(start.x, capY, capW, capH), false);
-        ornament(state.endCap, Rect(start.r() - capW, capY, capW, capH), true);
+        ornament(state.endCap, Rect(start.x, capY, capW, capH), false, edge.a);
+        ornament(state.endCap, Rect(start.r() - capW, capY, capW, capH), true, edge.a);
     }
     else
     {
