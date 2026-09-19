@@ -1,6 +1,7 @@
 #include "app/rail.h"
 
 #include "app/icons.h"
+#include "app/theme.h"
 #include "ui/ui.h"
 
 #include <cmath>
@@ -10,8 +11,6 @@ namespace app
 {
 namespace
 {
-
-const core::Col gold = core::Col::hex(0xD9C07A, 1.f);
 
 void diamond(const core::Vec2& center, float radius, float thickness, const core::Col& col)
 {
@@ -70,7 +69,7 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
     const core::Rect rail(viewport.x, viewport.y, width, viewport.h);
     ui::dl().rect(rail, ui::theme().panelFill.alpha(0.92f), 0.f);
     ui::dl().line(core::Vec2(rail.r(), rail.y), core::Vec2(rail.r(), rail.b()), ui::px(1.f),
-                  gold.alpha(0.25f));
+                  accent().alpha(0.25f));
 
     const float centerX = rail.x + rail.w * 0.5f;
 
@@ -79,8 +78,8 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
         drawMark(publisher, markCenter, ui::px(40.f), ui::theme().text.alpha(0.9f));
     else
     {
-        diamond(markCenter, ui::px(13.f), ui::px(1.5f), gold.alpha(0.75f));
-        diamond(markCenter, ui::px(5.f), ui::px(1.5f), gold.alpha(0.75f));
+        diamond(markCenter, ui::px(13.f), ui::px(1.5f), accent().alpha(0.75f));
+        diamond(markCenter, ui::px(5.f), ui::px(1.5f), accent().alpha(0.75f));
     }
 
     // the rail is too narrow for the name on one line
@@ -93,7 +92,7 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
 
     const float ruleY = rail.y + ui::px(104.f);
     ui::dl().line(core::Vec2(rail.x + ui::px(18.f), ruleY),
-                  core::Vec2(rail.r() - ui::px(18.f), ruleY), ui::px(1.f), gold.alpha(0.22f));
+                  core::Vec2(rail.r() - ui::px(18.f), ruleY), ui::px(1.f), accent().alpha(0.22f));
 
     float bandY = rail.y + ui::px(120.f);
     for (std::size_t i = 0; i < titles.size(); ++i)
@@ -109,12 +108,13 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
         const float hoverT = ui::anim(widget, 0, hot ? 1.f : 0.f, 14.f);
         const float wash = active ? 0.10f : 0.06f * hoverT;
         if (wash > 0.001f)
-            ui::dl().rect(band, gold.alpha(wash), 0.f);
+            ui::dl().rect(band, accent().alpha(wash), 0.f);
         const float bar = active ? 1.f : hoverT * 0.5f;
         if (bar > 0.01f)
-            ui::dl().rect(core::Rect(rail.x, band.y, ui::px(3.f), band.h), gold.alpha(bar), 0.f);
+            ui::dl().rect(core::Rect(rail.x, band.y, ui::px(3.f), band.h),
+                          accent().alpha(bar), 0.f);
 
-        const core::Col ink = gold.alpha(active ? 1.f : 0.55f + 0.35f * hoverT);
+        const core::Col ink = accent().alpha(active ? 1.f : 0.55f + 0.35f * hoverT);
         const core::Vec2 titleCenter(centerX, band.y + ui::px(22.f));
         if (entry.icon != nullptr && entry.icon->valid())
             drawMark(entry.icon, titleCenter, ui::px(36.f), ink);
@@ -140,13 +140,13 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
     result.cogClicked = ui::clicked(cogId, cogTarget) && inputEnabled;
     const float cogT = ui::anim(cogId, 0, cogHot ? 1.f : 0.f, 16.f);
     if (cogT > 0.01f)
-        ui::dl().rect(cogBox, gold.alpha(0.10f * cogT), 0.f);
-    const core::Col cogCol = gold.alpha(0.7f + 0.3f * cogT);
+        ui::dl().rect(cogBox, accent().alpha(0.10f * cogT), 0.f);
+    const core::Col cogCol = accent().alpha(0.7f + 0.3f * cogT);
     if (iconsReady())
         drawIcon(IconSize::Rail, icon::cog, cogIcon, cogCol);
     else
         cogGlyph(cogIcon.center(), cogIcon.w * 0.3f, cogCol);
-    ui::text(ui::fonts().caption, cogLabel, "LAUNCHER", gold.alpha(0.55f + 0.35f * cogT),
+    ui::text(ui::fonts().caption, cogLabel, "LAUNCHER", accent().alpha(0.55f + 0.35f * cogT),
              ui::AlignH::Center, ui::AlignV::Middle, ui::px(1.f));
 
     return result;

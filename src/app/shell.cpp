@@ -5,6 +5,7 @@
 #include "app/languages.h"
 #include "app/rail.h"
 #include "app/shelllayout.h"
+#include "app/theme.h"
 #include "ui/ui.h"
 #include "ui/widgets.h"
 
@@ -104,8 +105,6 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     using core::Rect;
     using core::Vec2;
 
-    const Col gold = Col::hex(0xD9C07A, 1.f);
-
     ui::dl().rect(viewport, ui::theme().body);
     ui::heroCard(viewport, hero.base, ui::theme().focus, 0.f, 1.f);
     if (hero.live != nullptr && hero.live->valid())
@@ -119,7 +118,8 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
 
     const float contentLeft = content.x + ui::px(shellContentPad);
     const float ruleY = headerY + ui::px(shellRowHeight) + ui::px(shellHeaderRuleGap);
-    ui::dl().line(Vec2(contentLeft, ruleY), Vec2(edgeRight, ruleY), ui::px(1.f), gold.alpha(0.28f));
+    ui::dl().line(Vec2(contentLeft, ruleY), Vec2(edgeRight, ruleY), ui::px(1.f),
+                  accent().alpha(0.28f));
 
     navClicked = {};
     const float navTracking = ui::px(2.f);
@@ -135,15 +135,16 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
             navClicked = entry.url;
         const float navT = ui::anim(navId, 0, navHot ? 1.f : 0.f, 14.f);
         const Col rest = ui::theme().text.alpha(0.72f);
-        const Col navCol(core::lerp(rest.r, gold.r, navT), core::lerp(rest.g, gold.g, navT),
-                         core::lerp(rest.b, gold.b, navT), core::lerp(rest.a, gold.a, navT));
+        const Col lit = accent();
+        const Col navCol(core::lerp(rest.r, lit.r, navT), core::lerp(rest.g, lit.g, navT),
+                         core::lerp(rest.b, lit.b, navT), core::lerp(rest.a, lit.a, navT));
         ui::text(ui::fonts().caption, box, entry.label, navCol, ui::AlignH::Center,
                  ui::AlignV::Middle, navTracking);
         if (navT > 0.01f)
         {
             const float half = (entryW - ui::px(shellNavPad)) * 0.5f * navT;
             ui::dl().rect(Rect(box.center().x - half, ruleY - ui::px(1.f), half * 2.f, ui::px(2.f)),
-                          gold.alpha(navT), ui::px(1.f));
+                          accent().alpha(navT), ui::px(1.f));
         }
         navX = box.r() + ui::px(shellNavGap);
     }
@@ -154,7 +155,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     if (!state.panelVisible)
         ui::dl().line(Vec2(dividerX, minimiseBox.center().y - ui::px(7.f)),
                       Vec2(dividerX, minimiseBox.center().y + ui::px(7.f)), ui::px(1.f),
-                      gold.alpha(0.3f));
+                      accent().alpha(0.3f));
 
     const float languageW = ui::px(shellLanguageWidth);
     const Rect languageRow(dividerX - ui::px(shellLanguageGap) - languageW, headerY, languageW,
@@ -171,9 +172,9 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     if (!state.panelVisible)
     {
         if (iconsReady())
-            drawIcon(IconSize::Caption, icon::globe, globeInk, gold.alpha(0.8f));
+            drawIcon(IconSize::Caption, icon::globe, globeInk, accent().alpha(0.8f));
         else
-            globeGlyph(globeInk.center(), ui::px(7.f), gold.alpha(0.8f));
+            globeGlyph(globeInk.center(), ui::px(7.f), accent().alpha(0.8f));
     }
 
     // settings sit with the other content controls, not in the rail, which is title selection
@@ -188,7 +189,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         const float cogT = ui::anim(cogId, 0, cogHot ? 1.f : 0.f, 16.f);
         if (cogT > 0.01f)
             ui::dl().rect(captionHoverBox(cogBox), Col::hex(0xFFFFFF, 0.09f * cogT), ui::px(2.f));
-        const Col cogCol = gold.alpha(0.7f + 0.3f * cogT);
+        const Col cogCol = accent().alpha(0.7f + 0.3f * cogT);
         if (iconsReady())
             drawIcon(IconSize::Caption, icon::cog, cogBox.offset(0.f, -ui::px(1.f)), cogCol);
         else
@@ -200,18 +201,18 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     const Rect bottom(contentLeft, content.b() - ui::px(shellBottomInset + shellBottomHeight) - lift,
                       edgeRight - contentLeft, ui::px(shellBottomHeight));
     ui::dl().line(Vec2(bottom.x, bottom.y - ui::px(14.f)), Vec2(edgeRight, bottom.y - ui::px(14.f)),
-                  ui::px(1.f), gold.alpha(0.20f));
+                  ui::px(1.f), accent().alpha(0.20f));
 
     const Rect start(bottom.r() - ui::px(240.f), bottom.y + ui::px(8.f), ui::px(240.f),
                      ui::px(44.f));
-    const Col startCol = state.startEnabled ? gold : gold.alpha(0.35f);
+    const Col startCol = state.startEnabled ? accent() : accent().alpha(0.35f);
     const std::uint32_t startId = ui::id("shell.start");
     const bool startHit = ui::clicked(startId, start);
     startClicked = state.startEnabled && startHit && !state.panelVisible;
     const bool hot = state.startEnabled && ui::hovered(startId, start);
     const float startT = ui::anim(startId, 0, hot ? 1.f : 0.f, 14.f);
     if (startT > 0.01f)
-        hexFill(start, gold.alpha(0.14f * startT));
+        hexFill(start, accent().alpha(0.14f * startT));
     hexFrame(start, ui::px(1.f), startCol.alpha(0.8f + 0.2f * startT));
     ui::text(ui::fonts().title, start, state.startLabel, startCol, ui::AlignH::Center,
              ui::AlignV::Middle, ui::px(6.f));
@@ -255,18 +256,18 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         ui::text(ui::fonts().body, label, state.statusLine, ui::theme().text, ui::AlignH::Left,
                  ui::AlignV::Middle, ui::px(1.2f));
         ui::dl().rect(track, Col::hex(0x000000, 0.45f), track.h * 0.5f);
-        ui::dl().rect(track, gold.alpha(0.16f), track.h * 0.5f);
+        ui::dl().rect(track, accent().alpha(0.16f), track.h * 0.5f);
         if (std::ranges::contains(sweepPhases, state.phase))
         {
             const float sweep = 0.5f + 0.5f * std::sin(ui::g().time * 2.2f);
             const float head = track.w * 0.22f;
             const Rect segment(track.x + (track.w - head) * sweep, track.y, head, track.h);
-            ui::dl().rect(segment, gold.alpha(0.85f), track.h * 0.5f);
+            ui::dl().rect(segment, accent().alpha(0.85f), track.h * 0.5f);
             ui::requestFrame();
         }
         else
         {
-            ui::loadingLine(track, state.progress, ui::g().time, gold, 1.f);
+            ui::loadingLine(track, state.progress, ui::g().time, accent(), 1.f);
         }
         if (!state.detailLine.empty())
         {
@@ -298,8 +299,6 @@ void drawWindowControls(const core::Rect& viewport)
     using core::Rect;
     using core::Vec2;
 
-    const Col gold = Col::hex(0xD9C07A, 1.f);
-
     const Rect closeBox = captionGlyphBox(viewport, 0);
     const std::uint32_t closeId = ui::id("shell.close");
     const bool closeHot = ui::hovered(closeId, closeBox);
@@ -309,7 +308,7 @@ void drawWindowControls(const core::Rect& viewport)
         ui::dl().rect(captionHoverBox(closeBox), Col::hex(0xFFFFFF, 0.10f * closeT),
                       ui::px(2.f));
     if (iconsReady())
-        drawIcon(IconSize::Caption, icon::close, closeBox, gold.alpha(0.7f + 0.3f * closeT));
+        drawIcon(IconSize::Caption, icon::close, closeBox, accent().alpha(0.7f + 0.3f * closeT));
     else
         ui::closeButton("shell.close.fallback", closeBox);
 
@@ -321,7 +320,7 @@ void drawWindowControls(const core::Rect& viewport)
     if (minimiseT > 0.01f)
         ui::dl().rect(captionHoverBox(minimiseBox), Col::hex(0xFFFFFF, 0.10f * minimiseT),
                       ui::px(2.f));
-    const Col minimiseCol = gold.alpha(0.7f + 0.3f * minimiseT);
+    const Col minimiseCol = accent().alpha(0.7f + 0.3f * minimiseT);
     if (iconsReady())
     {
         drawIcon(IconSize::Caption, icon::minimise, minimiseBox, minimiseCol);

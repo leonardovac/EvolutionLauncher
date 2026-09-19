@@ -2,6 +2,7 @@
 
 #include "app/controls.h"
 #include "app/languages.h"
+#include "app/theme.h"
 #include "ui/ui.h"
 
 #include <array>
@@ -13,8 +14,6 @@ namespace app
 {
 namespace
 {
-
-const core::Col gold = core::Col::hex(0xD9C07A, 1.f);
 
 constexpr std::array<std::string_view, 2> graphicsApiNames{"DirectX 11", "DirectX 12"};
 constexpr std::array<std::string_view, 3> gpuPreferenceNames{"Let Windows Decide", "Power Saving",
@@ -53,11 +52,11 @@ bool button(std::string_view id, const core::Rect& box, std::string_view label, 
     const bool hot = ui::hovered(widget, box);
     const float hoverT = ui::anim(widget, 0, hot ? 1.f : 0.f, 16.f);
     if (hoverT > 0.01f)
-        ui::dl().rect(box, gold.alpha(0.12f * hoverT), ui::px(2.f));
-    ui::dl().border(box, gold.alpha(0.5f + 0.5f * hoverT), ui::px(1.f), ui::px(2.f));
+        ui::dl().rect(box, accent().alpha(0.12f * hoverT), ui::px(2.f));
+    ui::dl().border(box, accent().alpha(0.5f + 0.5f * hoverT), ui::px(1.f), ui::px(2.f));
     const float pad = align == ui::AlignH::Left ? ui::px(12.f) : 0.f;
     const core::Rect caption(box.x + pad, box.y, box.w - pad * 2.f, box.h);
-    ui::text(ui::fonts().caption, caption, label, gold.alpha(0.85f + 0.15f * hoverT), align,
+    ui::text(ui::fonts().caption, caption, label, accent().alpha(0.85f + 0.15f * hoverT), align,
              ui::AlignV::Middle, ui::px(2.f));
     return hit;
 }
@@ -86,7 +85,8 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
     ui::dl().shadow(panel, base.alpha(0.55f), ui::px(30.f), 0.f, core::Vec2(-ui::px(6.f), 0.f));
     // uniform: a softened edge reads as a stray line against the border, not as depth
     ui::dl().rect(panel, base.alpha(0.86f), 0.f);
-    ui::dl().line(core::Vec2(panel.x, panel.y), core::Vec2(panel.x, panel.b()), ui::px(1.f), gold);
+    ui::dl().line(core::Vec2(panel.x, panel.y), core::Vec2(panel.x, panel.b()), ui::px(1.f),
+                  accent());
 
     const float inset = ui::px(24.f);
     const float rowW = panel.w - inset * 2.f;
@@ -100,7 +100,7 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
     const float stripY = panel.y + ui::px(56.f);
     const float ruleY = stripY + ui::px(26.f);
     ui::dl().line(core::Vec2(panel.x + inset, ruleY), core::Vec2(panel.r() - inset, ruleY),
-                  ui::px(1.f), gold.alpha(0.22f));
+                  ui::px(1.f), accent().alpha(0.22f));
 
     float tabX = panel.x + inset;
     for (const TabEntry& entry : tabEntries)
@@ -114,14 +114,15 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         const bool active = state.tab == entry.tab;
         const float mark = ui::anim(widget, 0, active ? 1.f : 0.f, 16.f);
         ui::text(ui::fonts().caption, box, entry.label,
-                 active ? gold : ui::theme().text.alpha(hot ? 0.95f : 0.62f), ui::AlignH::Center,
+                 active ? accent() : ui::theme().text.alpha(hot ? 0.95f : 0.62f),
+                 ui::AlignH::Center,
                  ui::AlignV::Middle, tabTracking);
         if (mark > 0.01f)
         {
             const float half = (tabW - ui::px(14.f)) * 0.5f * mark;
             ui::dl().rect(
                 core::Rect(box.center().x - half, ruleY - ui::px(1.f), half * 2.f, ui::px(2.f)),
-                gold.alpha(mark), ui::px(1.f));
+                accent().alpha(mark), ui::px(1.f));
         }
         tabX = box.r() + ui::px(4.f);
     }

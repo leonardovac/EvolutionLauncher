@@ -1,6 +1,7 @@
 #include "app/controls.h"
 
 #include "app/shelllayout.h"
+#include "app/theme.h"
 #include "ui/ui.h"
 
 #include <algorithm>
@@ -9,8 +10,6 @@ namespace app
 {
 namespace
 {
-
-const core::Col gold = core::Col::hex(0xD9C07A, 1.f);
 
 // ui::text applies tracking between glyphs but Font::measure does not
 float trackedWidth(std::string_view str, float tracking)
@@ -56,12 +55,12 @@ bool checkbox(std::string_view id, const core::Rect& row, std::string_view label
     const float side = ui::px(16.f);
     const core::Rect box(row.x, row.y + (row.h - side) * 0.5f, side, side);
     ui::dl().rect(box, ui::theme().surface, ui::px(2.f));
-    ui::dl().border(box, hot ? gold : gold.alpha(0.6f), ui::px(1.f), ui::px(2.f));
+    ui::dl().border(box, hot ? accent() : accent().alpha(0.6f), ui::px(1.f), ui::px(2.f));
     if (value)
     {
         const core::Rect mark(box.x + ui::px(4.f), box.y + ui::px(4.f), side - ui::px(8.f),
                               side - ui::px(8.f));
-        ui::dl().rect(mark, gold, ui::px(1.f));
+        ui::dl().rect(mark, accent(), ui::px(1.f));
     }
 
     const core::Rect caption(row.x + ui::px(26.f), row.y, row.w - ui::px(26.f), row.h);
@@ -106,7 +105,7 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
         ui::text(ui::fonts().caption, caption, label, ui::theme().text, ui::AlignH::Left,
                  ui::AlignV::Middle, ui::px(1.f));
         ui::dl().rect(field, ui::theme().surface, ui::px(2.f));
-        ui::dl().border(field, gold.alpha(0.45f + 0.55f * hoverT), ui::px(1.f), ui::px(2.f));
+        ui::dl().border(field, accent().alpha(0.45f + 0.55f * hoverT), ui::px(1.f), ui::px(2.f));
     }
 
     const bool valid = index >= 0 && index < static_cast<int>(options.size());
@@ -139,7 +138,7 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
     ui::text(ui::fonts().caption, value, valueText, ui::theme().text.alpha(0.85f + 0.15f * hoverT),
              ui::AlignH::Left, ui::AlignV::Middle, tracking);
     fieldChevron(core::Vec2(chevronX, field.center().y), ui::px(4.f), openT,
-                 gold.alpha(0.7f + 0.3f * hoverT));
+                 accent().alpha(0.7f + 0.3f * hoverT));
 
     if (open)
     {
@@ -179,7 +178,7 @@ bool dropdownOverlay(DropdownGroup group)
     ui::dl().shadow(list, core::Col::hex(0x000000, 0.6f * slide), ui::px(20.f), radius,
                     core::Vec2(0.f, ui::px(5.f)));
     ui::dl().rect(list, core::Col::hex(0x0B0A0A, 0.97f * slide), radius);
-    ui::dl().border(list, gold.alpha(0.32f * slide), ui::px(1.f), radius);
+    ui::dl().border(list, accent().alpha(0.32f * slide), ui::px(1.f), radius);
 
     bool changed = false;
     for (std::size_t i = 0; i < openOptions.size(); ++i)
@@ -190,16 +189,16 @@ bool dropdownOverlay(DropdownGroup group)
         const bool selected = static_cast<int>(i) == *openIndex;
         const float rowT = ui::anim(widget, 0, hot ? 1.f : 0.f, 20.f);
         if (rowT > 0.01f)
-            ui::dl().rect(item, gold.alpha(0.14f * rowT * slide), 0.f);
+            ui::dl().rect(item, accent().alpha(0.14f * rowT * slide), 0.f);
         const float markT = std::max(rowT * 0.55f, selected ? 1.f : 0.f);
         if (markT > 0.01f)
             ui::dl().rect(core::Rect(item.x, item.y, ui::px(2.f), item.h),
-                          gold.alpha(markT * slide), 0.f);
+                          accent().alpha(markT * slide), 0.f);
         const core::Rect caption(item.x + ui::px(12.f) + ui::px(3.f) * rowT, item.y,
                                  item.w - ui::px(20.f), item.h);
         ui::text(ui::fonts().caption, caption, openOptions[i],
-                 (selected ? gold : ui::theme().text).alpha((selected ? 1.f : 0.7f + 0.25f * rowT) *
-                                                            slide),
+                 (selected ? accent() : ui::theme().text)
+                     .alpha((selected ? 1.f : 0.7f + 0.25f * rowT) * slide),
                  ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
         if (ui::clicked(widget, item))
         {
