@@ -1,4 +1,4 @@
-# Warframe content update protocol
+# Digital Extremes content update protocol
 
 Wire format used by the stock `Tools\Launcher.exe` to keep an install current. Recovered
 from the retail launcher and confirmed against the live service on 2026-09-07. RVAs below
@@ -10,10 +10,27 @@ There is no authentication, no request signing, and no user agent
 
 ## Hosts
 
+Every title serves the same protocol from its own pair of hosts. Only the stem differs.
+
+**Warframe**
+
 | Role | Public | Test | Dev |
 |---|---|---|---|
 | Index | `https://origin.warframe.com` | `https://origin-test.warframe.com` | `https://origin-dev.warframe.com` |
 | Content | `http://content.warframe.com` | `http://content-test.warframe.com` | `http://content-dev.warframe.com` |
+
+**Soulframe**
+
+| Role | Public | Test | Dev |
+|---|---|---|---|
+| Index | `https://origin.soulframe.com` | `https://origin-test.soulframe.com` | `https://origin-dev.soulframe.com` |
+| Content | `http://content.soulframe.com` | `http://content-test.soulframe.com` | `http://content-dev.soulframe.com` |
+
+Only Soulframe's Public pair has been exercised. Its index was fetched on 2026-09-19 and
+parses byte-identically to Warframe's — same `<path>.<MD5>.lzma,<wireSize>` lines, the same
+`/Tools`, `/Lotus` and `/Cache.Windows` layout, and a `/Soulframe.x64.exe` where Warframe has
+`/Warframe.x64.exe`. The Test and Dev names above are inferred from Warframe's prefix pattern
+and have not been requested.
 
 The launcher retries once with the opposite scheme when a connection fails.
 

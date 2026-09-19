@@ -56,30 +56,43 @@ std::wstring key(std::wstring_view installPath)
 	return core::lower(installPath);
 }
 
+using HostTable = std::array<std::array<std::wstring_view, 3>, 2>;
+
+constexpr HostTable originHosts{
+	{{L"https://origin.warframe.com", L"https://origin-test.warframe.com",
+	  L"https://origin-dev.warframe.com"},
+	 {L"https://origin.soulframe.com", L"https://origin-test.soulframe.com",
+	  L"https://origin-dev.soulframe.com"}}};
+
+constexpr HostTable secureContentHosts{
+	{{L"https://content.warframe.com", L"https://content-test.warframe.com",
+	  L"https://content-dev.warframe.com"},
+	 {L"https://content.soulframe.com", L"https://content-test.soulframe.com",
+	  L"https://content-dev.soulframe.com"}}};
+
+constexpr HostTable plainContentHosts{
+	{{L"http://content.warframe.com", L"http://content-test.warframe.com",
+	  L"http://content-dev.warframe.com"},
+	 {L"http://content.soulframe.com", L"http://content-test.soulframe.com",
+	  L"http://content-dev.soulframe.com"}}};
+
+constexpr std::wstring_view host(const HostTable& table, Title title, Branch branch)
+{
+	const auto row = static_cast<std::size_t>(title);
+	const auto column = static_cast<std::size_t>(branch);
+	return table[row < table.size() ? row : 0][column < 3 ? column : 0];
 }
 
-std::wstring_view originHost(Branch branch)
-{
-	switch (branch)
-	{
-	case Branch::Test: return L"https://origin-test.warframe.com";
-	case Branch::Dev: return L"https://origin-dev.warframe.com";
-	case Branch::Public: break;
-	}
-	return L"https://origin.warframe.com";
 }
 
-std::wstring_view contentHost(Branch branch, bool forceHttps)
+std::wstring_view originHost(Title title, Branch branch)
 {
-	switch (branch)
-	{
-	case Branch::Test:
-		return forceHttps ? L"https://content-test.warframe.com" : L"http://content-test.warframe.com";
-	case Branch::Dev:
-		return forceHttps ? L"https://content-dev.warframe.com" : L"http://content-dev.warframe.com";
-	case Branch::Public: break;
-	}
-	return forceHttps ? L"https://content.warframe.com" : L"http://content.warframe.com";
+	return host(originHosts, title, branch);
+}
+
+std::wstring_view contentHost(Title title, Branch branch, bool forceHttps)
+{
+	return host(forceHttps ? secureContentHosts : plainContentHosts, title, branch);
 }
 
 std::wstring_view branchName(Branch branch)

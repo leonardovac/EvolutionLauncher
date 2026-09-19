@@ -98,7 +98,8 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	if (!session)
 		return std::unexpected(UpdateError::Session);
 
-	const auto origin = openConnection(*session, originHost(options.config.branch));
+	const auto origin =
+		openConnection(*session, originHost(options.config.title, options.config.branch));
 	if (!origin)
 		return std::unexpected(origin.error());
 
@@ -193,8 +194,9 @@ std::expected<Summary, UpdateError> run(const Options& options)
 		return summary;
 	}
 
-	const auto content = openConnection(*session, contentHost(options.config.branch,
-	                                                         options.config.forceHttps));
+	const auto content = openConnection(*session, contentHost(options.config.title,
+	                                                          options.config.branch,
+	                                                          options.config.forceHttps));
 	if (!content)
 		return std::unexpected(content.error());
 

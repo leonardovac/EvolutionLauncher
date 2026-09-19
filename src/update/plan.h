@@ -21,11 +21,18 @@ enum class Branch
 	Dev
 };
 
+enum class Title
+{
+	Warframe,
+	Soulframe
+};
+
 struct Config
 {
 	std::filesystem::path root;
 	std::wstring language = L"en";
 	Branch branch = Branch::Public;
+	Title title = Title::Warframe;
 	bool steam = false;
 	bool eosSdk = false;
 	bool dx12 = false;
@@ -34,8 +41,8 @@ struct Config
 	LauncherConfig launcher;
 };
 
-std::wstring_view originHost(Branch branch);
-std::wstring_view contentHost(Branch branch, bool forceHttps);
+std::wstring_view originHost(Title title, Branch branch);
+std::wstring_view contentHost(Title title, Branch branch, bool forceHttps);
 std::wstring_view branchName(Branch branch);
 
 bool appliesToClient(const Entry& entry, const Config& config);
