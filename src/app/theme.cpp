@@ -9,11 +9,12 @@ namespace app
 namespace
 {
 
+// Soulframe's values come off its own art: the end cap's cream and the leaf's dark outline
 constexpr std::array<TitleTheme, 2> themes{
     {{core::Col::hex(0xD9C07A, 1.f), core::Col::hex(0x060505, 1.f),
       core::Col::hex(0x0F0E0E, 1.f)},
-     {core::Col::hex(0xD9C07A, 1.f), core::Col::hex(0x060505, 1.f),
-      core::Col::hex(0x0F0E0E, 1.f)}}};
+     {core::Col::hex(0xCFC099, 1.f), core::Col::hex(0x191310, 1.f),
+      core::Col::hex(0x1A1512, 1.f)}}};
 
 TitleTheme current = themes[0];
 

@@ -14,6 +14,7 @@
 #include "app/resource.h"
 #include "app/settings.h"
 #include "app/shell.h"
+#include "app/theme.h"
 #include "app/titles.h"
 #include "app/updatejob.h"
 #include "app/versions.h"
@@ -118,6 +119,7 @@ int run(const Options& options)
     const auto currentTitle = [&selectedTitle]() {
         return titleProfiles()[static_cast<std::size_t>(selectedTitle)].title;
     };
+    setTitleTheme(currentTitle());
 
     UpdateJob job;
     job.setTitle(currentTitle());
@@ -418,6 +420,7 @@ int run(const Options& options)
             job.cancel();
             job.join();
             selectedTitle = rail.titleClicked;
+            setTitleTheme(currentTitle());
             settings = Settings::load(currentTitle(), wf::LauncherConfig::load());
             launchFailure.clear();
             meter.reset();
