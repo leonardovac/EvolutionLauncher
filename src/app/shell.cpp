@@ -231,7 +231,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     secondaryClicked = false;
     if (state.secondaryVisible)
     {
-        constexpr std::string_view secondaryText = "PLAY WITHOUT UPDATING";
+        const std::string_view secondaryText = state.secondaryLabel;
         const float secondaryTracking = ui::px(1.f);
         const float textW = navWidth(secondaryText, secondaryTracking);
         // the hit box hugs the text: a button-wide one lights the underline with nothing under it

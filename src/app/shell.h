@@ -20,8 +20,9 @@ struct ShellState
     float progress = 0.f;
     std::string_view startLabel = "PLAY";
     bool startEnabled = false;
-    // the quiet "play anyway" line under the button, shown only while an update is pending
+    // the quiet line under the button, shown only while an update is pending
     bool secondaryVisible = false;
+    std::string_view secondaryLabel = "PLAY WITHOUT UPDATING";
     bool panelVisible = false;
 };
 

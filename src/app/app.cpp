@@ -7,6 +7,7 @@
 #include "app/icons.h"
 #include "app/languages.h"
 #include "app/launch.h"
+#include "app/locate.h"
 #include "app/rail.h"
 #include "app/panel.h"
 #include "app/rate.h"
@@ -194,9 +195,11 @@ int run(const Options& options)
         shell.startEnabled = std::ranges::contains(actionablePhases, snap.phase);
         shell.panelVisible = panelSlide > 0.f;
         const bool updatePending = snap.phase == JobPhase::UpdateReady;
-        shell.startLabel = updatePending ? "UPDATE" : "PLAY";
-        // nothing to fall back to on a machine that has never installed the game
-        shell.secondaryVisible = updatePending && gameInstalled(settings, wf::Branch::Public);
+        const bool installed = gameInstalled(settings, wf::Branch::Public);
+        shell.startLabel = updatePending ? (installed ? "UPDATE" : "INSTALL") : "PLAY";
+        shell.secondaryVisible = updatePending;
+        // with no install to fall back to, the line offers to find one detection missed
+        shell.secondaryLabel = installed ? "PLAY WITHOUT UPDATING" : "ALREADY INSTALLED? LOCATE IT";
         std::string statusBuffer;
         std::string detailBuffer;
         std::string readyBuffer;
@@ -348,9 +351,27 @@ int run(const Options& options)
             }
             ui::requestFrame();
         }
+        const bool locateRequested = shellSecondaryClicked() && !installed;
         const bool launchRequested =
-            shellSecondaryClicked() || (shellStartClicked() && !updatePending);
-        if (shellStartClicked() && updatePending)
+            (shellSecondaryClicked() && installed) || (shellStartClicked() && !updatePending);
+        if (locateRequested)
+        {
+            if (const auto folder = pickFolder(window.handle()))
+            {
+                if (settings.adoptInstallRoot(wf::Branch::Public, *folder))
+                {
+                    launchFailure.clear();
+                    job.restart();
+                }
+                else
+                {
+                    launchFailure = "NO GAME FOUND IN THAT FOLDER";
+                    core::error("{}", launchFailure);
+                }
+            }
+            ui::requestFrame();
+        }
+        else if (shellStartClicked() && updatePending)
         {
             meter.reset();
             job.startUpdate();
