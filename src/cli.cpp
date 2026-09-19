@@ -45,6 +45,8 @@ void usage()
 	          "  --no-eos          force off\n"
 	          "  --dx12            keep the DirectX 12 caches (default: GraphicsAPI == 1)\n"
 	          "  --no-dx12         force off\n"
+	          "  --bulk            fetch the bulk .cache/.toc content (default: EnableBulkDownload)\n"
+	          "  --no-bulk         force off\n"
 	          "  --verbose         per-file detail\n"
 	          "  --settings        print the launcher settings and exit\n"
 	          "  --settings-write  write back the loaded settings and exit\n"
@@ -93,6 +95,7 @@ int run(int argc, wchar_t** argv)
 	std::optional<bool> steam;
 	std::optional<bool> eos;
 	std::optional<bool> dx12;
+	std::optional<bool> bulk;
 	bool wantSettings = false;
 	bool wantSettingsWrite = false;
 	bool wantVersions = false;
@@ -153,6 +156,14 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--no-dx12")
 		{
 			dx12 = false;
+		}
+		else if (flag == L"--bulk")
+		{
+			bulk = true;
+		}
+		else if (flag == L"--no-bulk")
+		{
+			bulk = false;
 		}
 		else if (flag == L"--verbose")
 		{
@@ -262,6 +273,7 @@ int run(int argc, wchar_t** argv)
 	options.config.steam = steam.value_or(settings.steam());
 	options.config.eosSdk = eos.value_or(settings.eos());
 	options.config.dx12 = dx12.value_or(settings.dx12());
+	options.config.bulkDownload = bulk.value_or(settings.bulkDownload);
 	options.config.forceHttps = !settings.allowNetworkCaches;
 	options.config.sideload = settings.sideload;
 	options.config.launcher = std::move(launcher);
@@ -367,6 +379,8 @@ int run(int argc, wchar_t** argv)
 	{
 		core::info("{} queued, {} up to date, {} filtered, {} skipped", summary->queued,
 		           summary->upToDate, summary->filtered, summary->skipped);
+		if (summary->bulkSkipped != 0)
+			core::info("{} cache files skipped: bulk download is off", summary->bulkSkipped);
 		if (summary->cacheDiffers != 0)
 			core::info("{} cache files differ from the index and were left alone",
 			           summary->cacheDiffers);

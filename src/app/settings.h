@@ -38,6 +38,8 @@ struct Settings
     std::wstring language = L"en";
     std::wstring audioLanguage;
     bool shaderCache = true;
+    // the stock launcher owns this one: read, never written back
+    bool bulkDownload = true;
     // launcher-wide: stored in launcher.json, mirrored into each title's ForceHTTPS
     bool allowNetworkCaches = true;
     // per title: patch this game's exe so the loader searches its folder for DLLs

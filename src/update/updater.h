@@ -43,6 +43,7 @@ struct Summary
 	std::size_t queued = 0;
 	std::uint64_t downloadBytes = 0;  // what the plan would fetch, not what it did
 	std::size_t cacheDiffers = 0;
+	std::size_t bulkSkipped = 0;
 	std::size_t updated = 0;
 	std::size_t failed = 0;
 	std::uint64_t downloaded = 0;

@@ -161,11 +161,14 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	summary.skipped = plan.skipped;
 	summary.upToDate = plan.upToDate;
 	summary.cacheDiffers = plan.cacheDiffers;
+	summary.bulkSkipped = plan.bulkSkipped;
 	summary.queued = plan.jobs.size();
 	summary.downloadBytes = plan.downloadBytes;
 
 	core::info("{} filtered, {} skipped, {} up to date, {} queued ({} to download)", plan.filtered,
 	           plan.skipped, plan.upToDate, plan.jobs.size(), core::formatBytes(plan.downloadBytes));
+	if (plan.bulkSkipped != 0)
+		core::info("{} cache files skipped: bulk download is off", plan.bulkSkipped);
 	if (progress != nullptr)
 		progress->onPlan(plan.jobs.size(), plan.downloadBytes);
 

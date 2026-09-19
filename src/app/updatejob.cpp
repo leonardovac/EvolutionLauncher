@@ -179,6 +179,7 @@ void UpdateJob::work()
     options.config.steam = settings.steam();
     options.config.eosSdk = settings.eos();
     options.config.dx12 = settings.dx12();
+    options.config.bulkDownload = settings.bulkDownload;
     options.config.forceHttps = !settings.allowNetworkCaches;
     options.config.sideload = settings.sideload;
     options.config.hashCaches = verify_.load(std::memory_order_relaxed);

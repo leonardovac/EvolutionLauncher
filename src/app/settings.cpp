@@ -93,6 +93,8 @@ Settings Settings::load(wf::Title title, const wf::LauncherConfig& launcher)
         out.audioLanguage = *value;
     if (const auto value = readDword(key, L"EnableShaderCache"))
         out.shaderCache = *value != 0;
+    if (const auto value = readDword(key, L"EnableBulkDownload"))
+        out.bulkDownload = *value != 0;
     // launcher-wide, so it lives in launcher.json; an older install is imported from ForceHTTPS
     if (const auto stored = launcher.allowNetworkCaches())
         out.allowNetworkCaches = *stored;

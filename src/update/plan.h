@@ -36,6 +36,7 @@ struct Config
 	bool steam = false;
 	bool eosSdk = false;
 	bool dx12 = false;
+	bool bulkDownload = true;  // EnableBulkDownload; off streams the caches instead
 	bool hashCaches = false;
 	bool forceHttps = false;
 	bool sideload = true;  // off makes a patched exe count as differing, so it refetches
@@ -70,6 +71,7 @@ struct Plan
 	std::size_t upToDate = 0;
 	std::size_t hashed = 0;
 	std::size_t cacheDiffers = 0;  // hashed caches left alone: defragmenting changes their bytes
+	std::size_t bulkSkipped = 0;   // part of filtered, not beside it
 };
 
 Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* progress = nullptr);

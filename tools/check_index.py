@@ -139,7 +139,7 @@ def language_allows(install, language):
     return code == "en"
 
 
-def applies(entry, args):
+def applies_ignoring_bulk(entry, args):
     low = entry["url"].lower()
     if not args.steam and "/steam" in low:
         return False
@@ -152,6 +152,12 @@ def applies(entry, args):
     return language_allows(entry["install"], args.lang)
 
 
+def applies(entry, args):
+    if args.no_bulk and entry["category"] == "CacheOrToc":
+        return False
+    return applies_ignoring_bulk(entry, args)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--title", choices=sorted(ORIGIN), default="warframe")
@@ -160,6 +166,8 @@ def main():
     parser.add_argument("--steam", action="store_true")
     parser.add_argument("--eos", action="store_true")
     parser.add_argument("--dx12", action="store_true")
+    # EnableBulkDownload defaults on, so the mirror opts out rather than in
+    parser.add_argument("--no-bulk", action="store_true")
     parser.add_argument("--save", metavar="PATH")
     parser.add_argument("--skip-file", default="skip.txt")
     args = parser.parse_args()
@@ -190,12 +198,17 @@ def main():
     skip = load_skip(args.skip_file)
     applicable = [e for e in entries if applies(e, args)]
     filtered = len(entries) - len(applicable)
+    bulk_skipped = (sum(1 for e in entries if e["category"] == "CacheOrToc"
+                        and applies_ignoring_bulk(e, args))
+                    if args.no_bulk else 0)
     kept = [e for e in applicable if normalise_skip(e["install"]) not in skip]
     skipped = len(applicable) - len(kept)
     total = sum(e["size"] for e in kept)
     print("lang=%s dx12=%s: %d of %d entries, %.2f GiB to download from empty "
           "(%d filtered, %d skipped)"
           % (args.lang, args.dx12, len(kept), len(entries), total / 2 ** 30, filtered, skipped))
+    if bulk_skipped:
+        print("%d cache files skipped: bulk download is off" % bulk_skipped)
 
     partners = collections.defaultdict(set)
     for entry in entries:

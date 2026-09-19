@@ -106,7 +106,11 @@ std::wstring_view branchName(Branch branch)
 	return L"Public";
 }
 
-bool appliesToClient(const Entry& entry, const Config& config)
+namespace
+{
+
+// the bulk gate is the one rule buildPlan has to ask about on its own, so it sits outside
+bool appliesIgnoringBulk(const Entry& entry, const Config& config)
 {
 	if (!config.steam && core::containsNoCase(entry.urlPath, L"/steam"))
 		return false;
@@ -125,6 +129,15 @@ bool appliesToClient(const Entry& entry, const Config& config)
 	return languageAllows(entry.installPath, config.language);
 }
 
+}
+
+bool appliesToClient(const Entry& entry, const Config& config)
+{
+	if (!config.bulkDownload && entry.category == Category::CacheOrToc)
+		return false;
+	return appliesIgnoringBulk(entry, config);
+}
+
 Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* progress)
 {
 	Plan plan;
@@ -139,6 +152,10 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 		if (!appliesToClient(entry, config))
 		{
 			++plan.filtered;
+			// only the ones the bulk gate alone rejected; the rest were never going to be fetched
+			if (!config.bulkDownload && entry.category == Category::CacheOrToc
+			    && appliesIgnoringBulk(entry, config))
+				++plan.bulkSkipped;
 			continue;
 		}
 		if (config.launcher.isExcluded(entry.installPath))
