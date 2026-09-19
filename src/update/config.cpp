@@ -322,6 +322,16 @@ LauncherConfig LauncherConfig::load()
 				scan.skipValue();
 			}
 		}
+		else if (key == "lastTitle")
+		{
+			if (const auto value = scan.string())
+				config.lastTitle_ = core::widen(*value);
+			else
+			{
+				core::warn("launcher.json: \"lastTitle\" is not a string; ignoring");
+				scan.skipValue();
+			}
+		}
 		else if (key == "patched")
 		{
 			if (scan.consume('{'))
@@ -392,33 +402,46 @@ LauncherConfig LauncherConfig::load()
 namespace
 {
 
-// the worker saves this file to record a patch and never owns the setting, so a save that
-// carries no opinion must not erase the one on disk
-std::optional<bool> storedAllowNetworkCaches()
+struct StoredScalars
 {
+	std::optional<bool> allowNetworkCaches;
+	std::optional<std::wstring> lastTitle;
+};
+
+// the worker saves this file to record a patch and owns neither setting, so a save that carries
+// no opinion must not erase the one on disk
+StoredScalars storedScalars()
+{
+	StoredScalars out;
 	const std::filesystem::path file = beside(L"launcher.json");
 	if (file.empty())
-		return std::nullopt;
+		return out;
 	std::ifstream input(file, std::ios::binary);
 	if (!input)
-		return std::nullopt;
+		return out;
 	const std::string bytes((std::istreambuf_iterator<char>(input)),
 	                        std::istreambuf_iterator<char>());
 	Scanner scan{bytes};
 	if (!scan.consume('{'))
-		return std::nullopt;
+		return out;
 	while (!scan.peek('}'))
 	{
 		const auto key = scan.string();
 		if (!key || !scan.consume(':'))
 			break;
 		if (*key == "allowNetworkCaches")
-			return scan.boolean();
-		scan.skipValue();
+			out.allowNetworkCaches = scan.boolean();
+		else if (*key == "lastTitle")
+		{
+			if (const auto value = scan.string())
+				out.lastTitle = core::widen(*value);
+		}
+		else
+			scan.skipValue();
 		if (!scan.consume(','))
 			break;
 	}
-	return std::nullopt;
+	return out;
 }
 
 }
@@ -428,6 +451,8 @@ bool LauncherConfig::save() const
 	const std::filesystem::path file = beside(L"launcher.json");
 	if (file.empty())
 		return false;
+	// read before the stream truncates, or the values we mean to preserve are already gone
+	const StoredScalars stored = storedScalars();
 	std::ofstream out(file, std::ios::binary | std::ios::trunc);
 	if (!out)
 		return false;
@@ -454,6 +479,14 @@ bool LauncherConfig::save() const
 		++i;
 	}
 	out << (patched_.empty() ? " }" : "\n  }");
+
+	const std::optional<bool> caches =
+		allowNetworkCaches_ ? allowNetworkCaches_ : stored.allowNetworkCaches;
+	const std::optional<std::wstring> title = lastTitle_ ? lastTitle_ : stored.lastTitle;
+	if (caches)
+		out << ",\n  \"allowNetworkCaches\": " << (*caches ? "true" : "false");
+	if (title)
+		out << ",\n  \"lastTitle\": \"" << escapeJson(core::narrow(*title)) << "\"";
 	out << "\n}\n";
 	return static_cast<bool>(out);
 }

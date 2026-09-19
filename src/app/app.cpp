@@ -112,15 +112,23 @@ int run(const Options& options)
             loadArt(entry.endCapResource, endCaps[i]);
         railTitles[i] = RailTitle{entry.railId, entry.label, &icons[i], &heroes[i]};
     }
+    const wf::LauncherConfig launcherConfig = wf::LauncherConfig::load();
     int selectedTitle = 0;
-    if (options.shotTitle)
-    {
+    const auto selectTitle = [&selectedTitle](wf::Title wanted) {
         for (std::size_t i = 0; i < titleProfiles().size(); ++i)
         {
-            if (titleProfiles()[i].title == *options.shotTitle)
+            if (titleProfiles()[i].title == wanted)
                 selectedTitle = static_cast<int>(i);
         }
+    };
+    if (const auto remembered = launcherConfig.lastTitle())
+    {
+        if (const auto parsed = parseTitleName(*remembered))
+            selectTitle(*parsed);
     }
+    // an explicit capture flag outranks what was remembered
+    if (options.shotTitle)
+        selectTitle(*options.shotTitle);
 
     const auto currentTitle = [&selectedTitle]() {
         return titleProfiles()[static_cast<std::size_t>(selectedTitle)].title;
@@ -133,7 +141,7 @@ int run(const Options& options)
         job.start();
     RateMeter meter;
 
-    Settings settings = Settings::load(currentTitle(), wf::LauncherConfig::load());
+    Settings settings = Settings::load(currentTitle(), launcherConfig);
     Settings working;
     PanelState panel;
     const bool startOpen = options.wantPanel || options.wantMenu;
@@ -433,6 +441,10 @@ int run(const Options& options)
             job.join();
             selectedTitle = rail.titleClicked;
             setTitleTheme(currentTitle());
+            wf::LauncherConfig stored = wf::LauncherConfig::load();
+            stored.setLastTitle(profile(currentTitle()).localFolder);
+            if (!stored.save())
+                core::error("could not record the selected title");
             settings = Settings::load(currentTitle(), wf::LauncherConfig::load());
             launchFailure.clear();
             meter.reset();

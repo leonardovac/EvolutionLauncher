@@ -37,11 +37,16 @@ public:
 	std::optional<bool> allowNetworkCaches() const { return allowNetworkCaches_; }
 	void setAllowNetworkCaches(bool value) { allowNetworkCaches_ = value; }
 
+	// launcher-wide: which tab the GUI opens on, empty until a save records one
+	std::optional<std::wstring> lastTitle() const { return lastTitle_; }
+	void setLastTitle(std::wstring_view value) { lastTitle_ = std::wstring(value); }
+
 private:
 	std::vector<std::wstring> exclude_;
 	std::vector<std::wstring> protect_;
 	std::unordered_map<std::wstring, PatchRecord> patched_;
 	std::optional<bool> allowNetworkCaches_;
+	std::optional<std::wstring> lastTitle_;
 };
 
 }
