@@ -221,6 +221,17 @@ void LauncherConfig::recordPatch(std::wstring_view installPath, const Digest& so
 	patched_[normalise(installPath)] = PatchRecord{source, result};
 }
 
+std::optional<bool> LauncherConfig::sideload(std::wstring_view title) const
+{
+	const auto found = sideload_.find(core::lower(title));
+	return found == sideload_.end() ? std::nullopt : std::optional<bool>(found->second);
+}
+
+void LauncherConfig::setSideload(std::wstring_view title, bool value)
+{
+	sideload_[core::lower(title)] = value;
+}
+
 LauncherConfig LauncherConfig::load()
 {
 	LauncherConfig config;
@@ -334,11 +345,25 @@ LauncherConfig LauncherConfig::load()
 		}
 		else if (key == "sideload")
 		{
-			if (const auto value = scan.boolean())
-				config.sideload_ = *value;
+			if (scan.consume('{'))
+			{
+				while (!scan.peek('}'))
+				{
+					const auto name = scan.string();
+					if (!name || !scan.consume(':'))
+						break;
+					if (const auto value = scan.boolean())
+						config.sideload_[core::lower(core::widen(*name))] = *value;
+					else
+						scan.skipValue();
+					if (!scan.consume(','))
+						break;
+				}
+				scan.consume('}');
+			}
 			else
 			{
-				core::warn("launcher.json: \"sideload\" is not a boolean; ignoring");
+				core::warn("launcher.json: \"sideload\" is not an object; ignoring");
 				scan.skipValue();
 			}
 		}
@@ -416,7 +441,7 @@ struct StoredScalars
 {
 	std::optional<bool> allowNetworkCaches;
 	std::optional<std::wstring> lastTitle;
-	std::optional<bool> sideload;
+	std::map<std::wstring, bool> sideload;
 };
 
 // the worker saves this file to record a patch and owns neither setting, so a save that carries
@@ -447,8 +472,22 @@ StoredScalars storedScalars()
 			if (const auto value = scan.string())
 				out.lastTitle = core::widen(*value);
 		}
-		else if (*key == "sideload")
-			out.sideload = scan.boolean();
+		else if (*key == "sideload" && scan.consume('{'))
+		{
+			while (!scan.peek('}'))
+			{
+				const auto name = scan.string();
+				if (!name || !scan.consume(':'))
+					break;
+				if (const auto value = scan.boolean())
+					out.sideload[core::lower(core::widen(*name))] = *value;
+				else
+					scan.skipValue();
+				if (!scan.consume(','))
+					break;
+			}
+			scan.consume('}');
+		}
 		else
 			scan.skipValue();
 		if (!scan.consume(','))
@@ -496,11 +535,26 @@ bool LauncherConfig::save() const
 	const std::optional<bool> caches =
 		allowNetworkCaches_ ? allowNetworkCaches_ : stored.allowNetworkCaches;
 	const std::optional<std::wstring> title = lastTitle_ ? lastTitle_ : stored.lastTitle;
-	const std::optional<bool> patchExe = sideload_ ? sideload_ : stored.sideload;
+	// a save that names no title keeps whatever the file already said about the others
+	std::map<std::wstring, bool> patchExe = stored.sideload;
+	for (const auto& [name, on] : sideload_)
+		patchExe[name] = on;
 	if (caches)
 		out << ",\n  \"allowNetworkCaches\": " << (*caches ? "true" : "false");
 	if (title)
 		out << ",\n  \"lastTitle\": \"" << escapeJson(core::narrow(*title)) << "\"";
+	if (!patchExe.empty())
+	{
+		out << ",\n  \"sideload\": {";
+		std::size_t written = 0;
+		for (const auto& [name, on] : patchExe)
+		{
+			out << (written == 0 ? "\n    \"" : ",\n    \"") << escapeJson(core::narrow(name))
+			    << "\": " << (on ? "true" : "false");
+			++written;
+		}
+		out << "\n  }";
+	}
 	out << "\n}\n";
 	return static_cast<bool>(out);
 }

@@ -98,7 +98,7 @@ Settings Settings::load(wf::Title title, const wf::LauncherConfig& launcher)
         out.allowNetworkCaches = *stored;
     else if (const auto legacy = readDword(key, L"ForceHTTPS"))
         out.allowNetworkCaches = *legacy == 0;
-    if (const auto stored = launcher.sideload())
+    if (const auto stored = launcher.sideload(profile(title).localFolder))
         out.sideload = *stored;
     if (const auto value = readString(key, L"LauncherExe"))
         out.launcherExe = *value;
@@ -136,7 +136,7 @@ bool Settings::save(const Settings* baseline) const
     {
         wf::LauncherConfig launcher = wf::LauncherConfig::load();
         launcher.setAllowNetworkCaches(allowNetworkCaches);
-        launcher.setSideload(sideload);
+        launcher.setSideload(profile(title).localFolder, sideload);
         ok = launcher.save() && ok;
         for (const TitleProfile& entry : titleProfiles())
             ok = writeDwordTo(entry.registrySubkey, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u)

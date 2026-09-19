@@ -7,6 +7,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -41,9 +42,9 @@ public:
 	std::optional<std::wstring> lastTitle() const { return lastTitle_; }
 	void setLastTitle(std::wstring_view value) { lastTitle_ = std::wstring(value); }
 
-	// launcher-wide: whether the game exe is patched for sideloading after an update
-	std::optional<bool> sideload() const { return sideload_; }
-	void setSideload(bool value) { sideload_ = value; }
+	// per title: whether that game's exe is patched for sideloading after an update
+	std::optional<bool> sideload(std::wstring_view title) const;
+	void setSideload(std::wstring_view title, bool value);
 
 private:
 	std::vector<std::wstring> exclude_;
@@ -51,7 +52,7 @@ private:
 	std::unordered_map<std::wstring, PatchRecord> patched_;
 	std::optional<bool> allowNetworkCaches_;
 	std::optional<std::wstring> lastTitle_;
-	std::optional<bool> sideload_;
+	std::map<std::wstring, bool> sideload_;
 };
 
 }

@@ -40,7 +40,7 @@ struct Settings
     bool shaderCache = true;
     // launcher-wide: stored in launcher.json, mirrored into each title's ForceHTTPS
     bool allowNetworkCaches = true;
-    // launcher-wide: patch the game exe so the loader searches its folder for DLLs
+    // per title: patch this game's exe so the loader searches its folder for DLLs
     bool sideload = true;
     std::filesystem::path launcherExe;
 
