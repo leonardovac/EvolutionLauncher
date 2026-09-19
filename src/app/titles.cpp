@@ -26,7 +26,7 @@ constexpr std::array<TitleProfile, 2> profiles{
       RES_WARFRAME_HERO, RES_WARFRAME_ICON},
      {wf::Title::Soulframe, L"Software\\Digital Extremes\\Soulframe\\Launcher",
       L"Soulframe.x64.exe", L"Soulframe", "rail.soulframe", "SOULFRAME", "ENTER", soulframeNav,
-      RES_SOULFRAME_HERO, RES_SOULFRAME_ICON}}};
+      RES_SOULFRAME_HERO, RES_SOULFRAME_ICON, RES_SOULFRAME_LEAF, RES_SOULFRAME_ENDCAP}}};
 
 }
 

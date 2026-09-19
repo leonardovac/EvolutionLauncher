@@ -6,6 +6,8 @@ RES_WARFRAME_ICON RCDATA "assets\warframe.png"
 RES_PUBLISHER_LOGO RCDATA "assets\publisher.png"
 RES_SOULFRAME_HERO RCDATA "assets\\soulframe-hero.jpg"
 RES_SOULFRAME_ICON RCDATA "assets\soulframe.png"
+RES_SOULFRAME_LEAF RCDATA "assets\soulframe-leaf.png"
+RES_SOULFRAME_ENDCAP RCDATA "assets\soulframe-endcap.png"
 
 #include <winver.h>
 

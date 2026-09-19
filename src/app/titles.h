@@ -31,6 +31,9 @@ struct TitleProfile
     std::span<const NavEntry> nav;
     int heroResource;
     int iconResource;
+    // 0 when this title has no such ornament
+    int leafResource = 0;
+    int endCapResource = 0;
 };
 
 const TitleProfile& profile(wf::Title title);
