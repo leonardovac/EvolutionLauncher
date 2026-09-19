@@ -204,9 +204,10 @@ def main():
     kept = [e for e in applicable if normalise_skip(e["install"]) not in skip]
     skipped = len(applicable) - len(kept)
     total = sum(e["size"] for e in kept)
-    print("lang=%s dx12=%s: %d of %d entries, %.2f GiB to download from empty "
-          "(%d filtered, %d skipped)"
-          % (args.lang, args.dx12, len(kept), len(entries), total / 2 ** 30, filtered, skipped))
+    print("lang=%s steam=%d eos=%d dx12=%d bulk=%d"
+          % (args.lang, args.steam, args.eos, args.dx12, not args.no_bulk))
+    print("%d of %d entries, %.2f GiB to download from empty (%d filtered, %d skipped)"
+          % (len(kept), len(entries), total / 2 ** 30, filtered, skipped))
     if bulk_skipped:
         print("%d cache files skipped: bulk download is off" % bulk_skipped)
 

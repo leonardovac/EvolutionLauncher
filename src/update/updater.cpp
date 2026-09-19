@@ -156,6 +156,11 @@ std::expected<Summary, UpdateError> run(const Options& options)
 
 	core::info("checking {} against {}", core::narrow(branchName(options.config.branch)),
 	           options.config.root.string());
+	// the resolved gates, so a run lines up with tools/check_index.py by eye
+	core::info("lang={} steam={} eos={} dx12={} bulk={}",
+	           core::narrow(options.config.language), options.config.steam ? 1 : 0,
+	           options.config.eosSdk ? 1 : 0, options.config.dx12 ? 1 : 0,
+	           options.config.bulkDownload ? 1 : 0);
 	const Plan plan = buildPlan(entries, options.config, progress);
 	summary.filtered = plan.filtered;
 	summary.skipped = plan.skipped;
