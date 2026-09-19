@@ -510,8 +510,10 @@ int run(const Options& options)
             {
             case PanelAction::Accept:
             {
+                // sideload changes what counts as up to date, so the plan has to be rebuilt
                 const bool needsRecheck = working.language != settings.language
-                    || working.graphicsApi != settings.graphicsApi;
+                    || working.graphicsApi != settings.graphicsApi
+                    || working.sideload != settings.sideload;
                 if (working.save(&settings))
                 {
                     settings = working;

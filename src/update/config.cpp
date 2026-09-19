@@ -332,6 +332,16 @@ LauncherConfig LauncherConfig::load()
 				scan.skipValue();
 			}
 		}
+		else if (key == "sideload")
+		{
+			if (const auto value = scan.boolean())
+				config.sideload_ = *value;
+			else
+			{
+				core::warn("launcher.json: \"sideload\" is not a boolean; ignoring");
+				scan.skipValue();
+			}
+		}
 		else if (key == "patched")
 		{
 			if (scan.consume('{'))
@@ -406,6 +416,7 @@ struct StoredScalars
 {
 	std::optional<bool> allowNetworkCaches;
 	std::optional<std::wstring> lastTitle;
+	std::optional<bool> sideload;
 };
 
 // the worker saves this file to record a patch and owns neither setting, so a save that carries
@@ -436,6 +447,8 @@ StoredScalars storedScalars()
 			if (const auto value = scan.string())
 				out.lastTitle = core::widen(*value);
 		}
+		else if (*key == "sideload")
+			out.sideload = scan.boolean();
 		else
 			scan.skipValue();
 		if (!scan.consume(','))
@@ -483,6 +496,7 @@ bool LauncherConfig::save() const
 	const std::optional<bool> caches =
 		allowNetworkCaches_ ? allowNetworkCaches_ : stored.allowNetworkCaches;
 	const std::optional<std::wstring> title = lastTitle_ ? lastTitle_ : stored.lastTitle;
+	const std::optional<bool> patchExe = sideload_ ? sideload_ : stored.sideload;
 	if (caches)
 		out << ",\n  \"allowNetworkCaches\": " << (*caches ? "true" : "false");
 	if (title)

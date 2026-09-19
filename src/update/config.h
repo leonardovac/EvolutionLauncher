@@ -41,12 +41,17 @@ public:
 	std::optional<std::wstring> lastTitle() const { return lastTitle_; }
 	void setLastTitle(std::wstring_view value) { lastTitle_ = std::wstring(value); }
 
+	// launcher-wide: whether the game exe is patched for sideloading after an update
+	std::optional<bool> sideload() const { return sideload_; }
+	void setSideload(bool value) { sideload_ = value; }
+
 private:
 	std::vector<std::wstring> exclude_;
 	std::vector<std::wstring> protect_;
 	std::unordered_map<std::wstring, PatchRecord> patched_;
 	std::optional<bool> allowNetworkCaches_;
 	std::optional<std::wstring> lastTitle_;
+	std::optional<bool> sideload_;
 };
 
 }

@@ -38,6 +38,7 @@ struct Config
 	bool dx12 = false;
 	bool hashCaches = false;
 	bool forceHttps = false;
+	bool sideload = true;  // off makes a patched exe count as differing, so it refetches
 	LauncherConfig launcher;
 };
 

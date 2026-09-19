@@ -192,8 +192,9 @@ Plan buildPlan(std::span<const Entry> entries, const Config& config, Progress* p
 			++plan.upToDate;
 			continue;
 		}
-		if (const PatchRecord* record = config.launcher.patchFor(entry->installPath);
-		    record != nullptr && digest && *digest == record->result &&
+		const PatchRecord* record =
+			config.sideload ? config.launcher.patchFor(entry->installPath) : nullptr;
+		if (record != nullptr && digest && *digest == record->result &&
 		    record->source == entry->hash)
 		{
 			++plan.upToDate;

@@ -263,6 +263,7 @@ int run(int argc, wchar_t** argv)
 	options.config.eosSdk = eos.value_or(settings.eos());
 	options.config.dx12 = dx12.value_or(settings.dx12());
 	options.config.forceHttps = !settings.allowNetworkCaches;
+	options.config.sideload = settings.sideload;
 	options.config.launcher = std::move(launcher);
 
 	if (wantSettings)
@@ -274,6 +275,7 @@ int run(int argc, wchar_t** argv)
 		core::info("audioLanguage {}", core::narrow(settings.audioLanguage));
 		core::info("shaderCache {}", settings.shaderCache);
 		core::info("allowNetworkCaches {}", settings.allowNetworkCaches);
+		core::info("sideload {}", settings.sideload);
 		core::info("root {}", settings.installRoot(options.config.branch).string());
 		core::info("steam {} eos {} dx12 {}", settings.steam(), settings.eos(), settings.dx12());
 		return 0;
@@ -333,7 +335,8 @@ int run(int argc, wchar_t** argv)
 	}
 
 	// patch only after a real update, never on a --check preview
-	if (summary->mainExe && !options.dryRun && !options.purgePrint && !options.staleReport)
+	if (summary->mainExe && settings.sideload && !options.dryRun && !options.purgePrint
+	    && !options.staleReport)
 		app::ensureSideloaded(options.config.launcher, *summary->mainExe, options.config.root);
 
 	if (options.purgePrint)

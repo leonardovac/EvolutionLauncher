@@ -180,6 +180,7 @@ void UpdateJob::work()
     options.config.eosSdk = settings.eos();
     options.config.dx12 = settings.dx12();
     options.config.forceHttps = !settings.allowNetworkCaches;
+    options.config.sideload = settings.sideload;
     options.config.hashCaches = verify_.load(std::memory_order_relaxed);
     options.staleReport = stale_.load(std::memory_order_relaxed);
     // a check builds the plan and stops; only an apply writes files
@@ -188,7 +189,7 @@ void UpdateJob::work()
 
     const auto summary = wf::run(options);
 
-    if (summary && summary->mainExe && apply)
+    if (summary && summary->mainExe && apply && settings.sideload)
         ensureSideloaded(options.config.launcher, *summary->mainExe, options.config.root);
 
     JobPhase phase = JobPhase::Ready;

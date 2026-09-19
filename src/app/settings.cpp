@@ -98,6 +98,8 @@ Settings Settings::load(wf::Title title, const wf::LauncherConfig& launcher)
         out.allowNetworkCaches = *stored;
     else if (const auto legacy = readDword(key, L"ForceHTTPS"))
         out.allowNetworkCaches = *legacy == 0;
+    if (const auto stored = launcher.sideload())
+        out.sideload = *stored;
     if (const auto value = readString(key, L"LauncherExe"))
         out.launcherExe = *value;
     return out;
@@ -129,10 +131,12 @@ bool Settings::save(const Settings* baseline) const
 
     // ours to act on, so it is stored launcher-wide; each title's stock launcher still reads
     // its own ForceHTTPS, so the choice is mirrored into every one of them
-    if (!baseline || allowNetworkCaches != baseline->allowNetworkCaches)
+    if (!baseline || allowNetworkCaches != baseline->allowNetworkCaches
+        || sideload != baseline->sideload)
     {
         wf::LauncherConfig launcher = wf::LauncherConfig::load();
         launcher.setAllowNetworkCaches(allowNetworkCaches);
+        launcher.setSideload(sideload);
         ok = launcher.save() && ok;
         for (const TitleProfile& entry : titleProfiles())
             ok = writeDwordTo(entry.registrySubkey, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u)

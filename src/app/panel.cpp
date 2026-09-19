@@ -193,6 +193,12 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         note(core::Rect(allowNetworkCachesRow.x, allowNetworkCachesRow.b() + ui::px(2.f), rowW,
                         noteH),
              "SHARED ACROSS EVERY GAME");
+
+        y = allowNetworkCachesRow.b() + ui::px(2.f) + noteH + ui::px(18.f);
+        const core::Rect sideloadRow(panel.x + inset, y, rowW, rowH);
+        checkbox("launcher.sideload", sideloadRow, "Allow Sideloaded DLLs", working.sideload);
+        note(core::Rect(sideloadRow.x, sideloadRow.b() + ui::px(2.f), rowW, noteH),
+             "PATCHES THE GAME EXECUTABLE; TURNING IT OFF REFETCHES IT");
     }
     else
     {
