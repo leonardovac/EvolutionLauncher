@@ -128,13 +128,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     const float navTracking = ui::px(2.f);
     const float leafW = ui::px(shellLeafWidth);
     const float leafH = leafW * 195.f / 232.f;
-    const float leafY = headerY + (ui::px(shellRowHeight) - leafH) * 0.5f;
     float navX = contentLeft;
-    if (state.leaf != nullptr)
-    {
-        ornament(state.leaf, Rect(navX, leafY, leafW, leafH), false);
-        navX += leafW + ui::px(shellLeafGap);
-    }
     for (const NavEntry& entry : state.nav)
     {
         const float entryW = trackedWidth(ui::fonts().caption, entry.label, navTracking)
@@ -160,10 +154,6 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         }
         navX = box.r() + ui::px(shellNavGap);
     }
-    if (state.leaf != nullptr)
-        ornament(state.leaf,
-                 Rect(navX - ui::px(shellNavGap) + ui::px(shellLeafGap), leafY, leafW, leafH),
-                 true);
 
     const Rect minimiseBox = captionGlyphBox(viewport, 1);
     const float dividerX = minimiseBox.x - ui::px(shellDividerGap);
