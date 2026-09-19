@@ -1,5 +1,6 @@
 #include "app/settings.h"
 
+#include "app/launch.h"
 #include "update/config.h"
 
 #include "core/str.h"
@@ -130,6 +131,24 @@ bool Settings::save(const Settings* baseline) const
         for (const std::wstring_view title : titleLauncherKeys)
             ok = writeDwordTo(title, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u) && ok;
     }
+    return ok;
+}
+
+bool Settings::adoptInstallRoot(wf::Branch branch, const std::filesystem::path& folder)
+{
+    std::error_code ec;
+    if (folder.empty() || !std::filesystem::exists(folder / gameExeName(branch), ec))
+        return false;
+    // the key names the stock launcher, and installRoot() reads the root back off its path
+    const std::filesystem::path exe = folder / L"Tools" / L"Launcher.exe";
+    HKEY key = nullptr;
+    if (::RegCreateKeyExW(HKEY_CURRENT_USER, launcherKey, 0, nullptr, REG_OPTION_NON_VOLATILE,
+                          KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+        return false;
+    const bool ok = writeString(key, L"LauncherExe", exe.wstring());
+    ::RegCloseKey(key);
+    if (ok)
+        launcherExe = exe;
     return ok;
 }
 
