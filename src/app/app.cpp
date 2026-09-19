@@ -33,6 +33,7 @@
 
 #include <algorithm>
 #include <array>
+#include <span>
 #include <chrono>
 #include <format>
 #include <ranges>
@@ -159,10 +160,20 @@ int run(const Options& options)
 
     HeroArt heroArt;
     gfx::Image liveHero;
+    gfx::Image nextHero;
     float heroFade = 0.f;
-    // the scrape is warframe.com only, and a screenshot keeps the baked art to stay reproducible
-    if (!options.wantShot && currentTitle() == wf::Title::Warframe)
-        heroArt.start();
+    const auto loadHero = [&device](std::span<const std::uint8_t> bytes, gfx::Image& out) {
+        if (bytes.empty())
+            return false;
+        auto loaded = gfx::loadImageMemory(device.dev(), bytes);
+        if (!loaded)
+            return false;
+        out = std::move(*loaded);
+        return true;
+    };
+    // a screenshot keeps the baked art to stay reproducible
+    if (!options.wantShot)
+        loadHero(heroArt.begin(currentTitle()), liveHero);
 
 
     window.setTitle(core::widen(railTitles[static_cast<std::size_t>(selectedTitle)].label));
@@ -180,20 +191,20 @@ int run(const Options& options)
 
         panelSlide = core::clamp01(panelSlide + (panelOpen ? 1.f : -1.f) * dt * 6.f);
 
-        if (!liveHero.valid())
+        // warm art is already settled, so anything the scrape hands over is newer and fades over it
+        if (const auto art = heroArt.take(); !art.empty() && loadHero(art, nextHero))
         {
-            if (const auto art = heroArt.take(); !art.empty())
-            {
-                if (auto loaded = gfx::loadImageMemory(device.dev(), art))
-                {
-                    liveHero = std::move(*loaded);
-                    ui::requestFrame();
-                }
-            }
+            heroFade = 0.f;
+            ui::requestFrame();
         }
-        else if (heroFade < 1.f)
+        if (nextHero.valid())
         {
             heroFade = core::clamp01(heroFade + dt * 1.6f);
+            if (heroFade >= 1.f)
+            {
+                liveHero = std::move(nextHero);
+                nextHero = gfx::Image{};
+            }
             ui::requestFrame();
         }
 
@@ -362,9 +373,11 @@ int run(const Options& options)
                 defragExit == 0 ? "CACHE DEFRAGMENTED" : "THE DEFRAGMENTER REPORTED A FAILURE";
             ui::requestFrame();
         }
-        gfx::Image* const baked = railTitles[static_cast<std::size_t>(selectedTitle)].hero;
-        const HeroFrame heroFrame{baked != nullptr && baked->valid() ? baked : nullptr,
-                                  liveHero.valid() ? &liveHero : nullptr, heroFade};
+        gfx::Image* baked = railTitles[static_cast<std::size_t>(selectedTitle)].hero;
+        if (baked == nullptr || !baked->valid())
+            baked = nullptr;
+        const HeroFrame heroFrame{liveHero.valid() ? &liveHero : baked,
+                                  nextHero.valid() ? &nextHero : nullptr, heroFade};
         drawShell(viewport, heroFrame, shell);
         const RailResult rail =
             drawRail(viewport, !shell.panelVisible, &publisherLogo, railTitles,
@@ -449,6 +462,7 @@ int run(const Options& options)
             launchFailure.clear();
             meter.reset();
             liveHero = gfx::Image{};
+            nextHero = gfx::Image{};
             heroFade = 0.f;
             heroArt.stop();
             panelOpen = false;
@@ -458,8 +472,7 @@ int run(const Options& options)
             if (!options.wantShot)
             {
                 job.restart();
-                if (currentTitle() == wf::Title::Warframe)
-                    heroArt.start();
+                loadHero(heroArt.begin(currentTitle()), liveHero);
             }
             ui::requestFrame();
         }
