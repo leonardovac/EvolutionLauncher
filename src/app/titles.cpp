@@ -16,9 +16,9 @@ constexpr std::array<NavEntry, 3> warframeNav{
      {"shell.nav.prime", "PRIME ACCESS", "https://www.warframe.com/prime-access"}}};
 
 constexpr std::array<NavEntry, 3> soulframeNav{
-    {{"shell.nav.preludes", "PRELUDES", "https://www.soulframe.com/en/news"},
-     {"shell.nav.buildnotes", "BUILD NOTES", "https://www.soulframe.com/en/patch-notes"},
-     {"shell.nav.community", "COMMUNITY", "https://www.soulframe.com/en/community"}}};
+    {{"shell.nav.soulframe.news", "NEWS", "https://www.soulframe.com/en/news"},
+     {"shell.nav.soulframe.notes", "PATCH NOTES", "https://www.soulframe.com/en/patch-notes"},
+     {"shell.nav.soulframe.founders", "FOUNDERS", "https://www.soulframe.com/shop/founders"}}};
 
 constexpr std::array<TitleProfile, 2> profiles{
     {{wf::Title::Warframe, L"Software\\Digital Extremes\\Warframe\\Launcher",
