@@ -367,8 +367,8 @@ int run(const Options& options)
                                   liveHero.valid() ? &liveHero : nullptr, heroFade};
         drawShell(viewport, heroFrame, shell);
         const RailResult rail =
-            drawRail(viewport, !shell.panelVisible, &publisherLogo, railTitles, selectedTitle,
-                     shellFooterAxis());
+            drawRail(viewport, !shell.panelVisible, &publisherLogo, railTitles,
+                     selectedTitle);
         if (const std::string_view url = shellNavClicked(); !url.empty())
             ::ShellExecuteW(nullptr, L"open", core::widen(url).c_str(), nullptr, nullptr,
                             SW_SHOWNORMAL);

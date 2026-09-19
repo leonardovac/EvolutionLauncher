@@ -61,7 +61,7 @@ void drawMark(gfx::Image* art, const core::Vec2& center, float size, const core:
 }
 
 RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* publisher,
-                    std::span<const RailTitle> titles, int selected, float cogAxis)
+                    std::span<const RailTitle> titles, int selected)
 {
     RailResult result;
 
@@ -130,6 +130,7 @@ RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* p
     const float cogSize = ui::px(22.f);
     const float cogHit = ui::px(36.f);
     // an action, not a title, so it skips the band's full width and its selected-item bar
+    const float cogAxis = rail.b() - ui::px(railCogInset);
     const core::Rect cogBox(centerX - cogHit * 0.5f, cogAxis - cogHit * 0.5f, cogHit, cogHit);
     const core::Rect cogIcon(centerX - cogSize * 0.5f, cogAxis - cogSize * 0.5f, cogSize, cogSize);
     // names the tab it opens, which is what tells it apart from the header's title-scoped cog

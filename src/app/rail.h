@@ -12,6 +12,9 @@ namespace app
 // design-space; drawShell insets its content by this much
 inline constexpr float railWidth = 96.f;
 
+// the cog's centre, up from the rail's own bottom edge; the rail never reads the content layout
+inline constexpr float railCogInset = 54.f;
+
 struct RailTitle
 {
     std::string_view id;
@@ -28,8 +31,7 @@ struct RailResult
     bool cogClicked = false;
 };
 
-// `cogAxis` is the shell's footer axis, so the cog lines up with the status line and PLAY
 RailResult drawRail(const core::Rect& viewport, bool inputEnabled, gfx::Image* publisher,
-                    std::span<const RailTitle> titles, int selected, float cogAxis);
+                    std::span<const RailTitle> titles, int selected);
 
 }

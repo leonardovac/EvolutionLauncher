@@ -52,7 +52,5 @@ int shellLanguageIndex();
 bool shellCogClicked();
 // the URL of the nav entry clicked this frame, empty when none was
 std::string_view shellNavClicked();
-// the axis the status line and the PLAY button share; set by drawShell, read by the rail's cog
-float shellFooterAxis();
 
 }

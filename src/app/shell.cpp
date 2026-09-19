@@ -27,7 +27,6 @@ bool secondaryClicked = false;
 bool minimiseClicked = false;
 int languageIndex = -1;
 bool cogClicked = false;
-float footerAxis = 0.f;
 std::string_view navClicked;
 
 void globeGlyph(const core::Vec2& center, float radius, const core::Col& col)
@@ -286,7 +285,6 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     const float textW = start.x - bottom.x - ui::px(24.f);
     // the track itself sits on the PLAY button's axis; the label and detail flank it
     const float axis = start.center().y;
-    footerAxis = axis;
     constexpr std::array sweepPhases{JobPhase::Idle, JobPhase::Checking};
     constexpr std::array barPhases{JobPhase::Idle, JobPhase::Checking, JobPhase::Updating};
     const bool showBar = std::ranges::contains(barPhases, state.phase);
@@ -413,11 +411,6 @@ bool shellCogClicked()
 std::string_view shellNavClicked()
 {
     return navClicked;
-}
-
-float shellFooterAxis()
-{
-    return footerAxis;
 }
 
 }
