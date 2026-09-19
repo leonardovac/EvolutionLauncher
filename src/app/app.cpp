@@ -219,7 +219,9 @@ int run(const Options& options)
         shell.nav = titleProfiles()[static_cast<std::size_t>(selectedTitle)].nav;
         const bool updatePending = snap.phase == JobPhase::UpdateReady;
         const bool installed = gameInstalled(settings, wf::Branch::Public);
-        shell.startLabel = updatePending ? (installed ? "UPDATE" : "INSTALL") : "PLAY";
+        shell.startLabel = updatePending
+            ? (installed ? "UPDATE" : "INSTALL")
+            : titleProfiles()[static_cast<std::size_t>(selectedTitle)].playLabel;
         shell.secondaryVisible = updatePending;
         // with no install to fall back to, the line offers to find one detection missed
         shell.secondaryLabel = installed ? "PLAY WITHOUT UPDATING" : "ALREADY INSTALLED? LOCATE IT";

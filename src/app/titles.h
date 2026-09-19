@@ -26,6 +26,8 @@ struct TitleProfile
     std::wstring_view localFolder;
     std::string_view railId;
     std::string_view label;
+    // the idle action; UPDATE and INSTALL are shared because they name an action, not a brand
+    std::string_view playLabel;
     std::span<const NavEntry> nav;
     int heroResource;
     int iconResource;

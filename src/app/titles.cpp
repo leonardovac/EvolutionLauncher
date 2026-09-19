@@ -22,10 +22,10 @@ constexpr std::array<NavEntry, 3> soulframeNav{
 
 constexpr std::array<TitleProfile, 2> profiles{
     {{wf::Title::Warframe, L"Software\\Digital Extremes\\Warframe\\Launcher",
-      L"Warframe.x64.exe", L"Warframe", "rail.warframe", "WARFRAME", warframeNav,
+      L"Warframe.x64.exe", L"Warframe", "rail.warframe", "WARFRAME", "PLAY", warframeNav,
       RES_WARFRAME_HERO, RES_WARFRAME_ICON},
      {wf::Title::Soulframe, L"Software\\Digital Extremes\\Soulframe\\Launcher",
-      L"Soulframe.x64.exe", L"Soulframe", "rail.soulframe", "SOULFRAME", soulframeNav,
+      L"Soulframe.x64.exe", L"Soulframe", "rail.soulframe", "SOULFRAME", "ENTER", soulframeNav,
       RES_SOULFRAME_HERO, RES_SOULFRAME_ICON}}};
 
 }
