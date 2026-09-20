@@ -47,6 +47,7 @@ void usage()
 	          "  --no-dx12         force off\n"
 	          "  --bulk            fetch the bulk .cache/.toc content (default: EnableBulkDownload)\n"
 	          "  --no-bulk         force off\n"
+	          "  --jobs N          parallel downloads, 1-16 (default: 4)\n"
 	          "  --verbose         per-file detail\n"
 	          "  --settings        print the launcher settings and exit\n"
 	          "  --settings-write  write back the loaded settings and exit\n"
@@ -123,6 +124,7 @@ int run(int argc, wchar_t** argv)
 	std::optional<bool> eos;
 	std::optional<bool> dx12;
 	std::optional<bool> bulk;
+		std::optional<std::size_t> jobs;
 	bool wantSettings = false;
 	bool wantSettingsWrite = false;
 	bool wantVersions = false;
@@ -191,6 +193,10 @@ int run(int argc, wchar_t** argv)
 		else if (flag == L"--no-bulk")
 		{
 			bulk = false;
+		}
+		else if (flag == L"--jobs" && i + 1 < argc)
+		{
+			jobs = static_cast<std::size_t>(::_wtoi(argv[++i]));
 		}
 		else if (flag == L"--verbose")
 		{
@@ -302,6 +308,7 @@ int run(int argc, wchar_t** argv)
 	options.config.eosSdk = eos.value_or(settings.eos());
 	options.config.dx12 = dx12.value_or(settings.dx12());
 	options.config.bulkDownload = bulk.value_or(settings.bulkDownload);
+	options.jobs = jobs.value_or(wf::defaultJobs);
 	options.config.forceHttps = !settings.allowNetworkCaches;
 	options.config.sideload = settings.sideload;
 	options.config.launcher = std::move(launcher);

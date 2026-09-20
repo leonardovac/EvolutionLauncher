@@ -16,6 +16,8 @@ constexpr DWORD connectTimeoutMs = 20'000;
 constexpr DWORD sendTimeoutMs = 30'000;
 constexpr DWORD receiveTimeoutMs = 60'000;
 constexpr std::size_t readChunk = 32u * 1024u;
+// WinHTTP defaults to 2 per server, which would quietly serialise every worker past the second
+constexpr DWORD maxConnectionsPerServer = 16;
 
 }
 
@@ -28,6 +30,9 @@ std::expected<Session, HttpError> Session::open()
 	::WinHttpSetTimeouts(handle.get(), static_cast<int>(connectTimeoutMs),
 	                     static_cast<int>(connectTimeoutMs), static_cast<int>(sendTimeoutMs),
 	                     static_cast<int>(receiveTimeoutMs));
+	DWORD connections = maxConnectionsPerServer;
+	::WinHttpSetOption(handle.get(), WINHTTP_OPTION_MAX_CONNS_PER_SERVER, &connections,
+	                   sizeof(connections));
 	return Session(std::move(handle));
 }
 
@@ -57,7 +62,8 @@ std::expected<Connection, HttpError> Connection::open(const Session& session,
 }
 
 std::expected<void, HttpError> Connection::fetch(std::wstring_view path, std::uint64_t resumeFrom,
-                                                 const BodySink& sink) const
+                                                 const BodySink& sink,
+                                                 std::uint64_t through) const
 {
 	const std::wstring object = basePath_ + std::wstring(path);
 	const DWORD flags = secure_ ? WINHTTP_FLAG_SECURE : 0u;
@@ -70,8 +76,11 @@ std::expected<void, HttpError> Connection::fetch(std::wstring_view path, std::ui
 	DWORD disable = WINHTTP_DISABLE_COOKIES;
 	::WinHttpSetOption(request.get(), WINHTTP_OPTION_DISABLE_FEATURE, &disable, sizeof(disable));
 
-	const std::wstring headers =
-		resumeFrom != 0 ? std::format(L"Range: bytes={}-", resumeFrom) : std::wstring{};
+	std::wstring headers;
+	if (through != 0)
+		headers = std::format(L"Range: bytes={}-{}", resumeFrom, through);
+	else if (resumeFrom != 0)
+		headers = std::format(L"Range: bytes={}-", resumeFrom);
 
 	if (!::WinHttpSendRequest(request.get(),
 	                          headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : headers.c_str(),
@@ -94,7 +103,7 @@ std::expected<void, HttpError> Connection::fetch(std::wstring_view path, std::ui
 	if (std::ranges::contains(gone, status))
 		return std::unexpected(HttpError::NotFound);
 
-	if (resumeFrom != 0)
+	if (resumeFrom != 0 || through != 0)
 	{
 		if (status != 206)
 			return std::unexpected(HttpError::Status);

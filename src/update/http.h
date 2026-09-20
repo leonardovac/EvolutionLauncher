@@ -56,8 +56,9 @@ class Connection
 public:
 	static std::expected<Connection, HttpError> open(const Session& session, std::wstring_view url);
 
+	// `through` bounds the Range; 0 means open-ended, which is what a whole entry wants
 	std::expected<void, HttpError> fetch(std::wstring_view path, std::uint64_t resumeFrom,
-	                                     const BodySink& sink) const;
+	                                     const BodySink& sink, std::uint64_t through = 0) const;
 
 private:
 	Connection(Internet handle, std::wstring basePath, bool secure) noexcept

@@ -9,6 +9,9 @@
 #include "update/purge.h"
 #include "update/stale.h"
 
+#include <thread>
+#include <mutex>
+#include <atomic>
 #include <algorithm>
 #include <format>
 #include <random>
@@ -203,31 +206,70 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	if (!content)
 		return std::unexpected(content.error());
 
-	std::size_t position = 0;
-	for (const Job& job : plan.jobs)
+	const std::size_t jobs = std::clamp<std::size_t>(options.jobs, 1, maxJobs);
+	std::atomic<std::size_t> position{0};
+	std::mutex tally;
+
+	// one category at a time: an interrupted run still leaves whole earlier categories done
+	for (std::size_t first = 0; first < plan.jobs.size() && !summary.cancelled;)
 	{
-		if (ctx.cancelled())
+		std::size_t last = first;
+		while (last < plan.jobs.size()
+		       && plan.jobs[last].entry->category == plan.jobs[first].entry->category)
+			++last;
+
+		std::atomic<std::size_t> next{first};
+		const auto worker = [&]
 		{
-			summary.cancelled = true;
-			break;
-		}
-		++position;
-		ctx.progress->onEntryStart(position, plan.jobs.size(), job.entry->installPath,
-		                           job.entry->wireSize);
-		const auto applied = applyEntry(*content, *job.entry, options.config, ctx);
-		if (!applied)
-		{
-			if (applied.error() == ApplyError::Cancelled)
+			for (;;)
 			{
-				summary.cancelled = true;
-				break;
+				const std::size_t mine = next.fetch_add(1, std::memory_order_relaxed);
+				if (mine >= last || ctx.cancelled())
+					return;
+				const Job& job = plan.jobs[mine];
+				ctx.progress->onEntryStart(position.fetch_add(1, std::memory_order_relaxed) + 1,
+				                           plan.jobs.size(), job.entry->installPath,
+				                           job.entry->wireSize);
+				// a chunkable entry spends the whole pool on itself; nothing else is in flight
+				const auto applied =
+					chunkable(*job.entry)
+						? applyChunked(*content, *job.entry, options.config, ctx, jobs)
+						: applyEntry(*content, *job.entry, options.config, ctx);
+
+				const std::lock_guard lock(tally);
+				if (!applied)
+				{
+					if (applied.error() == ApplyError::Cancelled)
+					{
+						summary.cancelled = true;
+						return;
+					}
+					++summary.failed;
+					ctx.progress->onEntryFailed(job.entry->installPath,
+					                            describe(applied.error()));
+					continue;
+				}
+				++summary.updated;
+				summary.downloaded += applied->downloaded;
 			}
-			++summary.failed;
-			ctx.progress->onEntryFailed(job.entry->installPath, describe(applied.error()));
-			continue;
-		}
-		++summary.updated;
-		summary.downloaded += applied->downloaded;
+		};
+
+		// a chunked entry parallelises inside itself, so it must not race its own siblings
+		const bool solo = std::any_of(plan.jobs.begin() + static_cast<std::ptrdiff_t>(first),
+		                              plan.jobs.begin() + static_cast<std::ptrdiff_t>(last),
+		                              [](const Job& job) { return chunkable(*job.entry); });
+		const std::size_t count = solo ? 1 : std::min(jobs, last - first);
+
+		std::vector<std::thread> pool;
+		pool.reserve(count);
+		for (std::size_t i = 0; i < count; ++i)
+			pool.emplace_back(worker);
+		for (std::thread& thread : pool)
+			thread.join();
+
+		if (ctx.cancelled())
+			summary.cancelled = true;
+		first = last;
 	}
 	return summary;
 }

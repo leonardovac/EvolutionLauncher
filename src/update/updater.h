@@ -23,6 +23,9 @@ enum class UpdateError
 	NoRoot
 };
 
+inline constexpr std::size_t defaultJobs = 4;
+inline constexpr std::size_t maxJobs = 16;
+
 struct Options
 {
 	Config config;
@@ -30,6 +33,7 @@ struct Options
 	bool staleReport = false;
 	bool purgePrint = false;
 	std::wstring only;
+	std::size_t jobs = defaultJobs;
 	RunContext ctx;
 };
 
