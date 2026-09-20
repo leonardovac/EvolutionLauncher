@@ -1,4 +1,4 @@
-# Digital Extremes content update protocol
+# Digital Extremes launcher protocol
 
 Wire format used by the stock `Tools\Launcher.exe` to keep an install current. Recovered
 from the retail launcher and confirmed against the live service on 2026-09-07.
@@ -193,7 +193,7 @@ Those switches come from the machine, and resolve as follows:
 
 Steam and Epic are the awkward ones: they are set by searching that command-line tag for
 `Steam` and `Epic`, so a client started by Steam runs as `-registry:Steam`. A
-replacement updater has to infer the platform some other way. Matching `steamapps` or
+replacement launcher has to infer the platform some other way. Matching `steamapps` or
 `Epic` against the recorded `LauncherExe` path is the closest equivalent.
 
 The dev-controls ceiling is a separate value: 2 for `-dev`, 1 when `EnableTestCluster` is

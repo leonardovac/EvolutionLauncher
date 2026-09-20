@@ -24,7 +24,7 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "FileDescription", "Custom launcher/updater for Digital Extremes games"
+            VALUE "FileDescription", "Custom launcher for Digital Extremes games"
             VALUE "FileVersion", "0.2.0"
             VALUE "InternalName", "Launcher"
             VALUE "OriginalFilename", "Launcher.exe"

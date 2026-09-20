@@ -27,7 +27,7 @@ namespace
 
 void usage()
 {
-	std::puts("Launcher - Digital Extremes content updater\n"
+	std::puts("Launcher - custom launcher for Digital Extremes games\n"
 	          "\n"
 	          "  --root <dir>      install root (default: LauncherExe's grandparent, else\n"
 	          "                    %LOCALAPPDATA%\\<title>\\Downloaded\\<branch>)\n"
