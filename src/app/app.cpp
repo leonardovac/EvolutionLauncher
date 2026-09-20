@@ -251,6 +251,7 @@ int run(const Options& options)
         input.down = window.mouseDown();
         input.pressed = window.mousePressed();
         input.released = window.mouseReleased();
+        input.keys = window.keys();
         ui::newFrame(input, dt, static_cast<float>(device.width()),
                      static_cast<float>(device.height()));
         constexpr std::array liveJobPhases{JobPhase::Checking, JobPhase::Updating};
@@ -638,7 +639,7 @@ int run(const Options& options)
         if (shellMinimiseClicked())
             window.minimise();
         ui::endFrame();
-        window.clearMouseEdge();
+        window.clearInputEdge();
         renderer.render(device.ctx(), ui::dl(), device.width(), device.height());
 
         if (options.wantShot && elapsed >= options.shotTime)

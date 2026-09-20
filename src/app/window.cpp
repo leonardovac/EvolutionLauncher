@@ -2,6 +2,7 @@
 
 #include "app/rail.h"
 #include "app/shelllayout.h"
+#include "ui/ui.h"
 
 #include <windowsx.h>
 
@@ -156,6 +157,12 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         mouseReleased_ = true;
         ::ReleaseCapture();
         return 0;
+    case WM_KEYDOWN:
+        if (wp == VK_RETURN)
+            keys_ |= static_cast<std::uint32_t>(ui::Key::Enter);
+        else if (wp == VK_ESCAPE)
+            keys_ |= static_cast<std::uint32_t>(ui::Key::Escape);
+        return 0;
     case WM_ERASEBKGND:
         return 1;
     case WM_DESTROY:
@@ -254,10 +261,11 @@ bool Window::takeScaleChanged() noexcept
     return was;
 }
 
-void Window::clearMouseEdge() noexcept
+void Window::clearInputEdge() noexcept
 {
     mousePressed_ = false;
     mouseReleased_ = false;
+    keys_ = 0;
 }
 
 }

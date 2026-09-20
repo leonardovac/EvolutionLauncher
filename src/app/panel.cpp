@@ -338,6 +338,22 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
     if (slide >= 1.f && ui::g().input.pressed && !panel.contains(ui::g().input.mouse))
         action = PanelAction::Dismiss;
 
+    // Escape backs out one level at a time, so an open list closes before the panel does
+    if (slide >= 1.f && !ui::keyboardCaptured())
+    {
+        if (ui::keyPressed(ui::Key::Escape))
+        {
+            if (dropdownOpen())
+                closeDropdown();
+            else
+                action = PanelAction::Dismiss;
+        }
+        else if (ui::keyPressed(ui::Key::Enter) && std::ranges::contains(editingTabs, state.tab))
+        {
+            action = PanelAction::Accept;
+        }
+    }
+
     // last, so the hint sits above every row and above an open dropdown
     if (slide >= 1.f)
         tooltipOverlay(panel);

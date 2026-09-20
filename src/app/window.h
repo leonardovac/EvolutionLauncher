@@ -4,6 +4,7 @@
 
 #include "core/types.h"
 
+#include <cstdint>
 #include <string_view>
 
 namespace app
@@ -25,12 +26,13 @@ public:
     [[nodiscard]] bool mouseDown() const noexcept { return mouseDown_; }
     [[nodiscard]] bool mousePressed() const noexcept { return mousePressed_; }
     [[nodiscard]] bool mouseReleased() const noexcept { return mouseReleased_; }
+    [[nodiscard]] std::uint32_t keys() const noexcept { return keys_; }
 
     bool pump();
     void waitForInput() const noexcept;
     bool takeResized() noexcept;
     bool takeScaleChanged() noexcept;
-    void clearMouseEdge() noexcept;
+    void clearInputEdge() noexcept;
 
 private:
     static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -47,6 +49,7 @@ private:
     bool mouseDown_ = false;
     bool mousePressed_ = false;
     bool mouseReleased_ = false;
+    std::uint32_t keys_ = 0;
 };
 
 }

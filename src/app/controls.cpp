@@ -233,6 +233,11 @@ void closeDropdown()
     openIndex = nullptr;
 }
 
+bool dropdownOpen()
+{
+    return openWidget != 0;
+}
+
 
 void tooltip(const core::Rect& row, std::string_view text)
 {

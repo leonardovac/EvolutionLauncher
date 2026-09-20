@@ -33,6 +33,8 @@ bool dropdownOverlay(DropdownGroup group);
 
 void closeDropdown();
 
+bool dropdownOpen();
+
 // records the hint for the hovered row; tooltipOverlay draws it once, after every row
 void tooltip(const core::Rect& row, std::string_view text);
 void tooltipOverlay(const core::Rect& bounds);
