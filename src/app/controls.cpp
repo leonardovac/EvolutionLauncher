@@ -142,8 +142,9 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
     }
     else
     {
-        value = core::Rect(field.x + ui::px(8.f), field.y, field.w - ui::px(28.f), field.h);
-        chevronX = field.r() - ui::px(10.f);
+        // the list rows' inset, so the value does not shift sideways when the list opens
+        value = core::Rect(field.x + ui::px(12.f), field.y, field.w - ui::px(40.f), field.h);
+        chevronX = field.r() - ui::px(16.f);
     }
 
     ui::text(ui::fonts().caption, value, valueText, ui::theme().text.alpha(0.85f + 0.15f * hoverT),
