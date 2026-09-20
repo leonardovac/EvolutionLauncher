@@ -31,7 +31,7 @@ std::wstring parentDir(std::wstring_view key)
 	return slash == std::wstring_view::npos ? std::wstring() : std::wstring(key.substr(0, slash));
 }
 
-// the stock launcher's vestigial set (WF_PurgeVestigialFiles, 0x2C500); nothing else qualifies
+// the stock launcher's vestigial set (docs/protocol.md); nothing else qualifies
 constexpr std::array<std::wstring_view, 7> purgeableExtensions{L".exe", L".dll", L".dat",
                                                                L".bin", L".pak", L".zip",
                                                                L".dmp"};

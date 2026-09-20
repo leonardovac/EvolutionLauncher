@@ -1,8 +1,7 @@
 # Digital Extremes content update protocol
 
 Wire format used by the stock `Tools\Launcher.exe` to keep an install current. Recovered
-from the retail launcher and confirmed against the live service on 2026-09-07. RVAs below
-refer to `Launcher.exe` with a zero image base.
+from the retail launcher and confirmed against the live service on 2026-09-07.
 
 There is no authentication, no request signing, and no user agent
 (`WinHttpOpen(pszAgentW = NULL)`). Cookies are disabled via
@@ -26,22 +25,16 @@ Every title serves the same protocol from its own pair of hosts. Only the stem d
 | Index | `https://origin.soulframe.com` | `https://origin-test.soulframe.com` | `https://origin-dev.soulframe.com` |
 | Content | `http://content.soulframe.com` | `http://content-test.soulframe.com` | `http://content-dev.soulframe.com` |
 
-Only Soulframe's Public pair has been exercised. Its index was fetched on 2026-09-19 and
-parses byte-identically to Warframe's — same `<path>.<MD5>.lzma,<wireSize>` lines, the same
-`/Tools`, `/Lotus` and `/Cache.Windows` layout, and a `/Soulframe.x64.exe` where Warframe has
-`/Warframe.x64.exe`. The Test and Dev names above are inferred from Warframe's prefix pattern
-and have not been requested.
-
 The launcher retries once with the opposite scheme when a connection fails.
 
 ## Index
 
     GET https://origin.warframe.com/origin/<8 uppercase hex>/index.txt.lzma
 
-The hex group is `(rand() << 16) | rand()` — a cache-buster nonce, not a build id. Any
-value is accepted; the response carries `Cache-Control: no-cache`.
+The hex group is `(rand() << 16) | rand()`, a cache-buster nonce. Any value is accepted;
+the response carries `Cache-Control: no-cache`.
 
-The body is an **LZMA-alone** stream: 13-byte header (1 props byte, 4-byte LE dictionary
+The body is an LZMA-alone stream: 13-byte header (1 props byte, 4-byte LE dictionary
 size, 8-byte LE uncompressed size) then raw LZMA1. Retail currently ships
 `lc=3 lp=0 pb=2`, 64 MiB dictionary. Decoded, it is `\n`-separated UTF-8 text; a recent
 snapshot is 258 lines / ~20 KB.
@@ -59,17 +52,14 @@ A line is accepted only when `indexOf(".lzma,")` equals `lastIndexOf('.') + 33` 
 i.e. exactly 32 hex characters sit between the final `.` and the extension. Lines failing
 that are dropped silently. `.bulk,` is tried when `.lzma,` is absent.
 
-Three fields are derived from each line (`WF_ParseIndexLine`, 0x2655C):
+Three fields are derived from each line:
 
 | Field | Derivation |
 |---|---|
-| Request path | `line[0 .. indexOf(ext) + 5)` — keeps the extension, **drops the comma and size** |
+| Request path | `line[0 .. indexOf(ext) + 5)`, which keeps the extension and **drops the comma and size** |
 | Install path | `line[0 .. lastDotIndex)`, `/` → `\`, appended to the branch root |
 | MD5 | the 32 hex characters at `lastDotIndex + 1` |
 | Wire size | decimal after the comma |
-
-The truncation is easy to miss when reading a decompilation: the length argument sits in
-`r8` (`lea r8, [r13+5]`) and Hex-Rays drops it from the `WF_WStrAssign` call.
 
 `.../B.CharacterCodesCache.cache.6D0E….bulk,14781` therefore means:
 
@@ -78,11 +68,11 @@ The truncation is easy to miss when reading a decompilation: the length argument
 
 ## Size and hash semantics
 
-**`wireSize` is the `Content-Length` of the CDN object**, not the size of the installed
-file — the compressed length for `.lzma`, the raw length for `.bulk`. For the sample
-above, `,8346` matched `Content-Length: 8346` while the decompressed file was 43970 bytes.
+`wireSize` is the `Content-Length` of the CDN object: the compressed length for `.lzma`,
+the raw length for `.bulk`. For the sample above, `,8346` matched `Content-Length: 8346`
+while the decompressed file was 43970 bytes.
 
-**The MD5 covers the installed bytes**: post-decompression for `.lzma`, raw for `.bulk`.
+The MD5 covers the installed bytes: post-decompression for `.lzma`, raw for `.bulk`.
 Both were verified live. CDN objects are content-addressed by that digest, so files from
 older builds stay fetchable. As a self-check, the index lists
 `/Tools/Launcher.exe.A605C7ACA82F918462771ECC927AB12C.lzma` and `A605C7AC…` is the MD5 of
@@ -95,30 +85,26 @@ the retail `Launcher.exe` on disk.
 `200` is required for a fresh request. To resume, send `Range: bytes=<offset>-` and
 require `206` plus a `Content-Range: bytes <first>-<last>/<total>` whose `first` equals the
 requested offset; anything else is a protocol error and the partial file is truncated and
-retried. `404` and `410` are permanent failures. Other statuses are retried — four attempts
-for the index, two for content files.
+retried. `404` and `410` are permanent failures. Other statuses are retried, four attempts
+for the index and two for content files.
 
 The body handler is chosen by whether the request path contains `.lzma`: LZMA-alone stream
-decode (`WF_ReadBodyLzma`, 0x29C54, 16 KiB in / 32 KiB out) or a straight copy
-(`WF_ReadBodyRaw`, 0x29958, 32 KiB). Both run MD5 over the bytes that reach disk.
+decode, or a straight copy. Both run MD5 over the bytes that reach disk.
 
 ## Content scheme
 
 `ForceHTTPS` in the launcher's registry key selects the scheme used for the content host.
-The stock settings dialog's **Allow Network Caches** checkbox stores its negation —
-checking it writes `ForceHTTPS = 0`. We honour the setting for `content.warframe.com` and
+The stock settings dialog's Allow Network Caches checkbox stores its negation: checking it
+writes `ForceHTTPS = 0`. We honour the setting for `content.warframe.com` and
 its `-test`/`-dev` siblings, so a checked box lets a transparent proxy or CDN cache serve
-those objects over `http://`. The origin index fetch stays on `https://` unconditionally
-regardless of the setting: it is one small compressed request where caching buys nothing,
-and downgrading it would trade away transport security for no benefit. `flipScheme` in
-`updater.cpp` still retries the opposite scheme on a connect failure either way, so a wrong
-guess degrades to one retry rather than a hard failure.
+those objects over `http://`. The origin index fetch stays on `https://` regardless of the
+setting. Either way a connect failure retries once with the opposite scheme.
 
 ## Install paths
 
-The root is **not** always under `%LOCALAPPDATA%`. A Steam install keeps content in the
-Steam library folder, and only logs and configuration under `%LOCALAPPDATA%\Warframe`. The
-launcher records its own location in the registry, and the root is that path's grandparent:
+The launcher records its own location in the registry, and the root is that path's
+grandparent. A Steam install keeps content in the Steam library folder, with logs and
+configuration under `%LOCALAPPDATA%\Warframe`:
 
     HKCU\Software\Digital Extremes\Warframe\Launcher
       LauncherExe = ...\steamapps\common\Warframe\Tools\Launcher.exe
@@ -126,14 +112,12 @@ launcher records its own location in the registry, and the root is that path's g
 
     %LOCALAPPDATA%\Warframe\Downloaded\<Public|Test|Dev>      (non-Steam fallback)
 
-Under the root, content lives in `Cache.Windows`, `Tools` and `Lotus`, with
-`Warframe.x64.exe` at the top. The same key also holds `Language` (the two-letter code the
-applicability filter needs), `GraphicsAPI`, and `EnableBulkDownload`.
+The same key also holds `Language` (the two-letter code the applicability filter needs),
+`GraphicsAPI`, and `EnableBulkDownload`.
 
 ## Game launch
 
-`WF_BuildGameCommandLine` (0x41714) composes the retail command line in this order, then
-`WF_SpawnGame` (0x4108C) runs it with
+The retail command line is composed in this order and run with
 `CreateProcessW(nullptr, line, …, CREATE_UNICODE_ENVIRONMENT | NORMAL_PRIORITY_CLASS)`:
 
     "<root>\Warframe.x64.exe" -windowMode:N -shaderCache:N -graphicsDriver:dx11|dx12
@@ -142,16 +126,16 @@ applicability filter needs), `GraphicsAPI`, and `EnableBulkDownload`.
 
 | Fragment | Source |
 |---|---|
-| exe path | branch root + `\Warframe.x64.exe` (`WF_GameExePath`, 0x3F3E0) |
-| `-windowMode` | `gWindowMode`, the registry `WindowMode` |
-| `-shaderCache` | `byte_105EA3`, the registry `ShaderCache` |
-| `-graphicsDriver` | `gGraphicsDriverNames[gGraphicsApi]` (0xD5550) = `dx11`, `dx12` |
-| `-gpuPreference` | `gGpuPreference`, the registry `GPUPreference` |
-| cluster | `gClusterArgs[gBranchIndex]` (0xD5538) |
+| exe path | branch root + `\<title>.x64.exe` |
+| `-windowMode` | the registry `WindowMode` |
+| `-shaderCache` | the registry `ShaderCache` |
+| `-graphicsDriver` | `dx11` or `dx12`, from the registry `GraphicsAPI` |
+| `-gpuPreference` | the registry `GPUPreference` |
+| cluster | the selected branch |
 | `-language` | the registry `Language` |
 | `-languageVO` | omitted when the VO index is 15, the "no override" sentinel |
-| `-clienttype` | the launcher's own `-registry:<tag>` argument, not the registry |
-| `-forceHTTPS` | `gForceHttps`, the registry `ForceHTTPS` |
+| `-clienttype` | the launcher's own `-registry:<tag>` argument |
+| `-forceHTTPS` | the registry `ForceHTTPS` |
 
 `-allowmultiple` is emitted only when the launcher already tracks a live instance, and the
 `-dedicated`, `-dscfg`, `-epic`, `-onlive` and `-relaunch` branches belong to the dedicated
@@ -161,11 +145,9 @@ On success the stock launcher reaches `PostQuitMessage(0)` and exits once the ga
 
 ## Cache defragment
 
-The launcher's Optimize action is not a download. `sub_31FB8` prompts with
-`OPTIMIZE_CACHE_PROMPT`, purges its unused-binary list, checks free space with
-`GetDiskFreeSpaceExW` against 1.5x the largest known file, and then `sub_238D4` removes
-`<root>\Defrag.log` and spawns the **game** through the `ReqSpawnProcess` dialog with the
-arguments `WF_BuildDefragArgs` (0x32710) composes:
+The launcher's Optimize action runs locally. It prompts, purges its unused-binary list,
+checks free space against 1.5x the largest known file, removes `<root>\Defrag.log`, and
+spawns the game with:
 
     -applet:/EE/Types/Framework/CacheDefraggerIOCP /Tools/CachePlan.txt
 
@@ -173,40 +155,24 @@ A trailing ` benchmark` is appended when the launcher itself was started with `-
 `Tools/CachePlan.txt` is an index-listed file; the applet rewrites the `.cache` set in place
 and writes `Defrag.log`.
 
-The unused-binary purge is the same code path as the vestigial purge below and is not
-reproduced here.
-
-This launcher's own free-space guard checks 1.5x the size of `Tools/CachePlan.txt` instead
-of the largest known file: the stock launcher already has the full index in hand at this
-point in its flow, and this launcher's defragment path does not.
-
-The applet is not a console binary. `Warframe.x64.exe` is subsystem 2 (GUI) and calls
-`AllocConsole` itself, so `CREATE_NO_WINDOW` does not apply to it; the console is suppressed
-by spawning with `STARTF_USESHOWWINDOW` and `SW_HIDE`, which is the show state `AllocConsole`
-gives its new window. Its byte progress is written with `WriteConsole` and by
-`SetConsoleTitleW` as `Defrag <done>/<total> <n>% complete`, never to `EE.log`, so the title
-of the hidden window is the only place to read it from. `EE.log` carries the per-file
-`Defragmenting <path>` lines and nothing else of use here.
-
 ## Sideload patch
 
-Not a wire behaviour: a local patch of the game executable applied after each update. The
-retail launcher links the game with `/DEPENDENTLOADFLAG:0x800`
+A local patch of the game executable, applied after each update. The retail launcher links
+the game with `/DEPENDENTLOADFLAG:0x800`
 (LOAD_LIBRARY_SEARCH_SYSTEM32), which forces DLL resolution to System32 and defeats a proxy
 DLL dropped beside the executable. This launcher zeroes that field so the default search
 order (including the application directory) applies.
 
 The field is `IMAGE_LOAD_CONFIG_DIRECTORY64::DependentLoadFlags`, at offset 0x4E into the
-load-config directory (data directory index 10, `IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG`). On
-the live `Warframe.x64.exe` it was `0x800` at file offset `0x253e68e`. Patching flips the
-two bytes to `00 00`. Because this changes the file's MD5, the pre-patch (index) hash and
-the post-patch hash are stored in `launcher.json`'s `patched` section so the check does not
-re-queue the patched file, and re-patches automatically once the index hash moves past the
-recorded `source`.
+load-config directory (data directory index 10, `IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG`).
+Patching flips the two bytes to `00 00`. Because this changes the file's MD5, the pre-patch
+(index) hash and the post-patch hash are stored in `launcher.json`'s `patched` section so
+the check treats the patched file as up to date, and re-patches automatically once the index
+hash moves past the recorded `source`.
 
 ## Applicability filter
 
-`WF_EntryAppliesToClient` (0x26D18) drops entries before any I/O:
+Entries are dropped before any I/O:
 
 - `/steam` unless this is a Steam install; `/eossdk` unless EOS is in use
 - `d3d12sdklayers` on the Public branch
@@ -214,42 +180,38 @@ recorded `source`.
 - files whose stem ends in `_<lang>` that do not match the selected language, with `_en`
   as the fallback for `misc`
 
-159 of 258 lines in the current index are language-suffixed, so this filter is not
-optional.
+159 of 258 lines in the current index are language-suffixed.
 
-Those switches come from the machine rather than from the index, and they resolve as
-follows (`sub_6FA0` loads the settings, `sub_7500` saves them):
+Those switches come from the machine, and resolve as follows:
 
 | Switch | Source |
 |---|---|
 | language | `Language` in the launcher's registry key, else `GetUserDefaultLangID` |
-| DX12 | `GraphicsAPI` → `dword_10F570`; the `dx12` caches are kept only when it is `1` |
-| Steam / Epic | the launcher's own `-registry:<tag>` argument, **not** the registry |
-| branch | `ServerCluster`, clamped to Public unless `dword_10F564` allows more |
+| DX12 | the registry `GraphicsAPI`; the `dx12` caches are kept only when it is `1` |
+| Steam / Epic | the launcher's own `-registry:<tag>` argument |
+| branch | `ServerCluster`, clamped to Public unless the dev controls allow more |
 
-Steam and Epic are the awkward ones: `sub_25248` sets them by searching that command-line
-tag for `Steam` and `Epic`, so a client started by Steam runs as `-registry:Steam`. A
-replacement updater is not launched that way and has to infer the platform some other way
-— matching `steamapps` or `Epic` against the recorded `LauncherExe` path is the closest
-equivalent.
+Steam and Epic are the awkward ones: they are set by searching that command-line tag for
+`Steam` and `Epic`, so a client started by Steam runs as `-registry:Steam`. A
+replacement updater has to infer the platform some other way. Matching `steamapps` or
+`Epic` against the recorded `LauncherExe` path is the closest equivalent.
 
-`dword_10F564` is the dev-controls ceiling, not a branch: `sub_6F00` sets it to 2 for
-`-dev`, 1 when `EnableTestCluster` is set, and leaves it 0 on retail. It gates two things —
-how high `ServerCluster` may go, and, together with the Public branch, whether
-`d3d12sdklayers` is skipped. On a retail client both terms hold, so that file is never
-fetched; a copy on disk is a leftover the purge keeps because the index lists it.
+The dev-controls ceiling is a separate value: 2 for `-dev`, 1 when `EnableTestCluster` is
+set, 0 on retail. It gates how high `ServerCluster` may go and, with the Public branch,
+whether `d3d12sdklayers` is skipped. On a retail client both terms hold, so that file stays
+unfetched; a copy on disk is a leftover the purge keeps because the index lists it.
 
-`EnableBulkDownload` (`byte_105EA2`) is a third gate worth knowing: when it is off, the
-launcher skips every category-4 `.cache` / `.toc` entry that is not inside an offline
-archive, and lets the game stream content instead.
+`EnableBulkDownload` is a third gate: when it is off, the launcher skips every category-4
+`.cache` / `.toc` entry that is not inside an offline archive, and lets the game stream
+content instead.
 
-Getting these wrong is silent: the run succeeds and simply installs less than it should.
+Getting these wrong is silent: the run succeeds and installs less than it should.
 On a Steam machine with DX12 selected, defaulting them all off skips `steam_api64.dll`
 and six `Dx12` cache and toc file pairs.
 
 ## Update decision
 
-`WF_BuildDownloadQueue` (0x28410) walks the index in category order:
+The index is walked in category order:
 
 | Category | Match |
 |---|---|
@@ -260,10 +222,9 @@ and six `Dx12` cache and toc file pairs.
 | 4 | `.cache` / `.toc` |
 
 For each surviving entry: a missing file is queued; otherwise the local file is MD5'd and
-queued on mismatch. **Category 4 is never hashed** — existence alone is accepted, which is
-why the launcher starts quickly against a multi-gigabyte cache and why a full re-verify is
-a separate, explicit action. When one member of a `.cache`/`.toc` pair is queued, its
-sibling is queued with it.
+queued on mismatch. **Category 4 is existence-checked**: the file's presence alone is
+accepted, which is why a full re-verify is a separate action. When one member of a
+`.cache`/`.toc` pair is queued, its sibling is queued with it.
 
 ## Install
 
@@ -273,17 +234,16 @@ mismatch discards the temporary file and reports `DownloadCorrupted`.
 
 ## Vestigial file purge
 
-Not part of updating, but it shares the manifest. `WF_PurgeVestigialFiles` (0x2C500) walks
-the branch root and deletes any file matching `*.exe`, `*.dll`, `*.dat`, `*.bin`, `*.pak`,
-`*.zip`, `*charactercodescachedx*`, `*dx9*` (and separately `*.tmp`, `*.dmp`) that the
-index does not list, keeping only `.Texture.`, `.Texture_` and `\unins00`. Empty
-directories go next. Any unmanaged file placed beside `Warframe.x64.exe` is removed on the
-next launch.
+Separate from updating, but it shares the manifest. The launcher walks the branch root and
+deletes any file matching `*.exe`, `*.dll`, `*.dat`, `*.bin`, `*.pak`, `*.zip`,
+`*charactercodescachedx*`, `*dx9*` (and separately `*.tmp`, `*.dmp`) that the index does
+not list, keeping only `.Texture.`, `.Texture_` and `\unins00`. Empty
+directories go next. Any unmanaged file placed beside the game executable is removed on
+the next launch.
 
-## Not needed here
+## Out of scope
 
-`.bulk` in the index is simply an uncompressed object. The separate `archive://` path
-(`WF_LoadOfflineInstaller`, 0x2D3FC) is the offline installer: a local manifest plus split
-volumes `<base>b00`, `b01`, … addressed as one concatenated stream.
-`WF_CopyFromPublicBranch` (0x2A9F0) reuses an already-downloaded Public file when
-populating Test or Dev.
+`.bulk` in the index is an uncompressed object. The separate `archive://` path is the
+offline installer: a local manifest plus split volumes `<base>b00`, `b01`, … addressed as
+one concatenated stream. There is also a path that reuses an already-downloaded Public file
+when populating Test or Dev.
