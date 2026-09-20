@@ -8,6 +8,8 @@
 
 #include <cstddef>
 #include <fstream>
+#include <istream>
+#include <utility>
 
 namespace app
 {
@@ -15,21 +17,16 @@ namespace
 {
 
 template <typename T>
-bool readAt(std::fstream& file, std::streamoff off, T& out)
+bool readAt(std::istream& file, std::streamoff off, T& out)
 {
     file.seekg(off);
     file.read(reinterpret_cast<char*>(&out), sizeof(T));
     return static_cast<bool>(file);
 }
 
-}
-
-std::expected<bool, SideloadError> stripDependentLoadFlags(const std::filesystem::path& exe)
+// file offset of DependentLoadFlags and the value sitting there
+std::expected<std::pair<std::streamoff, WORD>, SideloadError> locateFlags(std::istream& file)
 {
-    std::fstream file(exe, std::ios::in | std::ios::out | std::ios::binary);
-    if (!file)
-        return std::unexpected(SideloadError::Open);
-
     IMAGE_DOS_HEADER dos{};
     if (!readAt(file, 0, dos) || dos.e_magic != IMAGE_DOS_SIGNATURE)
         return std::unexpected(SideloadError::NotPe);
@@ -50,8 +47,6 @@ std::expected<bool, SideloadError> stripDependentLoadFlags(const std::filesystem
     const DWORD targetRva =
         lc.VirtualAddress + offsetof(IMAGE_LOAD_CONFIG_DIRECTORY64, DependentLoadFlags);
 
-    std::streamoff fileOffset = 0;
-    bool resolved = false;
     for (WORD i = 0; i < nt.FileHeader.NumberOfSections; ++i)
     {
         IMAGE_SECTION_HEADER sec{};
@@ -59,26 +54,46 @@ std::expected<bool, SideloadError> stripDependentLoadFlags(const std::filesystem
                     sectionTable + static_cast<std::streamoff>(i) * sizeof(IMAGE_SECTION_HEADER),
                     sec))
             return std::unexpected(SideloadError::Resolve);
-        if (targetRva >= sec.VirtualAddress &&
-            targetRva < sec.VirtualAddress + sec.Misc.VirtualSize)
-        {
-            fileOffset =
-                static_cast<std::streamoff>(sec.PointerToRawData) + (targetRva - sec.VirtualAddress);
-            resolved = true;
-            break;
-        }
-    }
-    if (!resolved)
-        return std::unexpected(SideloadError::Resolve);
+        if (targetRva < sec.VirtualAddress || targetRva >= sec.VirtualAddress + sec.Misc.VirtualSize)
+            continue;
 
-    WORD flags = 0;
-    if (!readAt(file, fileOffset, flags))
-        return std::unexpected(SideloadError::Resolve);
-    if (flags == 0)
+        const std::streamoff offset =
+            static_cast<std::streamoff>(sec.PointerToRawData) + (targetRva - sec.VirtualAddress);
+        WORD flags = 0;
+        if (!readAt(file, offset, flags))
+            return std::unexpected(SideloadError::Resolve);
+        return std::pair{offset, flags};
+    }
+    return std::unexpected(SideloadError::Resolve);
+}
+
+}
+
+std::expected<bool, SideloadError> dependentLoadFlagsSet(const std::filesystem::path& exe)
+{
+    std::ifstream file(exe, std::ios::binary);
+    if (!file)
+        return std::unexpected(SideloadError::Open);
+    const auto found = locateFlags(file);
+    if (!found)
+        return std::unexpected(found.error());
+    return found->second != 0;
+}
+
+std::expected<bool, SideloadError> stripDependentLoadFlags(const std::filesystem::path& exe)
+{
+    std::fstream file(exe, std::ios::in | std::ios::out | std::ios::binary);
+    if (!file)
+        return std::unexpected(SideloadError::Open);
+
+    const auto found = locateFlags(file);
+    if (!found)
+        return std::unexpected(found.error());
+    if (found->second == 0)
         return false;
 
     file.clear();
-    file.seekp(fileOffset);
+    file.seekp(found->first);
     const WORD zero = 0;
     file.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
     if (!file)
@@ -125,6 +140,38 @@ void ensureSideloaded(wf::LauncherConfig& config, const wf::Entry& mainExe,
     config.recordPatch(mainExe.installPath, mainExe.hash, *patched);
     config.save();
     core::info("sideloaded {}", core::narrow(mainExe.installPath));
+}
+
+void ensureSideloadedAtLaunch(const std::filesystem::path& exe, std::wstring_view installPath)
+{
+    const auto pending = dependentLoadFlagsSet(exe);
+    if (!pending)
+    {
+        core::warn("sideload patch failed: {}", core::narrow(describe(pending.error())));
+        return;
+    }
+    if (!*pending)
+        return;
+
+    // no index here, so the bytes on disk are what the patch is recorded against
+    const auto before = wf::md5File(exe);
+    if (!before)
+        return;
+
+    const auto changed = stripDependentLoadFlags(exe);
+    if (!changed)
+    {
+        core::warn("sideload patch failed: {}", core::narrow(describe(changed.error())));
+        return;
+    }
+    const auto after = wf::md5File(exe);
+    if (!after)
+        return;
+
+    wf::LauncherConfig config = wf::LauncherConfig::load();
+    config.recordPatch(installPath, *before, *after);
+    config.save();
+    core::info("sideloaded {}", core::narrow(installPath));
 }
 
 std::wstring_view describe(SideloadError error)

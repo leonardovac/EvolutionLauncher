@@ -1,5 +1,6 @@
 #include "app/launch.h"
 
+#include "app/sideload.h"
 #include "app/titles.h"
 #include "core/log.h"
 #include "core/str.h"
@@ -134,6 +135,9 @@ std::expected<void, LaunchError> launchGame(const Settings& settings, wf::Branch
     std::error_code ec;
     if (!std::filesystem::exists(exe, ec))
         return std::unexpected(LaunchError::NoExecutable);
+
+    if (settings.sideload)
+        ensureSideloadedAtLaunch(exe, gameExeName(settings.title));
 
     return spawn(line);
 }
