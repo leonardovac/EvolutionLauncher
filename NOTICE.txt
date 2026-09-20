@@ -1,0 +1,44 @@
+Evolution Launcher — scope of the MIT license, and third-party notices.
+
+The MIT license in LICENSE.txt covers the source code of this project: the
+contents of src/, tools/, build.bat, assets.rc, and the documentation under
+docs/. It does not cover anything listed below, none of which is the author's
+to license.
+
+
+Digital Extremes
+----------------
+
+  assets/warframe.png
+  assets/warframe-hero.jpg
+  assets/soulframe.png
+  assets/soulframe-hero.jpg
+  assets/soulframe-endcap.png
+  assets/soulframe-leaf.png
+  assets/publisher.png
+
+Artwork owned by Digital Extremes, included so the launcher can present their
+own games, and compiled into the executable for that purpose. No license to it
+is granted by this project. "Warframe", "Soulframe" and "Digital Extremes" are
+their trademarks; the MIT license grants no trademark rights.
+
+This project is not affiliated with, endorsed by, or connected to Digital
+Extremes.
+
+
+Roboto Condensed
+----------------
+
+  assets/RobotoCondensed.ttf
+
+Licensed under the SIL Open Font License, Version 1.1. The license text is in
+assets/RobotoCondensed-OFL.txt and travels with the font.
+
+
+LZMA SDK
+--------
+
+  third_party/lzma/
+
+Igor Pavlov's LZMA SDK reference decoder, placed in the public domain by its
+author, vendored here verbatim.
