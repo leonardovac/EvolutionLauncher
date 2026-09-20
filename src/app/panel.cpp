@@ -37,19 +37,33 @@ constexpr std::array<TabEntry, 3> tabEntries{
      {PanelTab::Maintenance, "panel.tab.maintenance", "MAINTENANCE"},
      {PanelTab::Launcher, "panel.tab.launcher", "LAUNCHER"}}};
 
-bool button(std::string_view id, const core::Rect& box, std::string_view label, ui::AlignH align)
+// `primary` fills the box, so the affirmative action reads by shape before it is read as a word
+bool button(std::string_view id, const core::Rect& box, std::string_view label, ui::AlignH align,
+            bool primary = false)
 {
     const std::uint32_t widget = ui::id(id);
     const bool hit = ui::clicked(widget, box);
     const bool hot = ui::hovered(widget, box);
     const float hoverT = ui::anim(widget, 0, hot ? 1.f : 0.f, 16.f);
-    if (hoverT > 0.01f)
-        ui::dl().rect(box, accent().alpha(0.12f * hoverT), ui::px(2.f));
-    ui::dl().border(box, accent().alpha(0.5f + 0.5f * hoverT), ui::px(1.f), ui::px(2.f));
+    const float pressT = ui::anim(widget, 1, ui::g().active == widget ? 1.f : 0.f, 26.f);
+    const float radius = ui::px(2.f);
+    if (primary)
+    {
+        ui::dl().rect(box, accent().alpha(0.82f + 0.18f * hoverT), radius);
+        if (pressT > 0.01f)
+            ui::dl().rect(box, core::Col::hex(0x000000, 0.25f * pressT), radius);
+    }
+    else
+    {
+        const float fill = 0.12f * hoverT + 0.16f * pressT;
+        if (fill > 0.01f)
+            ui::dl().rect(box, accent().alpha(fill), radius);
+    }
+    ui::dl().border(box, accent().alpha(0.5f + 0.5f * hoverT), ui::px(1.f), radius);
+    const core::Col ink = primary ? ui::theme().body : accent().alpha(0.85f + 0.15f * hoverT);
     const float pad = align == ui::AlignH::Left ? ui::px(12.f) : 0.f;
     const core::Rect caption(box.x + pad, box.y, box.w - pad * 2.f, box.h);
-    ui::text(ui::fonts().caption, caption, label, accent().alpha(0.85f + 0.15f * hoverT), align,
-             ui::AlignV::Middle, ui::px(2.f));
+    ui::text(ui::fonts().caption, caption, label, ink, align, ui::AlignV::Middle, ui::px(2.f));
     return hit;
 }
 
@@ -311,7 +325,7 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
             ui::text(ui::fonts().caption, failRect, "COULD NOT WRITE SETTINGS", ui::theme().fail,
                      ui::AlignH::Right, ui::AlignV::Middle, ui::px(1.f));
         }
-        if (button("panel.ok", okBox, "OK", ui::AlignH::Center))
+        if (button("panel.ok", okBox, "OK", ui::AlignH::Center, true))
             action = PanelAction::Accept;
         if (button("panel.cancel", lastBox, "CANCEL", ui::AlignH::Center))
             action = PanelAction::Dismiss;
