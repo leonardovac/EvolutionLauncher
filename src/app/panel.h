@@ -22,7 +22,8 @@ enum class PanelAction
     Dismiss,
     Verify,
     StaleReport,
-    Defragment
+    Defragment,
+    LocateRoot
 };
 
 struct PanelState
@@ -34,6 +35,8 @@ struct PanelState
     std::string staleLine;
     bool staleRunning = false;
     std::string defragLine;
+    // what the last folder pick found; the root itself is read off the working settings
+    std::string rootLine;
 };
 
 // slide is 0 (offscreen) to 1 (fully open); a tab click is written straight into state.tab.

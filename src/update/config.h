@@ -48,6 +48,10 @@ public:
 	std::optional<bool> sideload(std::wstring_view title) const;
 	void setSideload(std::wstring_view title, bool value);
 
+	// per title: the Public root the user picked here, overriding what the registry names
+	std::optional<std::wstring> root(std::wstring_view title) const;
+	void setRoot(std::wstring_view title, std::wstring_view value);
+
 private:
 	std::vector<std::wstring> exclude_;
 	std::vector<std::wstring> protect_;
@@ -55,6 +59,7 @@ private:
 	std::optional<bool> allowNetworkCaches_;
 	std::optional<std::wstring> lastTitle_;
 	std::map<std::wstring, bool> sideload_;
+	std::map<std::wstring, std::wstring> root_;
 };
 
 }

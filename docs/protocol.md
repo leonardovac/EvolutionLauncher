@@ -102,15 +102,37 @@ setting. Either way a connect failure retries once with the opposite scheme.
 
 ## Install paths
 
-The launcher records its own location in the registry, and the root is that path's
-grandparent. A Steam install keeps content in the Steam library folder, with logs and
-configuration under `%LOCALAPPDATA%\Warframe`:
+Two registry values in the launcher's key describe where content lives, and they are
+independent. `DownloadDir` names the parent of the branch directories; `LauncherExe`
+records the stock launcher's own location, whose grandparent is the branch root. A Steam
+install has no `DownloadDir` and no branch layer at all — the library folder *is* the
+Public root — while a standalone install keeps one directory per branch:
 
-    HKCU\Software\Digital Extremes\Warframe\Launcher
+    HKCU\Software\Digital Extremes\Warframe\Launcher        (Steam)
       LauncherExe = ...\steamapps\common\Warframe\Tools\Launcher.exe
       root        = ...\steamapps\common\Warframe
 
-    %LOCALAPPDATA%\Warframe\Downloaded\<Public|Test|Dev>      (non-Steam fallback)
+    HKCU\Software\Digital Extremes\Soulframe\Launcher       (standalone)
+      DownloadDir = %LOCALAPPDATA%\Soulframe\Downloaded
+      LauncherExe = %LOCALAPPDATA%\Soulframe\Downloaded\Public\Tools\Launcher.exe
+      root        = %LOCALAPPDATA%\Soulframe\Downloaded\<Public|Test|Dev>
+
+`DownloadDir` is the one that survives a relocation: the stock launcher lets the user move
+content to another folder or disk while the launcher itself stays where the platform put
+it, so `LauncherExe`'s grandparent is only a fallback, and only for Public. We resolve a
+root in this order, stopping at the first that names an existing directory:
+
+| Source | Root | Branches |
+|---|---|---|
+| `root` in `launcher.json` | the recorded path | Public |
+| `DownloadDir` | `DownloadDir\<branch>` | all |
+| `LauncherExe` | its grandparent | Public |
+| `%LOCALAPPDATA%` | `%LOCALAPPDATA%\<title>\Downloaded\<branch>` | all |
+
+`launcher.json`'s `root` is ours, written when the user picks a folder in this launcher;
+it is per title and covers Public only, which is the same limit `LauncherExe` carries. We
+never write `DownloadDir` or `LauncherExe`: both are Digital Extremes' values, and
+`LauncherExe` is also the only thing that still tells us the platform.
 
 The same key also holds `Language` (the two-letter code the applicability filter needs),
 `GraphicsAPI`, and `EnableBulkDownload`.

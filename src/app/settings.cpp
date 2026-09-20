@@ -8,6 +8,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <array>
 #include <optional>
 #include <string>
@@ -104,6 +105,10 @@ Settings Settings::load(wf::Title title, const wf::LauncherConfig& launcher)
         out.sideload = *stored;
     if (const auto value = readString(key, L"LauncherExe"))
         out.launcherExe = *value;
+    if (const auto value = readString(key, L"DownloadDir"))
+        out.downloadDir = *value;
+    if (const auto stored = launcher.root(profile(title).localFolder))
+        out.installRootOverride = *stored;
     return out;
 }
 
@@ -134,11 +139,14 @@ bool Settings::save(const Settings* baseline) const
     // ours to act on, so it is stored launcher-wide; each title's stock launcher still reads
     // its own ForceHTTPS, so the choice is mirrored into every one of them
     if (!baseline || allowNetworkCaches != baseline->allowNetworkCaches
-        || sideload != baseline->sideload)
+        || sideload != baseline->sideload
+        || installRootOverride != baseline->installRootOverride)
     {
         wf::LauncherConfig launcher = wf::LauncherConfig::load();
         launcher.setAllowNetworkCaches(allowNetworkCaches);
         launcher.setSideload(profile(title).localFolder, sideload);
+        if (!installRootOverride.empty())
+            launcher.setRoot(profile(title).localFolder, installRootOverride.wstring());
         ok = launcher.save() && ok;
         for (const TitleProfile& entry : titleProfiles())
             ok = writeDwordTo(entry.registrySubkey, L"ForceHTTPS", allowNetworkCaches ? 0u : 1u)
@@ -147,32 +155,46 @@ bool Settings::save(const Settings* baseline) const
     return ok;
 }
 
-bool Settings::adoptInstallRoot(const std::filesystem::path& folder)
+RootProbe probeInstallRoot(wf::Title title, const std::filesystem::path& folder)
 {
     std::error_code ec;
-    if (folder.empty() || !std::filesystem::exists(folder / gameExeName(title), ec))
-        return false;
-    // the key names the stock launcher, and installRoot() reads the root back off its path
-    const std::filesystem::path exe = folder / L"Tools" / L"Launcher.exe";
-    HKEY key = nullptr;
-    if (::RegCreateKeyExW(HKEY_CURRENT_USER, keyFor(title).c_str(), 0, nullptr,
-                          REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &key,
-                          nullptr) != ERROR_SUCCESS)
-        return false;
-    const bool ok = writeString(key, L"LauncherExe", exe.wstring());
-    ::RegCloseKey(key);
-    if (ok)
-        launcherExe = exe;
-    return ok;
+    if (folder.empty() || !std::filesystem::is_directory(folder, ec))
+        return RootProbe::Unusable;
+    if (std::filesystem::exists(folder / gameExeName(title), ec))
+        return RootProbe::HasGame;
+    const std::filesystem::directory_iterator it(folder, ec);
+    if (ec)
+        return RootProbe::Unusable;
+    return it == std::filesystem::directory_iterator() ? RootProbe::Empty : RootProbe::Occupied;
+}
+
+RootProbe Settings::adoptInstallRoot(const std::filesystem::path& folder)
+{
+    const RootProbe probe = probeInstallRoot(title, folder);
+    constexpr std::array adoptable{RootProbe::HasGame, RootProbe::Empty};
+    if (std::ranges::contains(adoptable, probe))
+        installRootOverride = folder.lexically_normal();
+    return probe;
 }
 
 std::filesystem::path Settings::installRoot(wf::Branch branch) const
 {
+    std::error_code ec;
+    const auto usable = [&ec](const std::filesystem::path& path) {
+        return !path.empty() && std::filesystem::is_directory(path, ec);
+    };
+
+    if (branch == wf::Branch::Public && usable(installRootOverride))
+        return installRootOverride;
+
+    // the one value that survives a relocation, so it outranks the launcher's own path
+    if (!downloadDir.empty() && usable(downloadDir / wf::branchName(branch)))
+        return downloadDir / wf::branchName(branch);
+
     if (branch == wf::Branch::Public && !launcherExe.empty())
     {
         const std::filesystem::path root = launcherExe.parent_path().parent_path();
-        std::error_code ec;
-        if (!root.empty() && std::filesystem::exists(root, ec))
+        if (usable(root))
             return root;
     }
 

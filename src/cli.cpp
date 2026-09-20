@@ -29,8 +29,10 @@ void usage()
 {
 	std::puts("Launcher - custom launcher for Digital Extremes games\n"
 	          "\n"
-	          "  --root <dir>      install root (default: LauncherExe's grandparent, else\n"
+	          "  --root <dir>      install root for this run (default: launcher.json root, else\n"
+	          "                    DownloadDir, else LauncherExe's grandparent, else\n"
 	          "                    %LOCALAPPDATA%\\<title>\\Downloaded\\<branch>)\n"
+	          "  --set-root <dir>  record <dir> as this title's install root and exit\n"
 	          "  --title <name>    warframe | soulframe           (default warframe)\n"
 	          "  --branch <name>   public | test | dev            (default public)\n"
 	          "  --lang <code>     two-letter language (default: registry Language, else en)\n"
@@ -119,6 +121,7 @@ int run(int argc, wchar_t** argv)
 
 	wf::Options options;
 	std::filesystem::path root;
+	std::filesystem::path setRoot;
 	bool languageGiven = false;
 	std::optional<bool> steam;
 	std::optional<bool> eos;
@@ -232,6 +235,16 @@ int run(int argc, wchar_t** argv)
 			}
 			root = *given;
 		}
+		else if (flag == L"--set-root")
+		{
+			const auto given = value(i);
+			if (!given)
+			{
+				core::error("--set-root needs a directory");
+				return 2;
+			}
+			setRoot = *given;
+		}
 		else if (flag == L"--branch")
 		{
 			const auto given = value(i);
@@ -312,6 +325,33 @@ int run(int argc, wchar_t** argv)
 	options.config.forceHttps = !settings.allowNetworkCaches;
 	options.config.sideload = settings.sideload;
 	options.config.launcher = std::move(launcher);
+
+	if (!setRoot.empty())
+	{
+		app::Settings next = settings;
+		switch (next.adoptInstallRoot(setRoot))
+		{
+		case app::RootProbe::HasGame:
+			break;
+		case app::RootProbe::Empty:
+			core::info("no game in {}, a full install will land there", setRoot.string());
+			break;
+		case app::RootProbe::Occupied:
+			core::error("{} holds other files; pass the game's folder or an empty one",
+			            setRoot.string());
+			return 2;
+		case app::RootProbe::Unusable:
+			core::error("could not read {}", setRoot.string());
+			return 2;
+		}
+		if (!next.save(&settings))
+		{
+			core::error("could not record the install root");
+			return 2;
+		}
+		core::info("root {}", next.installRoot(wf::Branch::Public).string());
+		return 0;
+	}
 
 	if (wantSettings)
 	{

@@ -58,6 +58,26 @@ std::string_view checkLabel(const JobSnapshot& snap)
     return "CHECKING FOR UPDATES";
 }
 
+// empty on success, because a folder that holds the game needs no explaining
+std::string_view describeProbe(RootProbe probe)
+{
+    switch (probe)
+    {
+    case RootProbe::HasGame: return {};
+    case RootProbe::Empty: return "NO GAME FOUND HERE - IT WILL BE INSTALLED INTO THIS FOLDER";
+    case RootProbe::Occupied:
+        return "THAT FOLDER HOLDS OTHER FILES - PICK THE GAME'S OR AN EMPTY ONE";
+    case RootProbe::Unusable: return "THAT FOLDER CANNOT BE READ";
+    }
+    return {};
+}
+
+bool adoptedRoot(RootProbe probe)
+{
+    constexpr std::array accepted{RootProbe::HasGame, RootProbe::Empty};
+    return std::ranges::contains(accepted, probe);
+}
+
 }
 
 int run(const Options& options)
@@ -414,16 +434,20 @@ int run(const Options& options)
         {
             if (const auto folder = pickFolder(window.handle()))
             {
-                if (settings.adoptInstallRoot(*folder))
+                Settings next = settings;
+                const RootProbe probe = next.adoptInstallRoot(*folder);
+                launchFailure = std::string(describeProbe(probe));
+                if (adoptedRoot(probe) && next.save(&settings))
                 {
-                    launchFailure.clear();
+                    settings = next;
                     job.restart();
                 }
-                else
+                else if (launchFailure.empty())
                 {
-                    launchFailure = "NO GAME FOUND IN THAT FOLDER";
-                    core::error("{}", launchFailure);
+                    launchFailure = "COULD NOT RECORD THAT FOLDER";
                 }
+                if (!launchFailure.empty())
+                    core::error("{}", launchFailure);
             }
             ui::requestFrame();
         }
@@ -485,6 +509,7 @@ int run(const Options& options)
             {
                 panel.tab = wanted;
                 panel.saveFailed = false;
+                panel.rootLine.clear();
                 working = settings;
                 panel.launcherLine =
                     std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
@@ -526,11 +551,13 @@ int run(const Options& options)
                 // sideload changes what counts as up to date, so the plan has to be rebuilt
                 const bool needsRecheck = working.language != settings.language
                     || working.graphicsApi != settings.graphicsApi
-                    || working.sideload != settings.sideload;
+                    || working.sideload != settings.sideload
+                    || working.installRootOverride != settings.installRootOverride;
                 if (working.save(&settings))
                 {
                     settings = working;
                     panel.saveFailed = false;
+                    panel.rootLine.clear();
                     panelOpen = false;
                     closeDropdown();
                     if (needsRecheck && !options.wantShot)
@@ -550,6 +577,15 @@ int run(const Options& options)
             case PanelAction::Dismiss:
                 panelOpen = false;
                 closeDropdown();
+                panel.rootLine.clear();
+                ui::requestFrame();
+                break;
+            case PanelAction::LocateRoot:
+                if (const auto folder = pickFolder(window.handle()))
+                {
+                    const RootProbe probe = working.adoptInstallRoot(*folder);
+                    panel.rootLine = std::string(describeProbe(probe));
+                }
                 ui::requestFrame();
                 break;
             case PanelAction::Verify:

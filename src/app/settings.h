@@ -29,6 +29,19 @@ enum class WindowMode : std::uint32_t
     Borderless = 2
 };
 
+enum class RootProbe
+{
+    HasGame,
+    // no entries at all, so a full install may go here
+    Empty,
+    // files, but not this title's: adopting it would put the purge over someone else's folder
+    Occupied,
+    Unusable
+};
+
+// what a folder is to this title, without changing anything
+RootProbe probeInstallRoot(wf::Title title, const std::filesystem::path& folder);
+
 struct Settings
 {
     wf::Title title = wf::Title::Warframe;
@@ -44,14 +57,19 @@ struct Settings
     bool allowNetworkCaches = true;
     // per title: patch this game's exe so the loader searches its folder for DLLs
     bool sideload = true;
+    // DE's, read-only for us: the stock launcher's path, which still names the platform
     std::filesystem::path launcherExe;
+    // DE's, read-only for us: the parent of the branch directories
+    std::filesystem::path downloadDir;
+    // ours, from launcher.json; Public only, the same limit launcherExe carries
+    std::filesystem::path installRootOverride;
 
     // the caller owns the one launcher.json read; loading it here would parse the file twice
     static Settings load(wf::Title title, const wf::LauncherConfig& launcher);
     bool save(const Settings* baseline = nullptr) const;
 
-    // takes the folder only when the title's game exe is in it; corrects a failed detection
-    bool adoptInstallRoot(const std::filesystem::path& folder);
+    // records the folder when it holds the game or is empty; save() is what writes it out
+    RootProbe adoptInstallRoot(const std::filesystem::path& folder);
 
     [[nodiscard]] std::filesystem::path installRoot(wf::Branch branch) const;
     [[nodiscard]] bool steam() const;

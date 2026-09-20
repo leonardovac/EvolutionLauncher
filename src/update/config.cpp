@@ -233,6 +233,18 @@ void LauncherConfig::setSideload(std::wstring_view title, bool value)
 	sideload_[core::lower(title)] = value;
 }
 
+std::optional<std::wstring> LauncherConfig::root(std::wstring_view title) const
+{
+	const auto found = root_.find(core::lower(title));
+	return found == root_.end() ? std::nullopt : std::optional<std::wstring>(found->second);
+}
+
+void LauncherConfig::setRoot(std::wstring_view title, std::wstring_view value)
+{
+	// a path the user reads back, so it keeps its case; only the title key is folded
+	root_[core::lower(title)] = std::wstring(value);
+}
+
 LauncherConfig LauncherConfig::load(const RunContext& ctx)
 {
 	LauncherConfig config;
@@ -371,6 +383,30 @@ LauncherConfig LauncherConfig::load(const RunContext& ctx)
 				scan.skipValue();
 			}
 		}
+		else if (key == "root")
+		{
+			if (scan.consume('{'))
+			{
+				while (!scan.peek('}'))
+				{
+					const auto name = scan.string();
+					if (!name || !scan.consume(':'))
+						break;
+					if (const auto value = scan.string())
+						config.root_[core::lower(core::widen(*name))] = core::widen(*value);
+					else
+						scan.skipValue();
+					if (!scan.consume(','))
+						break;
+				}
+				scan.consume('}');
+			}
+			else
+			{
+				ctx.log(core::Level::Warn, L"launcher.json: \"root\" is not an object; ignoring");
+				scan.skipValue();
+			}
+		}
 		else if (key == "patched")
 		{
 			if (scan.consume('{'))
@@ -450,10 +486,11 @@ struct StoredScalars
 	std::optional<bool> allowNetworkCaches;
 	std::optional<std::wstring> lastTitle;
 	std::map<std::wstring, bool> sideload;
+	std::map<std::wstring, std::wstring> root;
 };
 
-// the worker saves this file to record a patch and owns neither setting, so a save that carries
-// no opinion must not erase the one on disk
+// the worker saves this file to record a patch and owns none of these, so a save that carries
+// no opinion must not erase what is on disk
 StoredScalars storedScalars()
 {
 	StoredScalars out;
@@ -489,6 +526,22 @@ StoredScalars storedScalars()
 					break;
 				if (const auto value = scan.boolean())
 					out.sideload[core::lower(core::widen(*name))] = *value;
+				else
+					scan.skipValue();
+				if (!scan.consume(','))
+					break;
+			}
+			scan.consume('}');
+		}
+		else if (*key == "root" && scan.consume('{'))
+		{
+			while (!scan.peek('}'))
+			{
+				const auto name = scan.string();
+				if (!name || !scan.consume(':'))
+					break;
+				if (const auto value = scan.string())
+					out.root[core::lower(core::widen(*name))] = core::widen(*value);
 				else
 					scan.skipValue();
 				if (!scan.consume(','))
@@ -547,6 +600,9 @@ bool LauncherConfig::save() const
 	std::map<std::wstring, bool> patchExe = stored.sideload;
 	for (const auto& [name, on] : sideload_)
 		patchExe[name] = on;
+	std::map<std::wstring, std::wstring> roots = stored.root;
+	for (const auto& [name, path] : root_)
+		roots[name] = path;
 	if (caches)
 		out << ",\n  \"allowNetworkCaches\": " << (*caches ? "true" : "false");
 	if (title)
@@ -559,6 +615,18 @@ bool LauncherConfig::save() const
 		{
 			out << (written == 0 ? "\n    \"" : ",\n    \"") << escapeJson(core::narrow(name))
 			    << "\": " << (on ? "true" : "false");
+			++written;
+		}
+		out << "\n  }";
+	}
+	if (!roots.empty())
+	{
+		out << ",\n  \"root\": {";
+		std::size_t written = 0;
+		for (const auto& [name, path] : roots)
+		{
+			out << (written == 0 ? "\n    \"" : ",\n    \"") << escapeJson(core::narrow(name))
+			    << "\": \"" << escapeJson(core::narrow(path)) << "\"";
 			++written;
 		}
 		out << "\n  }";

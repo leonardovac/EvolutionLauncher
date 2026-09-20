@@ -60,7 +60,7 @@ With no arguments it opens the window. Everything else is a command-line run:
 
 Exit codes are `0` ok, `1` failed, `2` cancelled, `3` work to do (`--check` only).
 
-The install root comes from `HKCU\Software\Digital Extremes\<title>\Launcher\LauncherExe`, so an Epic/Steam install is found where the platform actually put it. Override it with `--root`.
+The install root is resolved in order: the `root` you picked in the launcher, then `DownloadDir` plus the branch, then the grandparent of `LauncherExe`, then `%LOCALAPPDATA%`. An Epic or Steam install is therefore found where the platform put it, and content moved to another folder or disk is found where the stock launcher moved it. `--root` overrides one run; `--set-root` records a folder for good, and takes either the folder the game is already in or an empty one to install into.
 
 ## Settings
 

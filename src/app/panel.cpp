@@ -4,11 +4,14 @@
 #include "app/icons.h"
 #include "app/languages.h"
 #include "app/theme.h"
+#include "core/str.h"
 #include "ui/ui.h"
 
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <ranges>
+#include <string>
 #include <string_view>
 
 namespace app
@@ -48,6 +51,17 @@ bool button(std::string_view id, const core::Rect& box, std::string_view label, 
     ui::text(ui::fonts().caption, caption, label, accent().alpha(0.85f + 0.15f * hoverT), align,
              ui::AlignV::Middle, ui::px(2.f));
     return hit;
+}
+
+// a path is read from its tail, so the head is what gets dropped
+std::string elidePath(std::string_view text, float width)
+{
+    if (trackedWidth(ui::fonts().caption, text, ui::px(1.f)) <= width)
+        return std::string(text);
+    std::string out(text);
+    while (!out.empty() && trackedWidth(ui::fonts().caption, "..." + out, ui::px(1.f)) > width)
+        out.erase(out.begin());
+    return "..." + out;
 }
 
 void note(const core::Rect& box, std::string_view text)
@@ -186,8 +200,28 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         tooltip(sideloadRow, "PATCHES THE GAME EXE. CHANGING THIS RE-DOWNLOADS IT.");
         y = sideloadRow.b() + gap;
 
+        const core::Rect folderBox(panel.x + inset, y, rowW, rowH);
+        if (button("settings.locateRoot", folderBox, "CHANGE THE GAME FOLDER", ui::AlignH::Left))
+            action = PanelAction::LocateRoot;
+        tooltip(folderBox, "PICK WHERE THE GAME IS, OR AN EMPTY FOLDER TO INSTALL INTO");
+        y = folderBox.b() + noteGap;
+
+        const std::filesystem::path root = working.installRoot(wf::Branch::Public);
+        const core::Rect rootNote(panel.x + inset, y, rowW, noteH);
+        note(rootNote, root.empty() ? "NO INSTALL FOUND"
+                                    : elidePath(core::narrow(root.wstring()), rowW));
+        y = rootNote.b() + ui::px(6.f);
+
+        if (!state.rootLine.empty())
+        {
+            const core::Rect rootOutcome(panel.x + inset, y, rowW, noteH);
+            ui::text(ui::fonts().caption, rootOutcome, state.rootLine, ui::theme().warn,
+                     ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
+            y = rootOutcome.b();
+        }
+
         // one quiet footnote instead of the same warning repeated against each row
-        const core::Rect recheck(panel.x + inset, sideloadRow.b() + ui::px(18.f), rowW, noteH);
+        const core::Rect recheck(panel.x + inset, y + ui::px(18.f), rowW, noteH);
         ui::text(ui::fonts().caption, recheck, "SOME SETTINGS RE-CHECK THE INSTALL",
                  ui::theme().subtext.alpha(0.7f), ui::AlignH::Left, ui::AlignV::Middle,
                  ui::px(1.f));
