@@ -317,15 +317,15 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
     constexpr std::array editingTabs{PanelTab::Settings, PanelTab::Launcher};
     if (std::ranges::contains(editingTabs, state.tab))
     {
-        const core::Rect okBox(lastBox.x - btnGap - btnW, lastBox.y, btnW, btnH);
+        const core::Rect saveBox(lastBox.x - btnGap - btnW, lastBox.y, btnW, btnH);
         if (state.saveFailed)
         {
-            const core::Rect failRect(panel.x + inset, okBox.y - noteH - ui::px(6.f),
-                                      okBox.x - (panel.x + inset), okBox.h);
+            const core::Rect failRect(panel.x + inset, saveBox.y - noteH - ui::px(6.f),
+                                      saveBox.x - (panel.x + inset), saveBox.h);
             ui::text(ui::fonts().caption, failRect, "COULD NOT WRITE SETTINGS", ui::theme().fail,
                      ui::AlignH::Right, ui::AlignV::Middle, ui::px(1.f));
         }
-        if (button("panel.ok", okBox, "OK", ui::AlignH::Center, true))
+        if (button("panel.save", saveBox, "SAVE", ui::AlignH::Center, true))
             action = PanelAction::Accept;
         if (button("panel.cancel", lastBox, "CANCEL", ui::AlignH::Center))
             action = PanelAction::Dismiss;
