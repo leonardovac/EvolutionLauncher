@@ -11,7 +11,7 @@ if not defined VSCMD_ARG_TGT_ARCH (
 cd /d "%~dp0"
 
 if not exist third_party\lzma\LzmaDec.c (
-  echo [!] third_party\lzma\LzmaDec.c missing - see third_party\lzma\VENDOR.md
+  echo [!] third_party\lzma\LzmaDec.c missing
   exit /b 1
 )
 

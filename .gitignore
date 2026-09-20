@@ -11,10 +11,6 @@ bin/
 *.nam
 *.til
 
-# vendored LZMA SDK sources, fetched per third_party/lzma/VENDOR.md
-third_party/lzma/*.c
-third_party/lzma/*.h
-
 # local working notes, never committed
 PLAN.md
 NOTES.md
