@@ -433,7 +433,7 @@ int run(const Options& options)
             (shellSecondaryClicked() && installed) || (shellStartClicked() && !updatePending);
         if (locateRequested)
         {
-            if (const auto folder = pickFolder(window.handle()))
+            if (const auto folder = pickFolder(window.handle(), settings.installRoot(wf::Branch::Public)))
             {
                 Settings next = settings;
                 const RootProbe probe = next.adoptInstallRoot(*folder);
@@ -511,6 +511,7 @@ int run(const Options& options)
                 panel.tab = wanted;
                 panel.saveFailed = false;
                 panel.rootLine.clear();
+                panel.rootPick.clear();
                 working = settings;
                 panel.launcherLine =
                     std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
@@ -559,6 +560,7 @@ int run(const Options& options)
                     settings = working;
                     panel.saveFailed = false;
                     panel.rootLine.clear();
+                    panel.rootPick.clear();
                     panelOpen = false;
                     closeDropdown();
                     if (needsRecheck && !options.wantShot)
@@ -579,13 +581,16 @@ int run(const Options& options)
                 panelOpen = false;
                 closeDropdown();
                 panel.rootLine.clear();
+                panel.rootPick.clear();
                 ui::requestFrame();
                 break;
             case PanelAction::LocateRoot:
-                if (const auto folder = pickFolder(window.handle()))
+                if (const auto folder = pickFolder(window.handle(), working.installRoot(wf::Branch::Public)))
                 {
                     const RootProbe probe = working.adoptInstallRoot(*folder);
                     panel.rootLine = std::string(describeProbe(probe));
+                    // a refusal leaves the root line unchanged, so name the folder it turned down
+                    panel.rootPick = adoptedRoot(probe) ? std::string() : core::narrow(folder->wstring());
                 }
                 ui::requestFrame();
                 break;

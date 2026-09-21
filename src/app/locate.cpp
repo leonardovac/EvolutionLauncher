@@ -2,12 +2,13 @@
 
 #include "gfx/com.h"
 
+#include <shlobj.h>
 #include <shobjidl.h>
 
 namespace app
 {
 
-std::optional<std::filesystem::path> pickFolder(HWND owner)
+std::optional<std::filesystem::path> pickFolder(HWND owner, const std::filesystem::path& startAt)
 {
     gfx::ComPtr<IFileOpenDialog> dialog;
     if (FAILED(::CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER,
@@ -19,6 +20,13 @@ std::optional<std::filesystem::path> pickFolder(HWND owner)
     // FORCEFILESYSTEM keeps the result a real path, not a virtual shell folder
     if (FAILED(dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM)))
         return std::nullopt;
+    // opens where the game already is, so the pick is a correction and not a hunt
+    if (!startAt.empty())
+    {
+        gfx::ComPtr<IShellItem> start;
+        if (SUCCEEDED(::SHCreateItemFromParsingName(startAt.c_str(), nullptr, IID_PPV_ARGS(start.put()))))
+            dialog->SetFolder(start.get());
+    }
     if (FAILED(dialog->Show(owner)))
         return std::nullopt;
     gfx::ComPtr<IShellItem> item;

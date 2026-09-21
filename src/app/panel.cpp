@@ -226,6 +226,12 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
                                     : elidePath(core::narrow(root.wstring()), rowW));
         y = rootNote.b() + ui::px(6.f);
 
+        if (!state.rootPick.empty())
+        {
+            const core::Rect picked(panel.x + inset, y, rowW, noteH);
+            ui::text(ui::fonts().caption, picked, elidePath(state.rootPick, rowW), ui::theme().warn.alpha(0.75f), ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
+            y = picked.b() + ui::px(4.f);
+        }
         if (!state.rootLine.empty())
         {
             const core::Rect rootOutcome(panel.x + inset, y, rowW, noteH);
