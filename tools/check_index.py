@@ -15,7 +15,6 @@ import argparse
 import collections
 import json
 import lzma
-import os
 import random
 import re
 import struct
@@ -51,28 +50,13 @@ def normalise_skip(path):
 
 def load_skip(path):
     skips = set(normalise_skip(p) for p in SKIP_DEFAULTS)
-    cfg = os.path.join(os.path.dirname(path), "launcher.json")
-    if os.path.exists(cfg):
-        try:
-            with open(cfg, "r", encoding="utf-8-sig") as handle:
-                data = json.load(handle)
-            # "skip" was the original spelling; read it so an early file still loads
-            for entry in data.get("exclude", data.get("skip", [])):
-                skips.add(normalise_skip(entry))
-        except (OSError, ValueError):
-            pass
-        return skips
-    # legacy skip.txt fallback keeps the leading-'-' removal affordance
-    if os.path.exists(path):
+    try:
         with open(path, "r", encoding="utf-8-sig") as handle:
-            for line in handle:
-                entry = normalise_skip(line)
-                if not entry or entry.startswith("#"):
-                    continue
-                if entry.startswith("-"):
-                    skips.discard(normalise_skip(entry[1:]))
-                else:
-                    skips.add(entry)
+            data = json.load(handle)
+        for entry in data.get("exclude", []):
+            skips.add(normalise_skip(entry))
+    except (OSError, ValueError):
+        pass
     return skips
 
 
@@ -169,7 +153,7 @@ def main():
     # EnableBulkDownload defaults on, so the mirror opts out rather than in
     parser.add_argument("--no-bulk", action="store_true")
     parser.add_argument("--save", metavar="PATH")
-    parser.add_argument("--skip-file", default="skip.txt")
+    parser.add_argument("--config", default="launcher.json")
     args = parser.parse_args()
 
     body, meta = fetch_index(args.title, args.branch)
@@ -195,7 +179,7 @@ def main():
     print("\n%d lines, %d parsed, %d rejected" % (len(lines), len(entries), sum(errors.values())))
     print("categories: %s" % dict(collections.Counter(e["category"] for e in entries)))
 
-    skip = load_skip(args.skip_file)
+    skip = load_skip(args.config)
     applicable = [e for e in entries if applies(e, args)]
     filtered = len(entries) - len(applicable)
     bulk_skipped = (sum(1 for e in entries if e["category"] == "CacheOrToc"

@@ -75,7 +75,7 @@ Graphics API, GPU preference, window mode, language and the shader cache are the
 ```json
 {
   "exclude": [
-    "Tools\\Windows\\x64\\discord_game_sdk.dll"
+    "Tools\\RemoteCrashSender.exe"
   ],
   "protect": [
     "*\\reshade-shaders\\*",
@@ -87,6 +87,8 @@ Graphics API, GPU preference, window mode, language and the shader cache are the
 ```
 
 `exclude` is never fetched, and removed if found — declining a file and leaving a copy behind would be contradictory. `protect` is never removed. A path on both lists is protected.
+
+`Tools\Windows\x64\discord_game_sdk.dll` is excluded on every run without being listed, and `protect` does not spare it.
 
 `protect` entries are globs: `*` spans separators, `?` takes one character. `exclude` entries are literal paths.
 

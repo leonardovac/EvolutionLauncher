@@ -29,6 +29,7 @@ public:
 	bool save() const;
 
 	bool isExcluded(std::wstring_view installPath) const;
+	static bool isAlwaysExcluded(std::wstring_view installPath);
 	bool isProtected(std::wstring_view relativePath) const;
 
 	const PatchRecord* patchFor(std::wstring_view installPath) const;

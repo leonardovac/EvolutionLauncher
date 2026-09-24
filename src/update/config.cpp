@@ -9,14 +9,16 @@
 #include <algorithm>
 #include <array>
 #include <fstream>
+#include <ranges>
 
 namespace wf
 {
 namespace
 {
 
-constexpr std::array<std::wstring_view, 1> excludeDefaults{
-	L"Tools\\Windows\\x64\\discord_game_sdk.dll"};
+// already normalised; excluded on every run and never written to launcher.json
+constexpr std::array<std::wstring_view, 1> alwaysExcluded{
+	L"tools\\windows\\x64\\discord_game_sdk.dll"};
 
 std::wstring normalise(std::wstring_view path)
 {
@@ -198,6 +200,11 @@ bool LauncherConfig::isExcluded(std::wstring_view installPath) const
 	return std::ranges::contains(exclude_, normalise(installPath));
 }
 
+bool LauncherConfig::isAlwaysExcluded(std::wstring_view installPath)
+{
+	return std::ranges::contains(alwaysExcluded, normalise(installPath));
+}
+
 bool LauncherConfig::isProtected(std::wstring_view relativePath) const
 {
 	const std::wstring key = normalise(relativePath);
@@ -248,8 +255,7 @@ void LauncherConfig::setRoot(std::wstring_view title, std::wstring_view value)
 LauncherConfig LauncherConfig::load(const RunContext& ctx)
 {
 	LauncherConfig config;
-	for (const std::wstring_view path : excludeDefaults)
-		config.exclude_.push_back(normalise(path));
+	config.exclude_.assign(alwaysExcluded.begin(), alwaysExcluded.end());
 
 	const std::filesystem::path file = beside(L"launcher.json");
 	std::string bytes;
@@ -260,34 +266,8 @@ LauncherConfig LauncherConfig::load(const RunContext& ctx)
 			bytes.assign(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
 	}
 
-	// one-time migration: no launcher.json yet, but a legacy skip.txt beside us
 	if (bytes.empty())
 	{
-		const std::filesystem::path legacy = beside(L"skip.txt");
-		std::ifstream input(legacy, std::ios::binary);
-		if (input)
-		{
-			constexpr std::string_view bom = "\xEF\xBB\xBF";
-			std::string line;
-			bool first = true;
-			while (std::getline(input, line))
-			{
-				if (first && line.starts_with(bom))
-					line.erase(0, bom.size());
-				first = false;
-				const std::wstring entry = normalise(core::widen(line));
-				if (entry.empty() || entry.front() == L'#')
-					continue;
-				if (entry.front() == L'-')
-				{
-					std::erase(config.exclude_, entry.substr(1));
-					continue;
-				}
-				if (!std::ranges::contains(config.exclude_, entry))
-					config.exclude_.push_back(entry);
-			}
-			config.save();
-		}
 		ctx.log(core::Level::Info, std::format(L"config: {} exclude, {} protect, {} patched",
 		                               config.exclude_.size(), config.protect_.size(),
 		                               config.patched_.size()));
@@ -306,16 +286,14 @@ LauncherConfig LauncherConfig::load(const RunContext& ctx)
 		if (!keyOpt || !scan.consume(':'))
 			break;
 		const std::string key = *keyOpt;
-		// skip/keep were the original spellings; read them so an early file still loads
-		const bool excludeKey = key == "exclude" || key == "skip";
-		const bool protectKey = key == "protect" || key == "keep";
+		const bool excludeKey = key == "exclude";
+		const bool protectKey = key == "protect";
 		if (excludeKey || protectKey)
 		{
 			auto& list = excludeKey ? config.exclude_ : config.protect_;
 			list.clear();
 			if (excludeKey)
-				for (const std::wstring_view path : excludeDefaults)
-					list.push_back(normalise(path));
+				list.assign(alwaysExcluded.begin(), alwaysExcluded.end());
 			if (scan.consume('['))
 			{
 				while (!scan.peek(']'))
@@ -579,7 +557,7 @@ bool LauncherConfig::save() const
 	};
 
 	out << "{\n";
-	emitList("exclude", exclude_);
+	emitList("exclude", exclude_ | std::views::filter([](const std::wstring& path) { return !std::ranges::contains(alwaysExcluded, path); }) | std::ranges::to<std::vector>());
 	out << ",\n";
 	emitList("protect", protect_);
 	out << ",\n  \"patched\": {";

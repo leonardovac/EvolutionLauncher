@@ -149,7 +149,7 @@ PurgeReport runPurge(std::span<const Entry> entries, const Config& config, bool 
 			report.cancelled = true;
 			break;
 		}
-		if (skip.empty() || config.launcher.isProtected(skip))
+		if (skip.empty() || (config.launcher.isProtected(skip) && !LauncherConfig::isAlwaysExcluded(skip)))
 			continue;
 		const std::filesystem::path target = (config.root / skip).lexically_normal();
 		// the skip list is user input, so reject anything that climbs out of the root
