@@ -2,7 +2,9 @@
 
 #include "core/types.h"
 #include "gfx/font.h"
+#include "ui/ui.h"
 
+#include <array>
 #include <span>
 #include <string_view>
 
@@ -11,6 +13,19 @@ namespace app
 
 // Font::measure is untracked, so the gaps between glyphs have to be added back
 float trackedWidth(gfx::Font& font, std::string_view text, float tracking);
+
+// calls draw(offset, colour) once per halo tap; the caller then draws the glyph itself on top
+template <class Draw>
+void glyphShadow(Draw&& draw)
+{
+    const float d = ui::px(1.f);
+    const std::array offsets{core::Vec2(-d, 0.f), core::Vec2(d, 0.f), core::Vec2(0.f, -d),
+                             core::Vec2(0.f, d), core::Vec2(-d, d), core::Vec2(d, d),
+                             core::Vec2(0.f, d * 2.f)};
+    const core::Col col = ui::theme().scrim.alpha(0.3f);
+    for (const core::Vec2& offset : offsets)
+        draw(offset, col);
+}
 
 enum class DropdownGroup
 {

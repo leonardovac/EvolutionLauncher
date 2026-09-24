@@ -147,10 +147,15 @@ void dropdown(DropdownGroup group, std::string_view id, const core::Rect& row,
         chevronX = field.r() - ui::px(16.f);
     }
 
+    const core::Vec2 chevronAt(chevronX, field.center().y);
+    if (bare)
+        glyphShadow([&](const core::Vec2& offset, const core::Col& col) {
+            ui::text(ui::fonts().caption, value.offset(offset.x, offset.y), valueText, col, ui::AlignH::Left, ui::AlignV::Middle, tracking);
+            fieldChevron(core::Vec2(chevronAt.x + offset.x, chevronAt.y + offset.y), ui::px(4.f), openT, col);
+        });
     ui::text(ui::fonts().caption, value, valueText, ui::theme().text.alpha(0.85f + 0.15f * hoverT),
              ui::AlignH::Left, ui::AlignV::Middle, tracking);
-    fieldChevron(core::Vec2(chevronX, field.center().y), ui::px(4.f), openT,
-                 accent().alpha(0.7f + 0.3f * hoverT));
+    fieldChevron(chevronAt, ui::px(4.f), openT, accent().alpha(0.7f + 0.3f * hoverT));
 
     if (open)
     {

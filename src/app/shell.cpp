@@ -74,6 +74,13 @@ void ornament(gfx::Image* art, const core::Rect& box, bool mirrored, float alpha
     ui::dl().image(art->srv.get(), box, core::Col(1.f, 1.f, 1.f, alpha), 0.f, uv);
 }
 
+void textGlyphShadow(gfx::Font& font, const core::Rect& box, std::string_view str, float tracking)
+{
+    glyphShadow([&](const core::Vec2& offset, const core::Col& col) {
+        ui::text(font, box.offset(offset.x, offset.y), str, col, ui::AlignH::Left, ui::AlignV::Middle, tracking);
+    });
+}
+
 void hexFill(const core::Rect& box, const core::Col& col)
 {
     const float chamfer = std::min(box.h * 0.45f, box.w * 0.5f);
@@ -178,7 +185,12 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     if (!state.panelVisible)
     {
         if (iconsReady())
+        {
+            glyphShadow([&](const Vec2& offset, const Col& col) {
+                drawIcon(IconSize::Caption, icon::globe, globeInk.offset(offset.x, offset.y), col);
+            });
             drawIcon(IconSize::Caption, icon::globe, globeInk, accent().alpha(0.8f));
+        }
         else
             globeGlyph(globeInk.center(), ui::px(7.f), accent().alpha(0.8f));
     }
@@ -196,8 +208,14 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         if (cogT > 0.01f)
             ui::dl().rect(captionHoverBox(cogBox), Col::hex(0xFFFFFF, 0.09f * cogT), ui::px(2.f));
         const Col cogCol = accent().alpha(0.7f + 0.3f * cogT);
+        const Rect cogInk = cogBox.offset(0.f, -ui::px(1.f));
         if (iconsReady())
-            drawIcon(IconSize::Caption, icon::cog, cogBox.offset(0.f, -ui::px(1.f)), cogCol);
+        {
+            glyphShadow([&](const Vec2& offset, const Col& col) {
+                drawIcon(IconSize::Caption, icon::cog, cogInk.offset(offset.x, offset.y), col);
+            });
+            drawIcon(IconSize::Caption, icon::cog, cogInk, cogCol);
+        }
         else
             ui::dl().arc(cogBox.center(), ui::px(6.f), ui::px(1.5f), 0.f, core::kPi * 2.f, cogCol);
     }
@@ -281,6 +299,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
     {
         const Rect track(statusX, axis - ui::px(1.5f), textW, ui::px(3.f));
         const Rect label(statusX, track.y - ui::px(24.f), textW, ui::px(16.f));
+        textGlyphShadow(ui::fonts().body, label, state.statusLine, ui::px(1.2f));
         ui::text(ui::fonts().body, label, state.statusLine, ui::theme().text, ui::AlignH::Left,
                  ui::AlignV::Middle, ui::px(1.2f));
         ui::dl().rect(track, Col::hex(0x000000, 0.45f), track.h * 0.5f);
@@ -300,6 +319,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         if (!state.detailLine.empty())
         {
             const Rect detail(statusX, track.b() + ui::px(8.f), textW, ui::px(14.f));
+            textGlyphShadow(ui::fonts().caption, detail, state.detailLine, ui::px(1.f));
             ui::text(ui::fonts().caption, detail, state.detailLine, ui::theme().subtext,
                      ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
         }
@@ -312,6 +332,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         const std::string_view text = std::ranges::contains(labelPhases, state.phase)
             ? state.buildLabel
             : state.statusLine;
+        textGlyphShadow(ui::fonts().body, label, text, ui::px(1.2f));
         ui::text(ui::fonts().body, label, text, line, ui::AlignH::Left, ui::AlignV::Middle,
                  ui::px(1.2f));
     }
@@ -336,7 +357,12 @@ void drawWindowControls(const core::Rect& viewport)
         ui::dl().rect(captionHoverBox(closeBox), Col::hex(0xFFFFFF, 0.10f * closeT),
                       ui::px(2.f));
     if (iconsReady())
+    {
+        glyphShadow([&](const Vec2& offset, const Col& col) {
+            drawIcon(IconSize::Caption, icon::close, closeBox.offset(offset.x, offset.y), col);
+        });
         drawIcon(IconSize::Caption, icon::close, closeBox, accent().alpha(0.7f + 0.3f * closeT));
+    }
     else
         ui::closeButton("shell.close.fallback", closeBox);
 
@@ -351,6 +377,9 @@ void drawWindowControls(const core::Rect& viewport)
     const Col minimiseCol = accent().alpha(0.7f + 0.3f * minimiseT);
     if (iconsReady())
     {
+        glyphShadow([&](const Vec2& offset, const Col& col) {
+            drawIcon(IconSize::Caption, icon::minimise, minimiseBox.offset(offset.x, offset.y), col);
+        });
         drawIcon(IconSize::Caption, icon::minimise, minimiseBox, minimiseCol);
     }
     else
