@@ -20,9 +20,8 @@ void glyphShadow(Draw&& draw)
 {
     const float d = ui::px(1.f);
     const std::array offsets{core::Vec2(-d, 0.f), core::Vec2(d, 0.f), core::Vec2(0.f, -d),
-                             core::Vec2(0.f, d), core::Vec2(-d, d), core::Vec2(d, d),
-                             core::Vec2(0.f, d * 2.f)};
-    const core::Col col = ui::theme().scrim.alpha(0.3f);
+                             core::Vec2(0.f, d), core::Vec2(-d, d), core::Vec2(d, d)};
+    const core::Col col = ui::theme().scrim.alpha(0.2f);
     for (const core::Vec2& offset : offsets)
         draw(offset, col);
 }
