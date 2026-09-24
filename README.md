@@ -6,7 +6,7 @@ A custom launcher for Warframe and Soulframe.
 
 <a href="https://en.cppreference.com/w/cpp/26"><img src="https://img.shields.io/badge/C%2B%2B-26-f44c7c?style=flat-square" alt="C++26"></a>
 <img src="https://img.shields.io/badge/Platform-Windows-0078d4?style=flat-square" alt="Windows">
-<img src="https://img.shields.io/badge/Version-1.0.0-4c9c4c?style=flat-square" alt="1.0.0">
+<a href="https://github.com/leonardovac/EvolutionLauncher/releases/latest"><img src="https://img.shields.io/github/v/release/leonardovac/EvolutionLauncher?sort=semver&label=Version&color=4c9c4c&style=flat-square" alt="Latest release"></a>
 <a href="LICENSE.txt"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT"></a>
 <a href="https://github.com/leonardovac/EvolutionLauncher/stargazers"><img src="https://img.shields.io/github/stars/leonardovac/EvolutionLauncher?style=flat-square" alt="Stars"></a>
 
