@@ -363,6 +363,8 @@ int run(const Options& options)
         if (defragSnap.running)
         {
             shell.startEnabled = false;
+            // the shell draws the bar only in its busy phases, whatever the update job is doing
+            shell.phase = defragSnap.total != 0 ? JobPhase::Updating : JobPhase::Checking;
             shell.statusLine = "DEFRAGMENTING CACHE";
             detailBuffer.clear();
             if (defragSnap.total != 0)
@@ -370,6 +372,8 @@ int run(const Options& options)
                 shell.progress = core::clamp01(
                     static_cast<float>(static_cast<double>(defragSnap.processed)
                                        / static_cast<double>(defragSnap.total)));
+                statusBuffer = std::format("DEFRAGMENTING CACHE  {}%", static_cast<int>(shell.progress * 100.f));
+                shell.statusLine = statusBuffer;
                 detailBuffer = std::format("{} / {}", core::formatBytes(defragSnap.processed),
                                            core::formatBytes(defragSnap.total));
             }
@@ -403,6 +407,8 @@ int run(const Options& options)
             shell.detailLine = {};
             shell.statusLine =
                 defragExit == 0 ? "CACHE DEFRAGMENTED" : "THE DEFRAGMENTER REPORTED A FAILURE";
+            shell.buildLabel = shell.statusLine;
+            shell.buildLabelLink = false;
             ui::requestFrame();
         }
         gfx::Image* baked = railTitles[static_cast<std::size_t>(selectedTitle)].hero;
