@@ -177,6 +177,13 @@ A trailing ` benchmark` is appended when the launcher itself was started with `-
 `Tools/CachePlan.txt` is an index-listed file; the applet rewrites the `.cache` set in place
 and writes `Defrag.log`.
 
+Progress goes only to the game's own log, `%LOCALAPPDATA%\<title>\EE.log`, which the game
+truncates at start and flushes in 4 KiB blocks. `Defragged <done>/<total>` counts bytes across
+the whole set; `Defragmenting /Cache.Windows/<file>` names the file being rewritten.
+A rewritten file grows as `Cache.Windows\<file>.tmp` and is renamed over the original when
+done; a skipped one gets no `.tmp`. The log's total covers only the blocks the plan names, so
+it is a little below the sum of the `.cache` sizes.
+
 ## Sideload patch
 
 A local patch of the game executable, applied after each update. The retail launcher links

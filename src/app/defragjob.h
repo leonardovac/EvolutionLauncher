@@ -26,7 +26,7 @@ struct DefragSnapshot
     std::uint32_t exitCode = 0;
 };
 
-// runs the cache defragmenter with its console hidden and reads progress from its title
+// runs the cache defragmenter with its console hidden; progress comes from EE.log and the .tmp it writes
 class DefragJob
 {
 public:
@@ -39,7 +39,7 @@ public:
     void clearFinished() noexcept;
 
 private:
-    void pump(void* process);
+    void pump(void* process, std::wstring log, std::uint64_t offset, std::wstring cacheDir);
 
     std::thread thread_;
     std::atomic<bool> running_{false};
