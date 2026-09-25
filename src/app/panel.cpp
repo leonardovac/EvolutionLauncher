@@ -7,10 +7,12 @@
 #include "core/str.h"
 #include "ui/ui.h"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -106,10 +108,101 @@ void warnMark(const core::Rect& row, std::string_view label)
                   ui::px(1.2f), col);
 }
 
+std::string_view reasonLabel(wf::Reason reason)
+{
+    switch (reason)
+    {
+    case wf::Reason::Missing: return "MISSING";
+    case wf::Reason::HashMismatch: return "CHANGED";
+    case wf::Reason::Sibling: return "PAIRED";
+    }
+    return {};
+}
+
+void fileList(const core::Rect& list, PanelState& state, float wheel)
+{
+    const std::span<const QueuedRow> rows = state.files ? std::span<const QueuedRow>(*state.files) : std::span<const QueuedRow>();
+    if (rows.empty())
+    {
+        note(core::Rect(list.x, list.y, list.w, ui::px(14.f)), "NOTHING TO DOWNLOAD");
+        return;
+    }
+
+    const float rowH = ui::px(24.f);
+    const float sizeW = ui::px(72.f);
+    const float reasonW = ui::px(70.f);
+    const float pad = ui::px(8.f);
+    const float tracking = ui::px(1.f);
+    const core::Col heading = ui::theme().subtext.alpha(0.7f);
+
+    const core::Rect head(list.x, list.y, list.w, rowH);
+    const core::Rect reasonHead(head.r() - pad - sizeW - reasonW, head.y, reasonW, rowH);
+    ui::text(ui::fonts().caption, core::Rect(head.x + pad, head.y, head.w, rowH), "PATH", heading, ui::AlignH::Left, ui::AlignV::Middle, tracking);
+    ui::text(ui::fonts().caption, reasonHead, "REASON", heading, ui::AlignH::Left, ui::AlignV::Middle, tracking);
+    ui::text(ui::fonts().caption, core::Rect(head.r() - pad - sizeW, head.y, sizeW, rowH), "SIZE", heading, ui::AlignH::Right, ui::AlignV::Middle, tracking);
+    tooltip(reasonHead, "PAIRED: FETCHED WITH ITS .CACHE OR .TOC PARTNER");
+    ui::dl().line(core::Vec2(head.x, head.b()), core::Vec2(head.r(), head.b()), ui::px(1.f), accent().alpha(0.22f));
+
+    const core::Rect body(list.x, head.b() + ui::px(4.f), list.w, list.b() - head.b() - ui::px(4.f));
+    const ui::Input& input = ui::g().input;
+    const bool inBody = body.contains(input.mouse);
+    const float contentH = rowH * static_cast<float>(rows.size());
+    const float maxScroll = std::max(0.f, contentH - body.h);
+    const float barW = maxScroll > 0.f ? ui::px(4.f) : 0.f;
+    const core::Rect track(body.r() - barW, body.y, barW, body.h);
+    const float thumbH = maxScroll > 0.f ? std::max(ui::px(24.f), body.h * body.h / contentH) : 0.f;
+    const auto thumbTop = [&] { return track.y + (track.h - thumbH) * (state.filesScroll / maxScroll); };
+
+    if (!input.down)
+        state.filesGrab = -1.f;
+    if (maxScroll > 0.f)
+    {
+        if (inBody)
+            state.filesScroll -= wheel * rowH * 3.f;
+        // wider than the drawn bar, which is too thin to hit
+        const core::Rect grabArea(track.x - ui::px(8.f), track.y, track.w + ui::px(8.f), track.h);
+        if (input.pressed && grabArea.contains(input.mouse))
+        {
+            const float top = thumbTop();
+            const bool onThumb = input.mouse.y >= top && input.mouse.y < top + thumbH;
+            state.filesGrab = onThumb ? input.mouse.y - top : thumbH * 0.5f;
+        }
+        if (state.filesGrab >= 0.f)
+            state.filesScroll = (input.mouse.y - state.filesGrab - track.y) / (track.h - thumbH) * maxScroll;
+    }
+    state.filesScroll = std::clamp(state.filesScroll, 0.f, maxScroll);
+
+    const float rowW = body.w - (maxScroll > 0.f ? barW + ui::px(8.f) : 0.f);
+    const float pathW = rowW - sizeW - reasonW - pad * 4.f;
+    ui::dl().pushClip(body);
+    for (std::size_t i = static_cast<std::size_t>(state.filesScroll / rowH); i < rows.size(); ++i)
+    {
+        const core::Rect row(body.x, body.y + rowH * static_cast<float>(i) - state.filesScroll, rowW, rowH);
+        if (row.y >= body.b())
+            break;
+        const QueuedRow& file = rows[i];
+        if (inBody && row.contains(input.mouse))
+            ui::dl().rect(row, accent().alpha(0.08f), ui::px(2.f));
+        const std::string path = elidePath(file.path, pathW);
+        if (inBody && path.size() != file.path.size())
+            tooltip(row, file.path);
+        ui::text(ui::fonts().caption, core::Rect(row.x + pad, row.y, pathW, rowH), path, ui::theme().text.alpha(0.9f), ui::AlignH::Left, ui::AlignV::Middle, tracking);
+        ui::text(ui::fonts().caption, core::Rect(row.r() - pad - sizeW - reasonW, row.y, reasonW, rowH), reasonLabel(file.reason), ui::theme().subtext, ui::AlignH::Left, ui::AlignV::Middle, tracking);
+        ui::text(ui::fonts().caption, core::Rect(row.r() - pad - sizeW, row.y, sizeW, rowH), core::formatBytes(file.size), ui::theme().subtext, ui::AlignH::Right, ui::AlignV::Middle, tracking);
+    }
+    ui::dl().popClip();
+
+    if (maxScroll > 0.f)
+    {
+        ui::dl().rect(track, accent().alpha(0.12f), barW * 0.5f);
+        ui::dl().rect(core::Rect(track.x, thumbTop(), barW, thumbH), accent().alpha(state.filesGrab >= 0.f ? 0.9f : 0.55f), barW * 0.5f);
+    }
+}
+
 }
 
 PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state,
-                      Settings& working)
+                      Settings& working, float wheel)
 {
     if (slide > 0.f && slide < 1.f)
         ui::requestFrame();
@@ -142,7 +235,10 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
                   ui::px(1.f), accent().alpha(0.22f));
 
     float tabX = panel.x + inset;
-    for (const TabEntry& entry : tabEntries)
+    const bool filesView = state.tab == PanelTab::Files;
+    if (filesView)
+        ui::text(ui::fonts().caption, core::Rect(tabX, stripY, rowW, ui::px(26.f)), "FILES TO DOWNLOAD", accent(), ui::AlignH::Left, ui::AlignV::Middle, tabTracking);
+    for (const TabEntry& entry : filesView ? std::span<const TabEntry>() : std::span<const TabEntry>(tabEntries))
     {
         const float tabW =
             trackedWidth(ui::fonts().caption, entry.label, tabTracking) + ui::px(14.f) * 2.f;
@@ -166,6 +262,11 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
         }
         tabX = box.r() + ui::px(4.f);
     }
+
+    const float btnW = ui::px(96.f);
+    const float btnH = ui::px(32.f);
+    const float btnGap = ui::px(12.f);
+    const core::Rect lastBox(panel.r() - inset - btnW, panel.b() - inset - btnH, btnW, btnH);
 
     PanelAction action = PanelAction::None;
     float y = ruleY + ui::px(20.f);
@@ -265,6 +366,13 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
                  working.allowNetworkCaches);
         tooltip(allowNetworkCachesRow, "SHARED BY BOTH GAMES");
     }
+    else if (state.tab == PanelTab::Files)
+    {
+        const core::Rect summary(panel.x + inset, y, rowW, noteH);
+        note(summary, state.filesLine);
+        y = summary.b() + noteGap;
+        fileList(core::Rect(panel.x + inset, y, rowW, lastBox.y - ui::px(16.f) - y), state, wheel);
+    }
     else
     {
         const core::Rect verifyBox(panel.x + inset, y, rowW, rowH);
@@ -307,11 +415,6 @@ PanelAction drawPanel(const core::Rect& viewport, float slide, PanelState& state
                      ui::AlignH::Left, ui::AlignV::Middle, ui::px(1.f));
         }
     }
-
-    const float btnW = ui::px(96.f);
-    const float btnH = ui::px(32.f);
-    const float btnGap = ui::px(12.f);
-    const core::Rect lastBox(panel.r() - inset - btnW, panel.b() - inset - btnH, btnW, btnH);
 
     // versions are reference, not a destination; they sit in view instead of behind a tab
     const core::Rect launcherLine(panel.x + inset, lastBox.y, rowW, noteH);

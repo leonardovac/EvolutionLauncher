@@ -171,6 +171,9 @@ std::expected<Summary, UpdateError> run(const Options& options)
 	summary.bulkSkipped = plan.bulkSkipped;
 	summary.queued = plan.jobs.size();
 	summary.downloadBytes = plan.downloadBytes;
+	summary.queuedFiles.reserve(plan.jobs.size());
+	for (const Job& job : plan.jobs)
+		summary.queuedFiles.push_back({job.entry->installPath, job.entry->wireSize, job.reason});
 
 	ctx.progress->onPlan(plan.jobs.size(), plan.downloadBytes, plan.filtered, plan.skipped,
 	                     plan.upToDate, plan.bulkSkipped);

@@ -173,6 +173,16 @@ int run(const Options& options)
         panel.tab = PanelTab::Maintenance;
     if (startOpen)
         working = settings;
+    const auto openPanel = [&panel, &working, &settings](PanelTab tab) {
+        panel.tab = tab;
+        panel.saveFailed = false;
+        panel.rootLine.clear();
+        panel.rootPick.clear();
+        working = settings;
+        panel.launcherLine = std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
+        const auto build = gameBuildVersion(settings, wf::Branch::Public);
+        panel.gameBuildLine = build ? std::format("GAME BUILD   {}", core::narrow(*build)) : std::string();
+    };
 
     DefragJob defrag;
     float defragNotice = 0.f;
@@ -329,6 +339,7 @@ int run(const Options& options)
             readyBuffer = std::format("UPDATE AVAILABLE  {} FILES  •  {}", snap.queuedFiles,
                                       core::formatBytes(snap.queuedBytes));
             shell.buildLabel = readyBuffer;
+            shell.buildLabelLink = snap.queuedRows != nullptr;
             break;
         case JobPhase::Ready:
             if (launchFailure.empty())
@@ -507,18 +518,17 @@ int run(const Options& options)
             const PanelTab wanted = rail.cogClicked ? PanelTab::Launcher : PanelTab::Settings;
             panelOpen = !panelOpen || panel.tab != wanted;
             if (panelOpen)
-            {
-                panel.tab = wanted;
-                panel.saveFailed = false;
-                panel.rootLine.clear();
-                panel.rootPick.clear();
-                working = settings;
-                panel.launcherLine =
-                    std::format("LAUNCHER   {}", core::narrow(launcherVersion()));
-                const auto build = gameBuildVersion(settings, wf::Branch::Public);
-                panel.gameBuildLine =
-                    build ? std::format("GAME BUILD   {}", core::narrow(*build)) : std::string();
-            }
+                openPanel(wanted);
+            closeDropdown();
+            ui::requestFrame();
+        }
+        if (shellBuildLabelClicked() && snap.queuedRows)
+        {
+            openPanel(PanelTab::Files);
+            panelOpen = true;
+            panel.files = snap.queuedRows;
+            panel.filesLine = std::format("{} FILES  •  {}", snap.queuedFiles, core::formatBytes(snap.queuedBytes));
+            panel.filesScroll = 0.f;
             closeDropdown();
             ui::requestFrame();
         }
@@ -540,7 +550,7 @@ int run(const Options& options)
         {
             const PanelTab beforeTab = panel.tab;
             const PanelAction panelAction =
-                drawPanel(viewport, panelSlide, panel, working);
+                drawPanel(viewport, panelSlide, panel, working, window.wheel());
             if (panel.tab != beforeTab)
             {
                 closeDropdown();

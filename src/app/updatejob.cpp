@@ -7,6 +7,8 @@
 #include "update/progress.h"
 #include "update/updater.h"
 
+#include <algorithm>
+#include <functional>
 #include <utility>
 
 namespace app
@@ -120,6 +122,7 @@ void UpdateJob::reset(bool verify, bool stale, bool apply)
     apply_.store(apply, std::memory_order_relaxed);
     queuedFiles_.store(0, std::memory_order_relaxed);
     queuedBytes_.store(0, std::memory_order_relaxed);
+    queuedRows_.store({}, std::memory_order_release);
     phase_.store(JobPhase::Idle, std::memory_order_relaxed);
     entryIndex_.store(0, std::memory_order_relaxed);
     entryCount_.store(0, std::memory_order_relaxed);
@@ -167,6 +170,7 @@ JobSnapshot UpdateJob::snapshot() const
     out.hashedBytes = hashedBytes_.load(std::memory_order_relaxed);
     out.queuedFiles = queuedFiles_.load(std::memory_order_relaxed);
     out.queuedBytes = queuedBytes_.load(std::memory_order_relaxed);
+    out.queuedRows = queuedRows_.load(std::memory_order_acquire);
     out.verifying = verify_.load(std::memory_order_relaxed);
     out.scanning = stale_.load(std::memory_order_relaxed);
     return out;
@@ -234,6 +238,15 @@ void UpdateJob::work()
         staleBytes_.store(summary->staleBytes, std::memory_order_release);
         queuedFiles_.store(summary->queued, std::memory_order_relaxed);
         queuedBytes_.store(summary->downloadBytes, std::memory_order_release);
+        if (phase == JobPhase::UpdateReady)
+        {
+            auto rows = std::make_shared<std::vector<QueuedRow>>();
+            rows->reserve(summary->queuedFiles.size());
+            for (const wf::QueuedFile& file : summary->queuedFiles)
+                rows->push_back({core::narrow(file.installPath), file.wireSize, file.reason});
+            std::ranges::stable_sort(*rows, std::ranges::greater{}, &QueuedRow::size);
+            queuedRows_.store(std::move(rows), std::memory_order_release);
+        }
     }
 
     if (!message.empty())

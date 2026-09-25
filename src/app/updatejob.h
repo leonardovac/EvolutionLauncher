@@ -10,12 +10,23 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace app
 {
 
 // shared so the UI can hold a frame's text without copying it off the worker
 using JobText = std::shared_ptr<const std::string>;
+
+struct QueuedRow
+{
+    std::string path;
+    std::uint64_t size = 0;
+    wf::Reason reason = wf::Reason::Missing;
+};
+
+// largest first; null until a check has planned something to fetch
+using QueuedRows = std::shared_ptr<const std::vector<QueuedRow>>;
 
 struct JobSnapshot
 {
@@ -29,6 +40,7 @@ struct JobSnapshot
     JobText message;
     std::size_t queuedFiles = 0;
     std::uint64_t queuedBytes = 0;
+    QueuedRows queuedRows;
     bool verifying = false;
     bool scanning = false;
 };
@@ -73,6 +85,7 @@ private:
     std::atomic<bool> apply_{false};
     std::atomic<std::size_t> queuedFiles_{0};
     std::atomic<std::uint64_t> queuedBytes_{0};
+    std::atomic<QueuedRows> queuedRows_;
     std::atomic<std::size_t> staleFiles_{0};
     std::atomic<std::uint64_t> staleBytes_{0};
 };

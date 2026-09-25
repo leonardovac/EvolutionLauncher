@@ -16,6 +16,8 @@ struct ShellState
 {
     JobPhase phase = JobPhase::Idle;
     std::string_view buildLabel;
+    // the build label is a link to the queued files
+    bool buildLabelLink = false;
     std::string_view statusLine;
     std::string_view detailLine;
     std::span<const NavEntry> nav;
@@ -47,6 +49,7 @@ void drawWindowControls(const core::Rect& viewport);
 bool shellCloseClicked();
 bool shellStartClicked();
 bool shellSecondaryClicked();
+bool shellBuildLabelClicked();
 bool shellMinimiseClicked();
 int shellLanguageIndex();
 bool shellCogClicked();

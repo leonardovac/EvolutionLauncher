@@ -157,6 +157,9 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         mouseReleased_ = true;
         ::ReleaseCapture();
         return 0;
+    case WM_MOUSEWHEEL:
+        wheel_ += static_cast<float>(GET_WHEEL_DELTA_WPARAM(wp)) / WHEEL_DELTA;
+        return 0;
     case WM_KEYDOWN:
         if (wp == VK_RETURN)
             keys_ |= static_cast<std::uint32_t>(ui::Key::Enter);
@@ -265,6 +268,7 @@ void Window::clearInputEdge() noexcept
 {
     mousePressed_ = false;
     mouseReleased_ = false;
+    wheel_ = 0.f;
     keys_ = 0;
 }
 

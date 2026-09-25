@@ -9,6 +9,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace wf
 {
@@ -37,6 +38,13 @@ struct Options
 	RunContext ctx;
 };
 
+struct QueuedFile
+{
+	std::wstring installPath;
+	std::uint64_t wireSize = 0;
+	Reason reason = Reason::Missing;
+};
+
 struct Summary
 {
 	std::size_t entries = 0;
@@ -58,6 +66,7 @@ struct Summary
 	std::size_t purgeFailed = 0;
 	bool cancelled = false;
 	std::optional<Entry> mainExe;  // from the fetched index, for the caller to sideload-patch
+	std::vector<QueuedFile> queuedFiles;  // the plan's jobs, in queue order
 };
 
 std::expected<Summary, UpdateError> run(const Options& options);

@@ -27,6 +27,8 @@ public:
     [[nodiscard]] bool mousePressed() const noexcept { return mousePressed_; }
     [[nodiscard]] bool mouseReleased() const noexcept { return mouseReleased_; }
     [[nodiscard]] std::uint32_t keys() const noexcept { return keys_; }
+    // notches turned this frame, positive away from the user
+    [[nodiscard]] float wheel() const noexcept { return wheel_; }
 
     bool pump();
     void waitForInput() const noexcept;
@@ -49,6 +51,7 @@ private:
     bool mouseDown_ = false;
     bool mousePressed_ = false;
     bool mouseReleased_ = false;
+    float wheel_ = 0.f;
     std::uint32_t keys_ = 0;
 };
 

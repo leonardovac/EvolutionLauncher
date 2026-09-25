@@ -24,6 +24,7 @@ namespace
 bool closeClicked = false;
 bool startClicked = false;
 bool secondaryClicked = false;
+bool buildLabelClicked = false;
 bool minimiseClicked = false;
 int languageIndex = -1;
 bool cogClicked = false;
@@ -284,6 +285,7 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         }
     }
 
+    buildLabelClicked = false;
     // the leaf is a fixture of the status area, so it holds its place across every phase
     const float statusX = state.leaf != nullptr ? bottom.x + leafW + ui::px(shellLeafGap)
                                                 : bottom.x;
@@ -332,8 +334,24 @@ void drawShell(const core::Rect& viewport, const HeroFrame& hero, const ShellSta
         const std::string_view text = std::ranges::contains(labelPhases, state.phase)
             ? state.buildLabel
             : state.statusLine;
+        Col ink = line;
+        if (state.buildLabelLink && state.phase == JobPhase::UpdateReady)
+        {
+            const float linkW = std::min(trackedWidth(ui::fonts().body, text, ui::px(1.2f)), label.w);
+            const Rect link(label.x, label.y, linkW, label.h);
+            const std::uint32_t linkId = ui::id("shell.buildLabel");
+            const bool linkHot = ui::hovered(linkId, link);
+            buildLabelClicked = ui::clicked(linkId, link) && !state.panelVisible;
+            const float linkT = ui::anim(linkId, 0, linkHot ? 1.f : 0.f, 14.f);
+            ink = Col(core::lerp(line.r, ui::theme().text.r, linkT), core::lerp(line.g, ui::theme().text.g, linkT), core::lerp(line.b, ui::theme().text.b, linkT), line.a);
+            if (linkT > 0.01f)
+            {
+                const float half = linkW * 0.5f * linkT;
+                ui::dl().line(Vec2(link.center().x - half, link.b() + ui::px(2.f)), Vec2(link.center().x + half, link.b() + ui::px(2.f)), ui::px(1.f), accent().alpha(0.7f * linkT));
+            }
+        }
         textGlyphShadow(ui::fonts().body, label, text, ui::px(1.2f));
-        ui::text(ui::fonts().body, label, text, line, ui::AlignH::Left, ui::AlignV::Middle,
+        ui::text(ui::fonts().body, label, text, ink, ui::AlignH::Left, ui::AlignV::Middle,
                  ui::px(1.2f));
     }
 
@@ -403,6 +421,11 @@ bool shellStartClicked()
 bool shellSecondaryClicked()
 {
     return secondaryClicked;
+}
+
+bool shellBuildLabelClicked()
+{
+    return buildLabelClicked;
 }
 
 bool shellMinimiseClicked()
