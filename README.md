@@ -106,6 +106,8 @@ Cancelling one of those keeps the partial file and a small `.ranges` file beside
 Cache files are checked for existence unless you pass `--verify`, because hashing a full cache is tens of gigabytes of reads.
 Defragmenting rewrites the cache in place, so its bytes stop matching the index; a hashed cache that differs is reported and left alone.
 
+The index lists the cache files but not what is inside them, so after every check the game's own content updater runs, the same one the original launcher starts, and brings the caches current before Play unlocks.
+
 The game's executable is patched so the loader searches its own folder for DLLs, which is what lets a sideloaded DLL work at all. That changes the file's hash, so the before and after are recorded in `launcher.json` and the file is not re-downloaded for it. Turn it off per title in the Settings tab; the next check then re-fetches a clean copy.
 
 ## Thanks

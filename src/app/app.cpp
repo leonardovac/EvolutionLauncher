@@ -239,7 +239,8 @@ int run(const Options& options)
         }
 
         const JobSnapshot snap = job.snapshot();
-        if (snap.phase == JobPhase::Updating)
+        constexpr std::array downloadPhases{JobPhase::Updating, JobPhase::UpdatingContent};
+        if (std::ranges::contains(downloadPhases, snap.phase))
             meter.sample(snap.downloaded, dt);
 
         if (window.takeResized())
@@ -264,7 +265,7 @@ int run(const Options& options)
         input.keys = window.keys();
         ui::newFrame(input, dt, static_cast<float>(device.width()),
                      static_cast<float>(device.height()));
-        constexpr std::array liveJobPhases{JobPhase::Checking, JobPhase::Updating};
+        constexpr std::array liveJobPhases{JobPhase::Checking, JobPhase::Updating, JobPhase::UpdatingContent};
         if (std::ranges::contains(liveJobPhases, snap.phase))
             ui::requestFrame();
         ShellState shell;
@@ -330,6 +331,28 @@ int run(const Options& options)
                     : 0u;
                 if (const std::string eta = formatEta(remaining, meter.bytesPerSecond());
                     !eta.empty())
+                    detailBuffer += std::format("  •  {}", eta);
+            }
+            shell.detailLine = detailBuffer;
+            break;
+        }
+        case JobPhase::UpdatingContent:
+        {
+            // the applet names no total until it has scanned the caches, so sweep until then
+            shell.phase = snap.downloadTotal != 0 ? JobPhase::Updating : JobPhase::Checking;
+            shell.statusLine = "CHECKING GAME CONTENT";
+            if (snap.downloadTotal == 0)
+                break;
+            shell.progress = core::clamp01(static_cast<float>(static_cast<double>(snap.downloaded) / static_cast<double>(snap.downloadTotal)));
+            statusBuffer = std::format("UPDATING GAME CONTENT  {}%", static_cast<int>(shell.progress * 100.f));
+            shell.statusLine = statusBuffer;
+            detailBuffer = std::format("{} / {}", core::formatBytes(snap.downloaded), core::formatBytes(snap.downloadTotal));
+            if (meter.ready())
+            {
+                if (const std::string rate = formatRate(meter.bytesPerSecond()); !rate.empty())
+                    detailBuffer += std::format("  •  {}", rate);
+                const std::uint64_t remaining = snap.downloadTotal > snap.downloaded ? snap.downloadTotal - snap.downloaded : 0u;
+                if (const std::string eta = formatEta(remaining, meter.bytesPerSecond()); !eta.empty())
                     detailBuffer += std::format("  •  {}", eta);
             }
             shell.detailLine = detailBuffer;

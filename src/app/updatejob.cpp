@@ -1,5 +1,7 @@
 #include "app/updatejob.h"
 
+#include "app/contentupdate.h"
+#include "app/launch.h"
 #include "app/settings.h"
 #include "app/sideload.h"
 #include "core/cancel.h"
@@ -8,6 +10,7 @@
 #include "update/updater.h"
 
 #include <algorithm>
+#include <format>
 #include <functional>
 #include <utility>
 
@@ -249,11 +252,48 @@ void UpdateJob::work()
         }
     }
 
+    // the index cannot see inside the caches, so the game's own applet brings them current
+    if (phase == JobPhase::Ready)
+        phase = updateContent(settings, options.config.branch, message);
+
     if (!message.empty())
         message_.store(std::make_shared<const std::string>(std::move(message)),
                        std::memory_order_release);
     phase_.store(phase, std::memory_order_release);
     running_.store(false, std::memory_order_release);
+}
+
+JobPhase UpdateJob::updateContent(const Settings& settings, wf::Branch branch, std::string& message)
+{
+    if (cancel_.requested())
+        return JobPhase::Cancelled;
+    downloaded_.store(0, std::memory_order_relaxed);
+    downloadTotal_.store(0, std::memory_order_relaxed);
+    currentFile_.store({}, std::memory_order_release);
+    phase_.store(JobPhase::UpdatingContent, std::memory_order_release);
+
+    const auto result = runContentUpdate(settings, branch, cancel_, [this](std::uint64_t downloaded, std::uint64_t total) {
+        downloaded_.store(downloaded, std::memory_order_relaxed);
+        downloadTotal_.store(total, std::memory_order_relaxed);
+    });
+    if (cancel_.requested())
+        return JobPhase::Cancelled;
+    if (!result)
+    {
+        message = core::narrow(describe(result.error()));
+        return JobPhase::Failed;
+    }
+    if (result->exitCode != 0)
+    {
+        message = std::format("content update exited with {}", result->exitCode);
+        return JobPhase::Failed;
+    }
+    if (!result->complete)
+    {
+        message = "content update did not finish";
+        return JobPhase::Failed;
+    }
+    return JobPhase::Ready;
 }
 
 std::size_t UpdateJob::staleFiles() const noexcept

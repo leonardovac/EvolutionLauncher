@@ -15,6 +15,8 @@
 namespace app
 {
 
+struct Settings;
+
 // shared so the UI can hold a frame's text without copying it off the worker
 using JobText = std::shared_ptr<const std::string>;
 
@@ -67,6 +69,7 @@ public:
 private:
     void work();
     void reset(bool verify, bool stale, bool apply);
+    JobPhase updateContent(const Settings& settings, wf::Branch branch, std::string& message);
 
     std::thread thread_;
     core::CancelToken cancel_;

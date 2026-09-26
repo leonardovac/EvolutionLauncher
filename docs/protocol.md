@@ -184,6 +184,37 @@ A rewritten file grows as `Cache.Windows\<file>.tmp` and is renamed over the ori
 done; a skipped one gets no `.tmp`. The log's total covers only the blocks the plan names, so
 it is a little below the sum of the `.cache` sizes.
 
+## Content update
+
+The index only names the `.cache`/`.toc` files, never what is inside them, so an install whose
+index check comes back clean can still be hundreds of megabytes behind. The stock launcher closes
+that gap after every index sync by running the game as an applet:
+
+    "<root>\<game>.x64.exe" -silent -log:/Preprocess.log -graphicsDriver:dx11|dx12
+        -cluster:public|test|dev -language:<lang> [-languageVO:<lang>] [-forceHTTPS]
+        -applet:/EE/Types/Framework/ContentUpdate
+
+No `-windowMode`, `-shaderCache`, `-gpuPreference` or `-clienttype`; the switches otherwise
+resolve as for a game launch. The applet downloads its own cache manifest, compares every
+asset in the local `.cache` set against it, and fetches or copies the ones that differ
+straight into the caches. It has no check-only mode: the size of the work is known only once
+it has started.
+
+Progress goes to `%LOCALAPPDATA%\<title>\Preprocess.log`, which the game truncates at start.
+`Downloaded <done>/<total>` counts bytes, about once a second, and the total can grow as the
+scan finds more. The last one logged need not reach the total.
+The run succeeded only if it exited `0` **and** logged `All stripped assets preprocessed`.
+It can exit `0` without that line, after `Fetch of <asset> failed!` lines, logging
+`stripped assets still pending preprocess` instead; the stock launcher offers a retry then.
+
+To stop it early the stock launcher opens the named semaphore `SoakStop` (unqualified, so
+session-local), releases it once, closes it, and waits a second for the process — up to 30
+times, then `TerminateProcess`. The applet logs `StopSoak detected: aborting update.` and
+exits cleanly. The defragment and repair applets honour the same semaphore.
+
+This launcher runs the applet after every check or update that ends with nothing left to
+fetch, and keeps Play disabled until it succeeds.
+
 ## Sideload patch
 
 A local patch of the game executable, applied after each update. The retail launcher links

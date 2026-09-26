@@ -21,6 +21,7 @@ namespace
 constexpr std::wstring_view defragArgs =
     L" -applet:/EE/Types/Framework/CacheDefraggerIOCP /Tools/CachePlan.txt";
 constexpr std::wstring_view defragLog = L"Defrag.log";
+constexpr std::wstring_view contentUpdateArgs = L" -applet:/EE/Types/Framework/ContentUpdate";
 
 constexpr std::array<std::wstring_view, 3> clusterArgs{L" -cluster:public", L" -cluster:test",
                                                        L" -cluster:dev"};
@@ -180,6 +181,28 @@ std::expected<std::wstring, LaunchError> buildDefragCommandLine(const Settings& 
         core::warn("could not remove {}: {}", core::narrow(defragLog), ec.message());
 
     line += defragArgs;
+    return line;
+}
+
+std::expected<std::wstring, LaunchError> buildContentUpdateCommandLine(const Settings& settings, wf::Branch branch)
+{
+    const std::filesystem::path root = settings.installRoot(branch);
+    if (root.empty())
+        return std::unexpected(LaunchError::NoRoot);
+
+    const std::filesystem::path exe = root / gameExeName(settings.title);
+    std::error_code ec;
+    if (!std::filesystem::exists(exe, ec))
+        return std::unexpected(LaunchError::NoExecutable);
+
+    std::wstring line = std::format(L"\"{}\" -silent -log:/{} -graphicsDriver:{}", exe.wstring(), contentUpdateLog, graphicsDriverName(settings.graphicsApi));
+    line += clusterArg(branch);
+    line += std::format(L" -language:{}", settings.language);
+    if (!settings.audioLanguage.empty())
+        line += std::format(L" -languageVO:{}", settings.audioLanguage);
+    if (!settings.allowNetworkCaches)
+        line += L" -forceHTTPS";
+    line += contentUpdateArgs;
     return line;
 }
 

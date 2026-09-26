@@ -41,6 +41,12 @@ std::expected<void, LaunchError> launchDefrag(const Settings& settings, wf::Bran
 std::expected<std::wstring, LaunchError> buildDefragCommandLine(const Settings& settings,
                                                                 wf::Branch branch);
 
+// the log a content update writes, under %LOCALAPPDATA%\<title>
+inline constexpr std::wstring_view contentUpdateLog = L"Preprocess.log";
+
+// the stock launcher's ContentUpdate line, which carries fewer switches than a game launch
+std::expected<std::wstring, LaunchError> buildContentUpdateCommandLine(const Settings& settings, wf::Branch branch);
+
 std::wstring_view describe(LaunchError error);
 
 }
