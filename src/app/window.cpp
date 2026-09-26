@@ -18,6 +18,7 @@ namespace
 constexpr wchar_t className[] = L"EvolutionLauncherWindow";
 constexpr int dragStripHeight = 64;   // design-space; the hero top edge is draggable
 constexpr DWORD idleWaitMs = 100;     // bounded so a repaint with no message still lands promptly
+constexpr core::Vec2 cursorAway{-1e6f, -1e6f};
 
 // mirrors shell.cpp's closeBox layout so the caption strip doesn't swallow the click
 RECT closeGlyphRect(int width, float scale)
@@ -144,6 +145,17 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     }
     case WM_MOUSEMOVE:
         mousePos_ = {static_cast<float>(GET_X_LPARAM(lp)), static_cast<float>(GET_Y_LPARAM(lp))};
+        if (!trackingLeave_)
+        {
+            TRACKMOUSEEVENT track{sizeof(track), TME_LEAVE, hwnd, 0};
+            trackingLeave_ = ::TrackMouseEvent(&track) != 0;
+        }
+        return 0;
+    case WM_MOUSELEAVE:
+        trackingLeave_ = false;
+        // a drag keeps its position under capture; the button-up outside parks it instead
+        if (!mouseDown_)
+            mousePos_ = cursorAway;
         return 0;
     case WM_LBUTTONDOWN:
         mousePos_ = {static_cast<float>(GET_X_LPARAM(lp)), static_cast<float>(GET_Y_LPARAM(lp))};
@@ -156,6 +168,8 @@ LRESULT Window::handle(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         mouseDown_ = false;
         mouseReleased_ = true;
         ::ReleaseCapture();
+        if (const RECT client{0, 0, width_, height_}; ::PtInRect(&client, POINT{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)}) == 0)
+            mousePos_ = cursorAway;
         return 0;
     case WM_MOUSEWHEEL:
         wheel_ += static_cast<float>(GET_WHEEL_DELTA_WPARAM(wp)) / WHEEL_DELTA;

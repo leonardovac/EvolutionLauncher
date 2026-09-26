@@ -49,6 +49,7 @@ private:
     bool running_ = true;
     core::Vec2 mousePos_;
     bool mouseDown_ = false;
+    bool trackingLeave_ = false;
     bool mousePressed_ = false;
     bool mouseReleased_ = false;
     float wheel_ = 0.f;
