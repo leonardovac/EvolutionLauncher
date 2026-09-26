@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/applet.h"
 #include "app/launch.h"
 #include "app/settings.h"
 #include "update/plan.h"
@@ -39,7 +40,7 @@ public:
     void clearFinished() noexcept;
 
 private:
-    void pump(void* process, std::wstring log, std::uint64_t offset, std::wstring cacheDir);
+    void pump(Handle child, LogTail log, std::wstring cacheDir);
 
     std::thread thread_;
     std::atomic<bool> running_{false};
